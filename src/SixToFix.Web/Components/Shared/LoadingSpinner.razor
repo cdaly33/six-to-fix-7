@@ -1,0 +1,18 @@
+@* Loading state indicator. Use FullPage=true to center in viewport. *@
+
+<div class="spinner-container @(FullPage ? "spinner-fullpage" : "")"
+     role="status" aria-label="@Label" aria-live="polite">
+    <div class="loading-spinner"></div>
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span class="spinner-label">@Label</span>
+    }
+</div>
+
+@code {
+    /// <summary>Accessible label for screen readers.</summary>
+    [Parameter] public string Label { get; set; } = "Loading…";
+
+    /// <summary>When true, centers the spinner in the viewport with overlay.</summary>
+    [Parameter] public bool FullPage { get; set; }
+}

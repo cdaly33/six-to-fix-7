@@ -1,0 +1,35 @@
+@* Reusable confirmation dialog. Traps focus while open (a11y). *@
+
+@if (IsOpen)
+{
+    <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title"
+         @onclick="HandleOverlayClick">
+        <div class="modal-content" @onclick:stopPropagation>
+            <h2 id="confirm-modal-title">@Title</h2>
+            <p>@Message</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @onclick="OnCancel">@CancelLabel</button>
+                <button class="btn @(IsDangerous ? "btn-danger" : "btn-primary")"
+                        @onclick="OnConfirm" autofocus>
+                    @ConfirmLabel
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string Title { get; set; } = "Confirm";
+    [Parameter] public string Message { get; set; } = "Are you sure?";
+    [Parameter] public string ConfirmLabel { get; set; } = "Confirm";
+    [Parameter] public string CancelLabel { get; set; } = "Cancel";
+
+    /// <summary>When true, the confirm button uses btn-danger styling.</summary>
+    [Parameter] public bool IsDangerous { get; set; }
+
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task HandleOverlayClick() => await OnCancel.InvokeAsync();
+}

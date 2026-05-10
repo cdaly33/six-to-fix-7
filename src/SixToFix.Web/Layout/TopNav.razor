@@ -1,0 +1,27 @@
+@* Top navigation bar. Displays tenant slug, user display name, and sign-out. *@
+@* Reads AuthenticationState via CascadingParameter — no service injection. *@
+
+<header class="top-nav" role="banner">
+    <div class="top-nav-left">
+        <span class="top-nav-brand">Six to Fix</span>
+        <AuthorizeView>
+            <Authorized Context="authState">
+                @{
+                    var tenantSlug = authState.User.FindFirst("tenant_slug")?.Value;
+                }
+                @if (!string.IsNullOrEmpty(tenantSlug))
+                {
+                    <span class="top-nav-tenant" aria-label="Current tenant">@tenantSlug</span>
+                }
+            </Authorized>
+        </AuthorizeView>
+    </div>
+    <div class="top-nav-right">
+        <AuthorizeView>
+            <Authorized Context="authState">
+                <span class="top-nav-user">@authState.User.Identity?.Name</span>
+                <a class="btn btn-ghost btn-sm" href="/logout" aria-label="Sign out">Sign out</a>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+</header>

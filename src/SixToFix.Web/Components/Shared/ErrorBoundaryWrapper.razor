@@ -1,0 +1,19 @@
+@* Error boundary for graceful error handling in Blazor components. *@
+@inherits ErrorBoundaryBase
+
+@if (CurrentException is null)
+{
+    @ChildContent
+}
+else
+{
+    <div class="error-boundary" role="alert">
+        <h3>Something went wrong</h3>
+        <p>An unexpected error occurred. Please refresh the page or contact support.</p>
+        <button class="btn btn-secondary" @onclick="() => Recover()">Try again</button>
+    </div>
+}
+
+@code {
+    protected override Task OnErrorAsync(Exception exception) => Task.CompletedTask;
+}

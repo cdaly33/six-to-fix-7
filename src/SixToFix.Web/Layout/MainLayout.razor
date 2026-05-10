@@ -1,0 +1,24 @@
+@inherits LayoutComponentBase
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            <div class="app-shell">
+                <aside class="sidebar" role="complementary" aria-label="Navigation">
+                    <NavSidebar />
+                </aside>
+                <div class="main-content">
+                    <TopNav />
+                    <main class="page-content" role="main" id="main-content">
+                        @Body
+                    </main>
+                </div>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <div class="auth-shell">
+                @Body
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>

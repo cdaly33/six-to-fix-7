@@ -1,0 +1,46 @@
+@* Generic sortable data table. TItem must have a meaningful string key. *@
+@* Callers define HeaderTemplate and RowTemplate as RenderFragments. *@
+@typeparam TItem
+
+<div class="data-table-scroll-container">
+    @if (IsLoading)
+    {
+        <LoadingSpinner Label="Loading data…" />
+    }
+    else if (Items.Count == 0)
+    {
+        <p class="text-muted">@EmptyMessage</p>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead>
+                <tr>@HeaderTemplate</tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Items)
+                {
+                    @RowTemplate(item)
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    [Parameter] public List<TItem> Items { get; set; } = new();
+
+    [Parameter, EditorRequired] public RenderFragment<TItem> RowTemplate { get; set; } = null!;
+
+    [Parameter, EditorRequired] public RenderFragment HeaderTemplate { get; set; } = null!;
+
+    [Parameter] public bool IsLoading { get; set; }
+
+    [Parameter] public string EmptyMessage { get; set; } = "No items found.";
+
+    [Parameter] public string? SortColumn { get; set; }
+
+    [Parameter] public bool SortDescending { get; set; }
+
+    [Parameter] public EventCallback<string> OnSort { get; set; }
+}

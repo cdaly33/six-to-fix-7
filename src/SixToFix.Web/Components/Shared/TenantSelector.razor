@@ -1,0 +1,25 @@
+@* SuperAdmin-only tenant switcher. Renders nothing for non-SuperAdmin roles. *@
+
+<AuthorizeView Roles="SuperAdmin">
+    <Authorized>
+        <div class="tenant-selector">
+            <label class="sr-only" for="tenant-select">Switch tenant</label>
+            <select id="tenant-select" class="input-field" @onchange="OnTenantChanged">
+                <option value="">— Select tenant —</option>
+                @* Tenants loaded in Phase 4 *@
+            </select>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public EventCallback<Guid> OnTenantSelected { get; set; }
+
+    private async Task OnTenantChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var tenantId))
+        {
+            await OnTenantSelected.InvokeAsync(tenantId);
+        }
+    }
+}

@@ -1,0 +1,22 @@
+@page "/audits"
+@attribute [Authorize]
+@inject NavigationManager Navigation
+
+<PageTitle>Audits — Six to Fix</PageTitle>
+
+<h1>Audits</h1>
+@* Full implementation — Phase 4 *@
+<p class="text-muted">Under construction.</p>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState;
+        if (!auth.User.Identity?.IsAuthenticated ?? true)
+        {
+            Navigation.NavigateTo("/login", forceLoad: false);
+        }
+    }
+}
