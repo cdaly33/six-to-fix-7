@@ -1,3 +1,37 @@
+# .NET build artifacts
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+.vs/
+*.swp
+
+# .NET publish output
+[Pp]ublish/
+[Pp]ublish[Oo]utput/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+nuget.config.bak
+
+# Playwright test artifacts
+tests/**/bin/
+tests/**/obj/
+**/playwright-report/
+**/test-results/
+**/.playwright/
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# Secrets / local config overrides
+appsettings.*.local.json
+secrets.json
+
 # Squad: ignore runtime state (logs, inbox, sessions)
 .squad/orchestration-log/
 .squad/log/
