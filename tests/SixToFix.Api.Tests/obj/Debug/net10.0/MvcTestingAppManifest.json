@@ -1,7 +1,0 @@
-{
-  "SixToFix.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\GitHub\\six-to-fix-7\\src\\SixToFix.Api",
-  "SixToFix.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\GitHub\\six-to-fix-7\\src\\SixToFix.Application",
-  "SixToFix.Domain, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\GitHub\\six-to-fix-7\\src\\SixToFix.Domain",
-  "SixToFix.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\GitHub\\six-to-fix-7\\src\\SixToFix.Infrastructure",
-  "SixToFix.Web, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\GitHub\\six-to-fix-7\\src\\SixToFix.Web"
-}
