@@ -44,3 +44,7 @@
 - `CalibrationDelta` is NOT created when a lockout is triggered — no override occurred.
 - `lockoutExpiresAt` is included in the 409 response body (earliest rejection in window + 24h).
 - Advisory lock used is `pg_advisory_xact_lock` (transaction-scoped) — compatible with pgBouncer transaction-mode pooling.
+
+### 2026-05-10 — Phase 0 Sealed
+
+**All 12 Chris decisions consolidated into canonical decisions.md (21,203 bytes).** 15 inbox files merged and deleted. Orchestration logs written per agent (oracle, trinity, tank). Session log: `.squad/log/2026-05-10T21_28_46Z-phase0-resolution.md`. All team history.md files appended with Phase 0 seal notification. Phase 1 gate: **CLEAR.**

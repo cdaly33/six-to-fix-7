@@ -68,7 +68,7 @@
 | `id` | `uuid` | PK, NOT NULL, DEFAULT gen_random_uuid() |
 | `tenant_id` | `uuid` | NOT NULL, FK → tenants.id ON DELETE CASCADE |
 | `user_id` | `uuid` | NOT NULL, FK → users.id ON DELETE CASCADE |
-| `role` | `varchar(50)` | NOT NULL, CHECK (role IN ('SuperAdmin','TenantAdmin','Auditor','Reviewer','OpsViewer')) |
+| `role` | `varchar(50)` | NOT NULL, CHECK (role IN ('SuperAdmin','TenantAdmin','Reviewer','Viewer','OpsViewer')) |
 | `created_at` | `timestamptz` | NOT NULL, DEFAULT now() |
 
 **Relationships:**

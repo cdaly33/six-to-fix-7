@@ -266,16 +266,18 @@ integration-tests:
 ```
 [guard: check upstream success]
        ↓
-deploy-staging ─→ smoke-test ─→ playwright-e2e ─→ notify
+deploy-dev ─→ smoke-test ─→ playwright-e2e ─→ notify
 ```
 
 | Job | `needs:` | Description | Fail Behavior |
 |-----|---------|-------------|---------------|
 | `guard` | — | Fails workflow immediately if `github.event.workflow_run.conclusion != 'success'`. Prevents E2E running after a failed integration build. | Abort workflow |
-| `deploy-staging` | `guard` | Deploys current `main` build to `app-strategicglue-dev` (dev environment used as staging). Uses Azure OIDC auth. | Fail workflow |
-| `smoke-test` | `deploy-staging` | `curl https://app-strategicglue-dev.azurewebsites.net/health` — expects HTTP 200 within 60s. Retries 3x with 10s sleep. | Fail workflow |
+| `deploy-dev` | `guard` | Deploys current `main` build to `app-strategicglue-dev`, the confirmed E2E target. Uses Azure OIDC auth. | Fail workflow |
+| `smoke-test` | `deploy-dev` | `curl https://app-strategicglue-dev.azurewebsites.net/health` — expects HTTP 200 within 60s. Retries 3x with 10s sleep. | Fail workflow |
 | `playwright-e2e` | `smoke-test` | Installs Playwright browsers (`npx playwright install --with-deps chromium`). Runs full test suite in `SixToFix.E2E`. Uploads Playwright HTML report + traces as artifacts. | Fail workflow |
 | `notify` | `playwright-e2e` | Posts result summary to GitHub Step Summary. On failure, creates a GitHub issue tagged `e2e-failure`. | Always runs (`if: always()`) |
+
+> ✅ Confirmed: `app-strategicglue-dev` is the E2E target for now; there is no separate staging slot/environment yet.
 
 ```yaml
 jobs:
@@ -330,9 +332,13 @@ validate-bicep ─→ deploy-infra ─→ deploy-app ─→ health-check ─→ 
 | `guard` | — | — | Fails if upstream `e2e.yml` did not succeed. | Abort workflow |
 | `validate-bicep` | `guard` | — | `az deployment group what-if` against `rg-StrategicGlue-CommandCenter`. Uploads what-if diff as artifact. | Fail workflow |
 | `deploy-infra` | `validate-bicep` | `production` ← **requires approval** | `az deployment group create` with `main.prod.bicepparam`. Captures outputs (App Service name, Key Vault URI). | Fail workflow |
-| `deploy-app` | `deploy-infra` | `production` | `dotnet publish -c Release`, zip deploy via `az webapp deploy`. Runs pending DB migrations before swap. | Fail workflow |
+| `deploy-app` | `deploy-infra` | `production` | `dotnet publish -c Release`, zip deploy via `az webapp deploy`. The app runs pending EF Core migrations on startup via `MigrateAsync()`. Migration-only runs use `sf_admin` credentials from a GitHub Actions secret. | Fail workflow |
 | `health-check` | `deploy-app` | — | `curl https://app-strategicglue-prod.azurewebsites.net/health` — expects `{"status":"healthy"}` within 90s (3 retries × 30s sleep). | Fail workflow (triggers rollback investigation) |
-| `notify` | `health-check` | — | Posts deployment summary (version, timestamp, who approved) to GitHub Step Summary + Slack webhook. | Always runs |
+| `notify` | `health-check` | — | Posts deployment summary (version, timestamp, who approved) to GitHub Step Summary only. | Always runs |
+
+> ✅ Confirmed: Production deploys rely on app-startup `MigrateAsync()`, with `sf_admin` credentials kept in GitHub Actions secrets for migration-only runs.
+
+> ✅ Confirmed: Notifications use GitHub Step Summary only; no Slack webhook is configured.
 
 ```yaml
 jobs:
@@ -385,6 +391,7 @@ The GitHub **`production`** Environment must be configured with:
 | `AZURE_CLIENT_ID` | App Registration client ID for OIDC federated auth | Azure App Registration (see §5) |
 | `AZURE_TENANT_ID` | Azure AD tenant ID | Azure Portal → Azure Active Directory |
 | `AZURE_SUBSCRIPTION_ID` | Target Azure subscription ID | Azure Portal → Subscriptions |
+| `SF_ADMIN_CONNECTION_STRING` | Direct-port PostgreSQL connection string for migration-only runs using `sf_admin` | Securely provisioned by platform owner; used only outside the normal `MigrateAsync()` startup path |
 
 > ⚠️ **No `AZURE_CLIENT_SECRET` is stored.** GitHub Actions authenticates to Azure via OIDC (workload identity federation) — no service principal password is used or stored. The `AZURE_CLIENT_ID` is the App Registration application (client) ID, **not** a secret.
 
@@ -460,6 +467,8 @@ The App Registration's service principal (not the App Service managed identity) 
 | `User Access Administrator` | `rg-StrategicGlue-CommandCenter` | Assign RBAC roles in Bicep (role assignments for managed identity) |
 
 > `User Access Administrator` is required because Bicep creates `Microsoft.Authorization/roleAssignments` resources. Without it, `az deployment group create` fails with `AuthorizationFailed`.
+>
+> ✅ Confirmed: Resource-group scope for `User Access Administrator` is approved for now.
 
 ### 5.4 GitHub Actions Login Step
 
@@ -555,8 +564,4 @@ The `main` branch must have the following branch protection rules configured in 
 
 ## ⚠️ Open Questions
 
-1. **Staging environment vs dev environment for E2E:** `e2e.yml` currently deploys to `app-strategicglue-dev`. If the dev environment is actively used by developers between PRs, E2E against dev may be disruptive. Consider an App Service deployment slot (`staging`) or a dedicated E2E environment.
-2. **Database migration in `deploy.yml`:** The `deploy-app` job must run EF Core migrations before deploying the new app version. Confirm migration runner approach: (a) `dotnet ef database update` from CI runner (requires direct DB access — complex with VNet), or (b) app runs migrations on startup via `MigrateAsync()` in `Program.cs`. Option (b) is simpler but means migrations run with `sf_app` credentials (no DDL). Recommend option (b) with `sf_admin` credentials available in a GitHub Actions secret for migration runs.
-3. **`ci.yml` Azure access:** If `ci.yml` only runs unit tests with mocks, no Azure access is needed. The `github-pr` federated credential is listed speculatively — remove if not needed.
-4. **Slack webhook for `notify` job:** Confirm whether a Slack webhook secret should be added (`SLACK_WEBHOOK_URL`) or if GitHub Step Summary notifications are sufficient.
-5. **`User Access Administrator` scope:** Granting `User Access Administrator` at the resource group scope is a broad permission. If security policy requires narrower scope, RBAC assignments can be moved out of Bicep and into a separate privileged pipeline step. Confirm with Chris.
+1. **`ci.yml` Azure access:** If `ci.yml` only runs unit tests with mocks, no Azure access is needed. The `github-pr` federated credential is listed speculatively — remove if not needed.

@@ -55,3 +55,22 @@
 - `raw_ai_response` and `prompt_used` are stored in `skill_runs` table (database, access-controlled) but never in log sinks
 - Background workers generate their own correlation IDs per event — no HTTP context available
 - `StrategicGlue` namespace prefix in `appsettings.json` logging config ensures app-level `Information` events reach Application Insights while framework noise is filtered at `Warning`
+
+### 2026-05-10 — HubSpot auth confirmed
+
+- Chris confirmed outbound HubSpot authentication uses a Private App bearer token stored as `sf-hubspot-private-app-token`
+- Inbound webhook HMAC validation remains separate and continues using `sf-hubspot-webhook-secret`
+- Updated `docs/architecture/hubspot-field-mapping.md` and `docs/architecture/environment-contract.md` to remove OAuth/client-secret references for outbound HubSpot auth
+
+### 2026-05-10 — Phase 0 Sealed
+
+**Status:** All Phase 0 questions resolved by Chris. 15 inbox files consolidated into canonical `decisions.md` (21,203 bytes).
+
+**Decision** entries merged include:
+- HubSpot Private App token (Q1) — oracle
+- Azure OpenAI same-subscription (Q2) — trinity
+- 8 infrastructure decisions (Q3–Q10) — tank
+- JWT role name confirmation (Q12) — trinity
+- 9 architecture ADRs (Morpheus, Neo) — all locked
+
+**Next:** Phase 1 gate is clear. Infrastructure teams can begin implementation from decisions.md.

@@ -6,7 +6,7 @@
 - **Auth decision:** ASP.NET Core Identity + JWT — no OIDC server. App issues JWTs with `tenant_id`, `tenant_slug`, `roles` claims.
 - **CSS approach:** Custom CSS design tokens only — no Tailwind, no Bootstrap, no MudBlazor. Warm cream/tan palette. Base tokens in `wwwroot/css/`.
 - **Key design tokens:** `--bg-primary: #F5F0E8`, `--bg-dark: #1A1A2E`, `--accent: #2563EB`, `--border: #E5E0D5`, `--text-primary: #1A1A2E`. Cards: `border-radius: 8px`, `box-shadow: 0 1px 3px rgba(0,0,0,0.08)`, lift on hover.
-- **Screen count:** 13 screens across 4 user roles (Super Admin, Tenant Admin, Auditor, Reviewer)
+- **Screen count:** 13 screens across 4 user roles (SuperAdmin, TenantAdmin, Reviewer, Viewer)
 - **Created:** 2026-05-10
 
 ## Learnings
@@ -43,8 +43,26 @@
 
 **Role visibility decisions locked:**
 - Four roles: `SuperAdmin`, `TenantAdmin`, `Reviewer`, `Viewer` (exact JWT claim strings — case-sensitive).
-- Note: PRD uses "Auditor" in some places; this project uses `TenantAdmin` for all audit-running capabilities. `Viewer` replaces a pure read-only role absent from PRD. This discrepancy must be reconciled with Neo (auth layer) before JWT issuance is implemented.
+- Chris confirmed the canonical JWT role claim strings are `SuperAdmin`, `TenantAdmin`, `Reviewer`, and `Viewer`. `Auditor` is not a valid role name and must not appear in JWT issuance or `<AuthorizeView>` checks.
 - All UI role checks use `<AuthorizeView Roles="...">` — no ad-hoc code-behind checks for rendering.
 - Exception: page-level redirect logic in `OnInitializedAsync` may use `IsInRole()` for navigation decisions only.
 - Denied authenticated users are redirected to the most appropriate permitted screen (not a 403 page) to avoid information leakage.
 - SuperAdmin sees cross-tenant data at service layer, not via separate UI branches — component is the same, service filters by role.
+
+### 2026-05-10 — Chris decision sync
+
+- Confirmed canonical JWT role claim strings: `SuperAdmin`, `TenantAdmin`, `Reviewer`, `Viewer`; removed invalid `Auditor` role references from architecture docs.
+- Recorded Chris's Azure OpenAI subscription decision: same subscription as App Service, managed identity via `DefaultAzureCredential`, no cross-subscription auth complexity.
+
+### 2026-05-10 — Phase 0 Sealed
+
+**Status:** All Phase 0 questions resolved by Chris. 15 inbox files consolidated into canonical `decisions.md` (21,203 bytes).
+
+**Decisions merged** include:
+- HubSpot Private App token (Q1) — oracle
+- Azure OpenAI same-subscription (Q2) — this decision
+- 8 infrastructure decisions (Q3–Q10) — tank
+- JWT role confirmation (Q12) — this decision
+- 9 architecture ADRs (Morpheus, Neo) — all locked
+
+**Team updates:** All team history.md files appended with Phase 0 seal notification. Phase 1 gate: CLEAR.

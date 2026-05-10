@@ -12,6 +12,16 @@ Six-to-Fix integrates bidirectionally with HubSpot via the HubSpot CRM API v3 (C
 
 **HubSpot client interface:** `IHubSpotClient` — wraps all outbound API calls with correlation ID logging and failure handling.
 
+### Outbound Authentication
+
+Outbound HubSpot API calls use a **HubSpot Private App token**. The application sends:
+
+```http
+Authorization: Bearer {private-app-token}
+```
+
+The token is read from Azure Key Vault secret `sf-hubspot-private-app-token`. There is no OAuth 2.0 client credentials flow, no refresh flow, and no `client_id` / `client_secret` required for outbound API access.
+
 ---
 
 ## Outbound — Client Create (HubSpot Company Upsert)

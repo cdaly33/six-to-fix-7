@@ -52,3 +52,20 @@
 7. DB migration runner in deploy.yml: CI runner with direct DB access vs app-startup `MigrateAsync()`
 8. Slack webhook for deploy notifications
 9. `User Access Administrator` scope narrowing for GitHub Actions OIDC principal
+
+## 2026-05-10 — Chris Phase 0 decisions applied
+
+- Updated Phase 0 architecture docs with Chris's confirmed decisions for prod Key Vault blob fallback secret, prod custom domain + managed certificate, startup `MigrateAsync()` deploy behavior, dev-only E2E target, resource-group RBAC scope, Step Summary-only notifications, AI Search contributor access, and shared Testcontainer + per-test transaction rollback.
+
+### 2026-05-10 — Phase 0 Sealed
+
+**Status:** All Phase 0 questions resolved by Chris. 15 inbox files consolidated into canonical `decisions.md` (21,203 bytes).
+
+**Decisions merged** include:
+- HubSpot Private App token (Q1) — oracle
+- Azure OpenAI same-subscription (Q2) — trinity
+- 8 infrastructure decisions (Q3–Q10) — this decision
+- JWT role confirmation (Q12) — trinity
+- 9 architecture ADRs (Morpheus, Neo) — all locked
+
+**Orchestration log written:** `.squad/orchestration-log/2026-05-10T21_28_46Z-tank.md`. Phase 1 gate: CLEAR.

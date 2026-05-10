@@ -47,7 +47,7 @@ All services registered in `Program.cs` via extension methods on `IServiceCollec
 | `IPasswordHasher<AppUser>` | (framework) | Transient | `AddIdentity<AppUser, AppRole>()` | Standard Identity registration. |
 | **Authentication & JWT** | | | | |
 | JWT Bearer Handler | (framework) | Singleton | `AddAuthentication().AddJwtBearer(...)` | Validates app-issued tokens. Key loaded from Key Vault at startup via managed identity. Token from `Authorization: Bearer ...` header or `?access_token=` query string (hub). |
-| Authorization Policies | (framework) | Singleton | `AddAuthorization(options => ...)` | `TenantUser`, `TenantAdmin`, `Auditor`, `Reviewer`, `SuperAdmin` policies. |
+| Authorization Policies | (framework) | Singleton | `AddAuthorization(options => ...)` | `TenantUser`, `TenantAdmin`, `Reviewer`, `Viewer`, `SuperAdmin` policies. |
 | **SignalR** | | | | |
 | SignalR Core | (framework) | Singleton (infrastructure) | `AddSignalR()` | Hub instances are Transient. |
 | `IHubContext<AuditRunHub>` | (framework) | Singleton | Registered automatically by `AddSignalR()` | Injected into `AuditOrchestrator`, `CouncilRunner` for pushing events. |

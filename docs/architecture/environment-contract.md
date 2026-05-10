@@ -45,7 +45,7 @@ All configuration enters the App Service as **App Settings** (environment variab
 
 | Key | Source | Purpose |
 |-----|--------|---------|
-| `HubSpot:ClientSecret` | `KV:sf-hubspot-client-secret` | HubSpot OAuth client secret for API calls |
+| `HubSpot:PrivateAppToken` | `KV:sf-hubspot-private-app-token` | HubSpot Private App bearer token for outbound API calls |
 | `HubSpot:WebhookSecret` | `KV:sf-hubspot-webhook-secret` | HMAC-SHA256 secret for inbound webhook signature validation |
 | `HubSpot:PortalId` | `AppSettings` | HubSpot portal/account ID (non-secret) |
 | `HubSpot:BaseUrl` | `AppSettings` | `https://api.hubapi.com` | HubSpot API base URL |
@@ -94,9 +94,11 @@ All secrets below must exist in Key Vault before the application can start. The 
 | `sf-pgbouncer-connstr` | Full ADO.NET connection string to pgBouncer on port 6432 | On DB password change | Format: `Host=psql-strategicglue-{env}.postgres.database.azure.com;Port=6432;Database=strategicglue;Username=sf_app;Password=...;SSL Mode=Require;Trust Server Certificate=true` |
 | `sf-jwt-signing-key` | 256-bit (32-byte) random hex string | Every 90 days in prod | Used for HMAC-SHA256 JWT signing. Rotation invalidates all active tokens |
 | `sf-openai-api-key` | Azure OpenAI API key | On compromise or quarterly | Used only as fallback if managed identity auth fails; prefer managed identity |
-| `sf-hubspot-client-secret` | HubSpot OAuth 2.0 client secret | Per HubSpot rotation policy | Required for outbound HubSpot API authentication |
+| `sf-hubspot-private-app-token` | HubSpot Private App bearer token | Manual rotation in HubSpot portal | Required for outbound HubSpot API authentication |
 | `sf-hubspot-webhook-secret` | HMAC-SHA256 shared secret for HubSpot webhook | On compromise | Used to validate `X-HubSpot-Signature-v3` on inbound webhooks |
-| `sf-blob-storage-connstr` | Azure Blob Storage connection string | Fallback only — prefer managed identity | Only used if managed identity Blob auth is not available; for local dev override |
+| `sf-blob-storage-connstr` | Azure Blob Storage connection string | Fallback only — prefer managed identity | Exists in both dev and prod Key Vaults; primarily used for local-dev override / fallback scenarios |
+
+> ✅ Confirmed: `sf-blob-storage-connstr` exists in the prod Key Vault as well as dev.
 
 ### 2.1 Secrets Seeding
 
@@ -113,7 +115,7 @@ The App Service (`app-strategicglue-{env}`) uses a **system-assigned managed ide
 | `kv-strategicglue-{env}` (Key Vault) | `Key Vault Secrets User` | Resource | Get/List secrets; required for Key Vault references and `AddAzureKeyVault` |
 | `ststrategicglue{env}` (Storage Account) | `Storage Blob Data Contributor` | Resource | Read/write audit artifact blobs; no SAS tokens needed |
 | Azure OpenAI resource | `Cognitive Services OpenAI User` | Resource | Authenticate AI skill chain API calls without API key |
-| `srch-strategicglue-{env}` (AI Search) | `Search Index Data Reader` | Resource | Query the audit search index |
+| `srch-strategicglue-{env}` (AI Search) | `Search Index Data Contributor` | Resource | Read/write the audit search index |
 
 > **Note:** All RBAC assignments are provisioned by Bicep (`modules/keyvault.bicep`, `modules/storage.bicep`, `modules/search.bicep`). No manual portal assignments.
 
@@ -141,13 +143,15 @@ The App Service (`app-strategicglue-{env}`) uses a **system-assigned managed ide
 | Private Endpoints | No | Yes (PostgreSQL + Key Vault) | |
 | Application Insights | `appi-strategicglue-dev` | `appi-strategicglue-prod` | |
 | Azure OpenAI Endpoint | `https://oai-strategicglue-dev.openai.azure.com/` | `https://oai-strategicglue-prod.openai.azure.com/` | |
-| `Jwt:Issuer` | `https://app-strategicglue-dev.azurewebsites.net` | `https://app.strategicglue.com` | Custom domain in prod |
+| `Jwt:Issuer` | `https://app-strategicglue-dev.azurewebsites.net` | `https://app.strategicglue.com` | Custom domain in prod; SSL via App Service Managed Certificate |
 | `Jwt:TokenExpiryMinutes` | `120` | `60` | Shorter expiry in prod |
 | ARR Affinity | Enabled | Enabled | Required for SignalR (see §6) |
 | Always On | Enabled | Enabled | Prevents cold starts |
 | Min TLS Version | 1.2 | 1.3 | |
 | HTTPS Only | Enabled | Enabled | |
 | Auto-scale | No | Yes (1–4 instances) | CPU > 70% → scale out |
+
+> ✅ Confirmed: Prod custom domain is `app.strategicglue.com`, and SSL is provided by an App Service Managed Certificate.
 
 ---
 
@@ -211,7 +215,7 @@ The application must validate all critical configuration before accepting traffi
 | `ConnectionStrings:DefaultConnection` | _(direct EF Core check)_ | Non-null, non-empty; test DB connection |
 | `Azure` | `AzureOptions` | `KeyVaultUri` (valid URI), `StorageAccountName` (non-empty), `SearchEndpoint` (valid URI), `OpenAiEndpoint` (valid URI) |
 | `Jwt` | `JwtOptions` | `SigningKey` (min 32 chars), `Issuer` (valid URI), `Audience` (non-empty), `TokenExpiryMinutes` (1–1440) |
-| `HubSpot` | `HubSpotOptions` | `ClientSecret` (non-empty), `WebhookSecret` (non-empty), `PortalId` (non-empty) |
+| `HubSpot` | `HubSpotOptions` | `PrivateAppToken` (non-empty), `WebhookSecret` (non-empty), `PortalId` (non-empty) |
 
 ### 7.2 Registration Pattern
 
@@ -284,6 +288,3 @@ Map at `/health` — this endpoint is polled by the deployment pipeline's health
 ## ⚠️ Open Questions
 
 1. **Azure OpenAI resource name:** The task specifies `sf-openai-api-key` as a KV secret but managed identity auth is preferred. Confirm whether the OpenAI resource will be in the same subscription (managed identity works) or a shared subscription (may need API key fallback).
-2. **HubSpot OAuth vs Private App Token:** Infra spec references `HUBSPOT-PRIVATE-APP-TOKEN` (Private App), but this document models OAuth `ClientSecret`. Confirm which HubSpot auth model is in use — Private App token or OAuth 2.0 client credentials.
-3. **`sf-blob-storage-connstr`:** Listed per spec, but managed identity is preferred for Blob. This secret should only exist as a local-dev fallback. Confirm whether it needs to exist in prod Key Vault.
-4. **Custom domain in prod:** `Jwt:Issuer` uses `https://app.strategicglue.com` — confirm this domain and SSL cert management approach (App Service Managed Certificate or bring-your-own).

@@ -137,9 +137,9 @@ builder.Services.AddSingleton(sp =>
 |----------|-------|
 | SDK Client Class | `SearchClient` (Azure.Search.Documents) |
 | Registration Pattern | `AddSingleton<SearchClient>` with managed identity |
-| Required RBAC Role | `Search Index Data Reader` (ID: `1407120a-92aa-4202-b7e9-c0e197c71c8f`) |
+| Required RBAC Role | `Search Index Data Contributor` (ID: `8ebe5a00-799e-43f5-93ac-243d3dce84a7`) |
 | Scope | Resource (`/subscriptions/.../providers/Microsoft.Search/searchServices/srch-strategicglue-{env}`) |
-| Dev Setup | `az login` — local identity needs the role on the dev Search resource |
+| Dev Setup | `az login` — local identity needs the role on the dev Search resource because the app writes to the index |
 
 ```csharp
 // Program.cs
@@ -151,6 +151,8 @@ builder.Services.AddSingleton(sp =>
     return new SearchClient(endpoint, indexName, credential);
 });
 ```
+
+> ✅ Confirmed: The application writes to the AI Search index, so `Search Index Data Contributor` is required.
 
 ---
 
@@ -288,14 +290,14 @@ resource openAiUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-0
 ### 6.4 Azure AI Search — `modules/search.bicep`
 
 ```bicep
-// Search Index Data Reader — for App Service managed identity
-resource searchReaderAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(searchService.id, appServicePrincipalId, '1407120a-92aa-4202-b7e9-c0e197c71c8f')
+// Search Index Data Contributor — for App Service managed identity
+resource searchContributorAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(searchService.id, appServicePrincipalId, '8ebe5a00-799e-43f5-93ac-243d3dce84a7')
   scope: searchService
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
-      '1407120a-92aa-4202-b7e9-c0e197c71c8f'  // Search Index Data Reader
+      '8ebe5a00-799e-43f5-93ac-243d3dce84a7'  // Search Index Data Contributor
     )
     principalId: appServicePrincipalId
     principalType: 'ServicePrincipal'
@@ -310,7 +312,7 @@ resource searchReaderAssignment 'Microsoft.Authorization/roleAssignments@2022-04
 | Key Vault Secrets User | `4633458b-17de-408a-b874-0445c86b69e6` | Key Vault |
 | Storage Blob Data Contributor | `ba92f5b4-2d11-453d-a403-e96b0029c9fe` | Storage Account |
 | Cognitive Services OpenAI User | `5e0bd9bd-7b93-4f28-af87-19fc36ad61bd` | Azure OpenAI |
-| Search Index Data Reader | `1407120a-92aa-4202-b7e9-c0e197c71c8f` | AI Search |
+| Search Index Data Contributor | `8ebe5a00-799e-43f5-93ac-243d3dce84a7` | AI Search |
 
 > All role definition IDs are well-known Azure built-in roles and do not change between subscriptions.
 
@@ -395,5 +397,4 @@ export AZURE_CLIENT_SECRET="<sp-secret>"  # Store in shell profile, NOT in code
 ## ⚠️ Open Questions
 
 1. **Azure OpenAI subscription placement:** If the Azure OpenAI resource is in a different subscription than the App Service, `DefaultAzureCredential` with system-assigned managed identity will not work across subscriptions. Confirm the OpenAI resource is in `rg-StrategicGlue-CommandCenter`.
-2. **AI Search — Data Reader vs Contributor:** The task specifies `Search Index Data Reader` (read-only). If the app needs to push documents to the index (e.g., indexing audit results), `Search Index Data Contributor` is required. Confirm the app's search write requirements.
-3. **GitHub Actions OIDC identity:** The federated credential for GitHub Actions (used in `deploy.yml`) needs its own RBAC grants (Contributor on resource group). This is separate from the App Service managed identity and documented in the GitHub Actions DAG artifact.
+2. **GitHub Actions OIDC identity:** The federated credential for GitHub Actions (used in `deploy.yml`) needs its own RBAC grants (Contributor on resource group). This is separate from the App Service managed identity and documented in the GitHub Actions DAG artifact.

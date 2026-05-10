@@ -23,6 +23,7 @@
 > - Server-side JWT issuance (auth layer)  
 > - Client-side `<AuthorizeView Roles="...">` checks (UI layer)  
 >
+> `Auditor` is **not** a valid role name in this system. The correct claim string for the review role is `Reviewer`.  
 > Use these exact strings — case-sensitive. A mismatch between JWT issuance and UI role strings causes silent access failures.
 
 ---

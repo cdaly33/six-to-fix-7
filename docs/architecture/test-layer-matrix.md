@@ -16,7 +16,7 @@ This document defines the complete test responsibility matrix for the Six-to-Fix
 | **Component / bUnit** | Blazor components: rendering, event handling, parameter binding, SignalR hub interaction (mocked), authorization attributes on components | All services injected into components, `IHubContext`, SignalR hub | Component render tree, parameter/event contracts | `SixToFix.Blazor.Tests` | Blazor component public surface | `ci.yml` (PR gate) |
 | **Integration / Testcontainers** | EF Core repositories, `DbContext` queries, tenant isolation enforcement, migration correctness, `category_result_versions` append-only behavior | Azure OpenAI, HubSpot API, Blob Storage | **Real PostgreSQL 16** via Testcontainer, EF Core migrations, `sf_app` + `sf_admin` roles, all 15 DB tables | `SixToFix.Infrastructure.Tests` | `SixToFix.Infrastructure` (repositories, EF Core) | `integration.yml` (push to main) |
 | **API Integration / WebApplicationFactory** | All REST endpoints: HTTP status codes, request/response shapes, JWT auth enforcement, multi-tenant scoping via `tenant_id` claim, 409 REVIEWER_REJECTION_LOCKOUT, 502 AI schema failure | Azure OpenAI (`ISkillRunner` stub returning canned responses), HubSpot API, Blob Storage (`IBlobService` stub), real external HTTP calls | **Real PostgreSQL 16** via Testcontainer, EF Core, JWT token generation, ASP.NET Core middleware pipeline, SignalR hub negotiation | `SixToFix.Api.Tests` | All API controllers, middleware, auth policies | `integration.yml` (push to main) |
-| **E2E / Playwright** | Full user journeys: login, audit creation, AI skill chain execution, reviewer workflow, lockout scenario, HubSpot sync status display | Nothing — runs against fully deployed staging environment | Deployed app, real (dev) database, real Azure OpenAI, real HubSpot sandbox | `SixToFix.E2E` | Critical user paths (happy path + key error paths) | `e2e.yml` (merge to main only) |
+| **E2E / Playwright** | Full user journeys: login, audit creation, AI skill chain execution, reviewer workflow, lockout scenario, HubSpot sync status display | Nothing — runs against the fully deployed dev environment (`app-strategicglue-dev`) | Deployed app, real (dev) database, real Azure OpenAI, real HubSpot sandbox | `SixToFix.E2E` | Critical user paths (happy path + key error paths) | `e2e.yml` (merge to main only) |
 
 ---
 
@@ -228,6 +228,8 @@ public sealed class AuditRepositoryTests(PostgresContainerFixture db)
 }
 ```
 
+> ✅ Confirmed: API integration tests use the shared PostgreSQL Testcontainer fixture plus per-test `IDbContextTransaction` rollback for isolation.
+
 ### 5.3 DB Role Rules in Tests
 
 | Operation | Role Used | Reason |
@@ -296,6 +298,4 @@ public async Task GetAuditsForTenant_CannotReturnDataBelongingToAnotherTenant()
 ## ⚠️ Open Questions
 
 1. **bUnit + SignalR:** Confirm that `IHubContext<AuditRunHub>` can be injected as a Moq mock in bUnit without triggering real WebSocket negotiation. Expect yes — bUnit uses a fake JSInterop runtime.
-2. **API integration test database isolation:** Each `WebApplicationFactory` test class will spin up its own Testcontainer (or share a collection fixture). Confirm preferred approach: shared container with per-test transaction rollback, or separate container per class. **Recommended:** shared container + `IDbContextTransaction` rollback per test to reduce container startup overhead.
-3. **Playwright staging URL:** `e2e.yml` needs a deployed staging URL. Confirm whether E2E runs against dev environment (`app-strategicglue-dev`) or a dedicated staging slot.
-4. **Coverage on `SixToFix.Application`:** If the Application layer is thin (just orchestration calling Domain services), 80% may be trivially met. Confirm the Application layer contains enough logic to warrant the gate (e.g., command handlers, validators).
+2. **Coverage on `SixToFix.Application`:** If the Application layer is thin (just orchestration calling Domain services), 80% may be trivially met. Confirm the Application layer contains enough logic to warrant the gate (e.g., command handlers, validators).
