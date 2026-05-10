@@ -91,6 +91,35 @@ public sealed class Publisher : IPublisher
         return new PublishResult(composite, systemsMaturityScore, aiReadinessPct, tier, publishedAt);
     }
 
+    public async Task<PublishedAuditSummary> GetPublishedAuditByRunIdAsync(Guid auditRunId, CancellationToken ct = default)
+    {
+        var auditRun = await _db.AuditRuns
+            .FirstOrDefaultAsync(r => r.Id == auditRunId && r.Status == "published", ct)
+            ?? throw new AuditRunNotFoundException(auditRunId);
+
+        var audit = await _db.Audits.FirstOrDefaultAsync(a => a.Id == auditRun.AuditId, ct);
+        var client = audit is not null
+            ? await _db.Clients.FirstOrDefaultAsync(c => c.Id == audit.ClientId, ct)
+            : null;
+
+        var clientSlug = client?.Slug ?? auditRunId.ToString("N");
+
+        var categoryResults = await _db.CategoryResults
+            .Where(r => r.AuditRunId == auditRunId)
+            .ToListAsync(ct);
+
+        var categoryScores = categoryResults.ToDictionary(r => r.Category, r => (decimal)r.ActivityScore);
+
+        return new PublishedAuditSummary(
+            clientSlug,
+            auditRun.Tier ?? "tier_3",
+            (decimal)(auditRun.CompositeScore ?? 0),
+            auditRun.SystemsMaturityScore ?? 0m,
+            auditRun.AiReadinessScore ?? 0m,
+            auditRun.CompletedAt ?? auditRun.CreatedAt,
+            categoryScores);
+    }
+
     public async Task<PublishedAuditSummary> GetPublishedAuditAsync(string clientSlug, CancellationToken ct = default)
     {
         var auditRun = await GetLatestPublishedRunAsync(clientSlug, ct)
