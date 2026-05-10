@@ -1,0 +1,150 @@
+name: Deploy — Infra + App
+
+on:
+  workflow_run:
+    workflows: ["E2E — Playwright"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  guard:
+    name: Guard — Check E2E Passed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check upstream workflow conclusion
+        if: ${{ github.event.workflow_run.conclusion != 'success' }}
+        run: |
+          echo "::error::Upstream 'E2E — Playwright' workflow did not succeed (conclusion: ${{ github.event.workflow_run.conclusion }}). Aborting deploy."
+          exit 1
+
+  validate-bicep:
+    name: Validate Bicep (what-if)
+    needs: guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Bicep what-if
+        run: |
+          az deployment group what-if \
+            --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters/dev.bicepparam \
+            --parameters adminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
+            --name "whatif-${{ github.run_number }}" \
+            2>&1 | tee whatif-output.txt
+
+      - name: Upload what-if diff
+        uses: actions/upload-artifact@v4
+        with:
+          name: bicep-whatif
+          path: whatif-output.txt
+
+  deploy-infra:
+    name: Deploy Bicep Infrastructure
+    needs: validate-bicep
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep
+        run: |
+          az deployment group create \
+            --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters/dev.bicepparam \
+            --parameters adminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
+            --name "deploy-${{ github.run_number }}"
+
+  deploy-app:
+    name: Deploy Application
+    needs: deploy-infra
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Restore & Publish
+        run: |
+          dotnet restore SixToFix.slnx
+          dotnet publish src/SixToFix.Web/SixToFix.Web.csproj \
+            --configuration Release \
+            --output ./publish
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to App Service (prod)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_APP_SERVICE_NAME_PROD }}
+          package: ./publish
+
+  health-check:
+    name: Health Check (post-deploy)
+    needs: deploy-app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for app and health check
+        run: |
+          HEALTH_URL="https://${{ vars.AZURE_APP_SERVICE_NAME_PROD }}.azurewebsites.net/health"
+          for i in 1 2 3; do
+            echo "Attempt $i: GET $HEALTH_URL"
+            RESPONSE=$(curl -s -w "\n%{http_code}" "$HEALTH_URL" --max-time 30)
+            STATUS=$(echo "$RESPONSE" | tail -1)
+            BODY=$(echo "$RESPONSE" | head -1)
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Health check passed (HTTP $STATUS)"
+              echo "Response: $BODY"
+              exit 0
+            fi
+            echo "⏳ HTTP $STATUS — waiting 30s before retry..."
+            sleep 30
+          done
+          echo "::error::Health check failed after 3 attempts. Investigate deployment."
+          exit 1
+
+  notify:
+    name: Notify
+    needs: health-check
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Post deployment summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Run | #${{ github.run_number }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ needs.health-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Timestamp | $(date -u +%Y-%m-%dT%H:%M:%SZ) |" >> $GITHUB_STEP_SUMMARY
