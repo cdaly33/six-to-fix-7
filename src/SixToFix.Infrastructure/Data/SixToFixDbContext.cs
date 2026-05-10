@@ -30,6 +30,9 @@ public sealed class SixToFixDbContext : IdentityDbContext<ApplicationUser, Ident
     public DbSet<HubSpotSyncQueue> HubSpotSyncQueue => Set<HubSpotSyncQueue>();
     public DbSet<BlobReference> BlobReferences => Set<BlobReference>();
     public DbSet<ReviewerLockout> ReviewerLockouts => Set<ReviewerLockout>();
+    public DbSet<TelemetryEvent> TelemetryEvents => Set<TelemetryEvent>();
+    public DbSet<CalibrationDelta> CalibrationDeltas => Set<CalibrationDelta>();
+    public DbSet<ReviewerAction> ReviewerActions => Set<ReviewerAction>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -53,5 +56,8 @@ public sealed class SixToFixDbContext : IdentityDbContext<ApplicationUser, Ident
         builder.Entity<HubSpotSyncQueue>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
         builder.Entity<BlobReference>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
         builder.Entity<ReviewerLockout>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
+        builder.Entity<TelemetryEvent>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
+        builder.Entity<CalibrationDelta>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
+        builder.Entity<ReviewerAction>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
     }
 }
