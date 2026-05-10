@@ -49,3 +49,66 @@
 - Published state enforcement: service layer guard clause (`if status == Published → throw`). Not a DB constraint (cross-table CHECK not supported in PostgreSQL).
 - Publish preconditions: all 6 `category_results.status = 'approved'`, `audit_runs.status = 'completed'`.
 - No DB triggers anywhere — all consistency maintained by application-layer logic within EF Core transactions.
+
+## Phase 1 — Infrastructure Scaffolding (2026-05-10)
+
+### Completed
+
+**Domain Entities (15 classes) — `src/SixToFix.Domain/Entities/`**
+- Tenant, User, Client, Audit, AuditRun, CategoryConfig, SkillRun, CategoryResult, CategoryResultVersion, Policy, PolicyFlag, CouncilSession, HubSpotSyncQueue, BlobReference, ReviewerLockout
+- All use `class` (not `record`) for EF Core compatibility
+- All tenant-scoped entities have `Guid TenantId`
+- Navigation properties configured for all FK relationships
+
+**Infrastructure Auth**
+- `ApplicationUser` (extends `IdentityUser<Guid>`) — `src/SixToFix.Infrastructure/Auth/ApplicationUser.cs`
+- `JwtTokenService` — generates HMAC-SHA256 JWT tokens with tenant_id + tenant_slug claims
+
+**Infrastructure Data**
+- `SixToFixDbContext` — inherits `IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>`
+- All 14 domain DbSets registered
+- Global query filters with `IsResolved` guard (passthrough for background/admin, filter for HTTP requests)
+- `UseSnakeCaseNamingConvention()` applied
+- `ApplyConfigurationsFromAssembly` loads all 14 entity configurations
+- `SixToFixDbContextFactory` — design-time factory for EF Core migrations (deferred to post-Phase 1)
+
+**Entity Type Configurations (14 files) — `src/SixToFix.Infrastructure/Data/EntityConfigurations/`**
+- All entities: explicit `ToTable()`, `HasKey()`, `HasMaxLength()`, FK relationships, indexes on TenantId and FK columns
+- `CategoryResultVersionConfiguration` — append-only semantics documented
+- `HasDefaultValueSql("now()")` on all `CreatedAt` (and `UpdatedAt` where applicable)
+
+**Application Interfaces**
+- `ITokenService` + `TokenRequest` record — `src/SixToFix.Application/Auth/ITokenService.cs`
+- `IDbConnectionFactory` — pgBouncer-aware connection interface — `src/SixToFix.Application/Data/IDbConnectionFactory.cs`
+
+**Infrastructure Implementations**
+- `NpgsqlConnectionFactory` — appends `No Reset On Close=true` for pgBouncer compatibility
+- `InfrastructureServiceExtensions.AddInfrastructureServices` — registers DbContext, Identity, ITokenService, IDbConnectionFactory
+
+### Decisions Filed
+- `.squad/decisions/inbox/neo-phase1-schema.md` — global query filter pattern, migrations deferral, EFCore.NamingConventions package requirement
+
+### Not Done (by design)
+- Migrations — deferred to post-Phase 1 build
+- .csproj modifications (Morpheus owns)
+- EFCore.NamingConventions package (Morpheus must add to Infrastructure csproj)
+
+## Phase 2 — Business Services (2026-05-10)
+
+### Completed
+- 5 Application service interfaces: IAuditOrchestrator, IReviewerWorkflow, IPublisher, ICalibrationTracker, ITelemetryCollector
+- 9 Application models in SixToFix.Application.Models
+- 14 domain exceptions in SixToFix.Application.Exceptions
+- 3 new domain entities: TelemetryEvent, CalibrationDelta, ReviewerAction
+- Entity configurations and DbContext registrations for all 3
+- 5 Infrastructure service implementations
+
+### Key Implementation Decisions
+- ReviewerWorkflow lockout: serializable transaction + pg_advisory_xact_lock keyed on (categoryId, reviewerId) hash
+- CalibrationDelta: CategoryId stored as string (matches Category column pattern in domain)
+- Publisher: fetches SystemsMaturityScore and AiReadinessPct from SkillRun.ConfidenceScore by skill name
+- AuditOrchestrator: checks Oracle-owned exception types by Name string to avoid coupling to Oracle's assembly
+- TelemetryCollector.GetDailyMetricsAsync: uses IgnoreQueryFilters() for cross-tenant ops metrics
+- HubSpot channel: Channel<HubSpotEvent> singleton registered in BusinessServiceExtensions; Oracle's HubSpotWorker consumes
+- SignalR group key: auditRunId.ToString("N") (no dashes)
+- ISkillRunner, IPolicyEngine, ICouncilRunner: created stubs — Oracle will replace with real implementations

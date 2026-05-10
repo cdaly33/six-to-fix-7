@@ -1,0 +1,173 @@
+/* /Layout/AuthLayout.razor.rz.scp.css */
+/* All layout styles use CSS custom properties from tokens.css */
+
+.auth-shell[b-p6ifhzucgl] {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-primary);
+  padding: var(--space-4);
+}
+/* /Layout/MainLayout.razor.rz.scp.css */
+/* All layout styles use CSS custom properties from tokens.css */
+
+.app-shell[b-rnf9ielfcf] {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+}
+
+.sidebar[b-rnf9ielfcf] {
+  width: var(--sidebar-width);
+  min-height: 100vh;
+  background-color: var(--bg-dark);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.main-content[b-rnf9ielfcf] {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.page-content[b-rnf9ielfcf] {
+  flex: 1;
+  padding: var(--space-8);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  width: 100%;
+}
+
+.auth-shell[b-rnf9ielfcf] {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-primary);
+  padding: var(--space-4);
+}
+/* /Layout/NavSidebar.razor.rz.scp.css */
+/* All values via CSS custom properties from tokens.css */
+
+.nav-menu[b-1ekkuzzw2p] {
+  padding: var(--space-4);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-brand[b-1ekkuzzw2p] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-2);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid rgba(245, 240, 232, 0.15);
+}
+
+.nav-logo[b-1ekkuzzw2p] {
+  font-size: var(--text-2xl);
+  color: var(--accent);
+}
+
+.nav-title[b-1ekkuzzw2p] {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-inverse);
+}
+
+.nav-list[b-1ekkuzzw2p] {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+}
+
+.nav-link[b-1ekkuzzw2p] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  color: rgba(245, 240, 232, 0.7);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: background-color var(--transition-fast),
+              color var(--transition-fast);
+}
+
+.nav-link:hover[b-1ekkuzzw2p] {
+  background-color: rgba(245, 240, 232, 0.1);
+  color: var(--text-inverse);
+  text-decoration: none;
+}
+
+.nav-link.active[b-1ekkuzzw2p] {
+  background-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.nav-icon[b-1ekkuzzw2p] {
+  flex-shrink: 0;
+  width: 1.25rem;
+  text-align: center;
+}
+
+.nav-label[b-1ekkuzzw2p] {
+  white-space: nowrap;
+}
+/* /Layout/TopNav.razor.rz.scp.css */
+/* All values via CSS custom properties from tokens.css */
+
+.top-nav[b-nvckbxalig] {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  background-color: var(--bg-dark);
+  border-bottom: 1px solid rgba(245, 240, 232, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  flex-shrink: 0;
+}
+
+.top-nav-left[b-nvckbxalig] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.top-nav-brand[b-nvckbxalig] {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--accent);
+}
+
+.top-nav-tenant[b-nvckbxalig] {
+  font-size: var(--text-sm);
+  color: rgba(245, 240, 232, 0.6);
+  padding: var(--space-1) var(--space-3);
+  background-color: rgba(245, 240, 232, 0.1);
+  border-radius: var(--radius-full);
+}
+
+.top-nav-right[b-nvckbxalig] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.top-nav-user[b-nvckbxalig] {
+  font-size: var(--text-sm);
+  color: rgba(245, 240, 232, 0.8);
+}

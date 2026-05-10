@@ -1,0 +1,151 @@
+is_global = true
+build_property.TargetFramework = net10.0
+build_property.TargetFrameworkIdentifier = .NETCoreApp
+build_property.TargetFrameworkVersion = v10.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = SixToFix.Web
+build_property.RootNamespace = SixToFix.Web
+build_property.ProjectDir = C:\GitHub\six-to-fix-7\src\SixToFix.Web\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.RazorLangVersion = 9.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = C:\GitHub\six-to-fix-7\src\SixToFix.Web
+build_property._RazorSourceGeneratorDebug = 
+build_property.EffectiveAnalysisLevelStyle = 10.0
+build_property.EnableCodeStyleSeverity = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/App.razor]
+build_metadata.AdditionalFiles.TargetPath = QXBwLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Components/RedirectToLogin.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSZWRpcmVjdFRvTG9naW4ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Components/Shared/AuditStatusChip.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcQXVkaXRTdGF0dXNDaGlwLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Components/Shared/ConfirmDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcQ29uZmlybURpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Components/Shared/DataTable.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcRGF0YVRhYmxlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Components/Shared/ErrorBoundaryWrapper.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcRXJyb3JCb3VuZGFyeVdyYXBwZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Components/Shared/LoadingSpinner.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcTG9hZGluZ1NwaW5uZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Components/Shared/PolicyFlagBadge.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcUG9saWN5RmxhZ0JhZGdlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Components/Shared/ScoreCard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcU2NvcmVDYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Components/Shared/SkillProgressBar.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcU2tpbGxQcm9ncmVzc0Jhci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Components/Shared/StatusDot.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcU3RhdHVzRG90LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Components/Shared/TenantSelector.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcVGVuYW50U2VsZWN0b3IucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Components/Shared/TierBadge.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcVGllckJhZGdlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/AuditDetail.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXVkaXREZXRhaWwucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/AuditList.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXVkaXRMaXN0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/CalibrationDashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2FsaWJyYXRpb25EYXNoYm9hcmQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/CategoryReview.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2F0ZWdvcnlSZXZpZXcucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/ClientManagement.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2xpZW50TWFuYWdlbWVudC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/DocumentManagement.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRG9jdW1lbnRNYW5hZ2VtZW50LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/Login.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTG9naW4ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/ReviewerQueue.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUmV2aWV3ZXJRdWV1ZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/SkillChainRunner.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU2tpbGxDaGFpblJ1bm5lci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/SuperAdminPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU3VwZXJBZG1pblBhbmVsLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/TelemetryDashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGVsZW1ldHJ5RGFzaGJvYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/TenantAdminPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGVuYW50QWRtaW5QYW5lbC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Pages/TenantOnboarding.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGVuYW50T25ib2FyZGluZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Routes.razor]
+build_metadata.AdditionalFiles.TargetPath = Um91dGVzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/_Imports.razor]
+build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Layout/AuthLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XEF1dGhMYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-p6ifhzucgl
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Layout/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XE1haW5MYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-rnf9ielfcf
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Layout/NavSidebar.razor]
+build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XE5hdlNpZGViYXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-1ekkuzzw2p
+
+[C:/GitHub/six-to-fix-7/src/SixToFix.Web/Layout/TopNav.razor]
+build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XFRvcE5hdi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-nvckbxalig
