@@ -1,0 +1,153 @@
+name: "6tofix-scorecard-rubric"
+version: "1.0"
+description: >
+  Score all six marketing areas (0–10 each) based on client profile and retrieved evidence.
+  Produces the foundational Activity Scores and confidence ratings for the entire audit.
+  This is the first and most foundational skill in the chain — all subsequent skills depend on its output.
+model: "gpt-4o"
+output_schema_pointer: "#/output_schema"
+depends_on: []
+
+system_prompt: |
+  You are a senior marketing maturity assessment expert specializing in B2B and SMB marketing audits.
+  Your task is to score a client's marketing activities across six areas using the Six-to-Fix rubric.
+
+  SCORING RUBRIC — apply consistently to each area:
+    0–2: No meaningful activity. Ad hoc or completely absent.
+    3–4: Early-stage or inconsistent activity. Some effort but no system or strategy.
+    5–6: Developing. Consistent effort but limited documentation, repeatability, or measurement.
+    7–8: Established. Documented, repeatable, and measured. Clear strategy in place.
+    9–10: Optimized. Best-in-class, data-driven, continuously improved, owner-independent.
+
+  THE SIX AREAS:
+    - brand: Brand identity, positioning, consistency, and market differentiation.
+    - customer: ICP clarity, CRM maturity, segmentation, and customer intelligence.
+    - offering: Product/service clarity, pricing documentation, and go-to-market articulation.
+    - communications: Content strategy, channel execution, messaging consistency, and cadence.
+    - sales: Sales process documentation, pipeline management, and sales-marketing alignment.
+    - management: Marketing leadership, budget ownership, reporting cadence, and decision rights.
+
+  SCORING RULES:
+    1. Score each area independently based only on the evidence provided.
+    2. For confidence_scores: reflect your certainty that the evidence is sufficient to justify the score.
+       A high score (0.8–1.0) means the evidence is abundant and conclusive.
+       A low score (0.4–0.6) means limited or ambiguous evidence.
+    3. For documented_strategy: classify whether the client has documented their approach for this area.
+       "none" = no documentation found, "partial" = some documentation exists, "full" = comprehensive documentation.
+    4. composite_score MUST equal the sum of all six area_scores. Compute it yourself; do not estimate.
+    5. evidence_used: include only evidence items from the input that directly influenced your score.
+    6. Return ONLY the JSON output matching the output schema. No prose, no markdown.
+
+  IMPORTANT: Integer vs number distinction is enforced by schema validation.
+  area_scores values MUST be integers (not floats). confidence_scores values MUST be numbers (floats).
+
+output_schema:
+  $schema: "http://json-schema.org/draft-07/schema#"
+  title: "ScorecardRubricOutput"
+  type: object
+  required:
+    - area_scores
+    - confidence_scores
+    - evidence_used
+    - composite_score
+    - documented_strategy
+  properties:
+    area_scores:
+      type: object
+      required: [brand, customer, offering, communications, sales, management]
+      additionalProperties: false
+      properties:
+        brand:          {type: integer, minimum: 0, maximum: 10}
+        customer:       {type: integer, minimum: 0, maximum: 10}
+        offering:       {type: integer, minimum: 0, maximum: 10}
+        communications: {type: integer, minimum: 0, maximum: 10}
+        sales:          {type: integer, minimum: 0, maximum: 10}
+        management:     {type: integer, minimum: 0, maximum: 10}
+    confidence_scores:
+      type: object
+      required: [brand, customer, offering, communications, sales, management]
+      additionalProperties: false
+      properties:
+        brand:          {type: number, minimum: 0.0, maximum: 1.0}
+        customer:       {type: number, minimum: 0.0, maximum: 1.0}
+        offering:       {type: number, minimum: 0.0, maximum: 1.0}
+        communications: {type: number, minimum: 0.0, maximum: 1.0}
+        sales:          {type: number, minimum: 0.0, maximum: 1.0}
+        management:     {type: number, minimum: 0.0, maximum: 1.0}
+    evidence_used:
+      type: object
+      required: [brand, customer, offering, communications, sales, management]
+      additionalProperties: false
+      properties:
+        brand:          {type: array, items: {type: string}, minItems: 0}
+        customer:       {type: array, items: {type: string}, minItems: 0}
+        offering:       {type: array, items: {type: string}, minItems: 0}
+        communications: {type: array, items: {type: string}, minItems: 0}
+        sales:          {type: array, items: {type: string}, minItems: 0}
+        management:     {type: array, items: {type: string}, minItems: 0}
+    composite_score:
+      type: integer
+      minimum: 0
+      maximum: 60
+      description: "Sum of all 6 area_scores. Must equal brand + customer + offering + communications + sales + management."
+    documented_strategy:
+      type: object
+      required: [brand, customer, offering, communications, sales, management]
+      additionalProperties: false
+      properties:
+        brand:          {type: string, enum: [none, partial, full]}
+        customer:       {type: string, enum: [none, partial, full]}
+        offering:       {type: string, enum: [none, partial, full]}
+        communications: {type: string, enum: [none, partial, full]}
+        sales:          {type: string, enum: [none, partial, full]}
+        management:     {type: string, enum: [none, partial, full]}
+  additionalProperties: false
+
+input_schema:
+  $schema: "http://json-schema.org/draft-07/schema#"
+  title: "ScorecardRubricInput"
+  type: object
+  required: [company_name, industry, stated_strategy, evidence]
+  properties:
+    company_name:
+      type: string
+      minLength: 1
+      maxLength: 200
+      description: "Client company display name. Source: clients.name"
+    industry:
+      type: string
+      minLength: 1
+      maxLength: 100
+    stated_strategy:
+      type: string
+      minLength: 1
+      maxLength: 2000
+      description: "Client's self-described marketing strategy from audit intake."
+    evidence:
+      type: object
+      required: [brand, customer, offering, communications, sales, management]
+      additionalProperties: false
+      properties:
+        brand:          {type: array, items: {type: string}}
+        customer:       {type: array, items: {type: string}}
+        offering:       {type: array, items: {type: string}}
+        communications: {type: array, items: {type: string}}
+        sales:          {type: array, items: {type: string}}
+        management:     {type: array, items: {type: string}}
+    benchmark_set:
+      type: string
+      description: "Industry benchmark group identifier. Optional."
+  additionalProperties: false
+
+max_tokens: 3000
+temperature: 0.2
+
+notes: |
+  Schema validation failure semantics (per ADR-010):
+  - Missing or out-of-range area_scores → HTTP 502, skill chain aborted
+  - Missing or out-of-range confidence_scores → HTTP 502
+  - composite_score mismatch vs sum is caught by PolicyEngine SCORE_STRATEGY_MISMATCH rule, not schema validation
+  - integer vs number type mismatch → HTTP 502 (Azure OpenAI structured output enforces this)
+  
+  This skill is loaded by SkillRunner (SkillIndex = 0). Output is the input to Skills 2, 3, 4, and 5
+  via accumulated context. The full Skill 1 output is passed forward in the scorecard_output envelope.

@@ -1,0 +1,134 @@
+name: "gap-analysis-template"
+version: "1.0"
+description: >
+  Identify specific gaps in each marketing area, rate severity, and produce prioritized
+  recommendations based on scored areas, systems maturity output, and available benchmark data.
+  Output drives Skill 4 value driver identification and Skill 5 tier derivation.
+model: "gpt-4o"
+output_schema_pointer: "#/output_schema"
+depends_on:
+  - "6tofix-scorecard-rubric"
+  - "systems-maturity-scoring"
+
+system_prompt: |
+  You are a senior B2B marketing strategy consultant performing a gap analysis for a client.
+  Using the client's Six-to-Fix scorecard results, systems maturity assessment, and optional
+  industry benchmark data, identify the most significant gaps between their current state
+  and the next level of marketing maturity.
+
+  AREA DEFINITIONS:
+    - brand: Brand identity, positioning, consistency, differentiation.
+    - customer: ICP clarity, CRM maturity, segmentation, customer intelligence.
+    - offering: Product/service clarity, pricing, go-to-market articulation.
+    - communications: Content strategy, channel execution, messaging, cadence.
+    - sales: Sales process, pipeline management, sales-marketing alignment.
+    - management: Leadership, budget ownership, reporting cadence, decision rights.
+
+  GAP SEVERITY CRITERIA:
+    critical: Score ≤ 4 AND/OR significant lag behind benchmark AND/OR blocks progress in ≥2 other areas.
+              This area needs immediate investment before other improvements compound.
+    moderate: Score 5–6 AND/OR some benchmark lag AND/OR growth is constrained by this area.
+              Important to address but not an emergency blocker.
+    minor:    Score 7+ AND/OR near or above benchmark. Some room for improvement but not urgent.
+
+  ANALYSIS RULES:
+    1. Analyze all six areas. You may produce 1–6 gap items; not every area must have a gap if
+       scores are strong (≥ 8) and above benchmark.
+    2. Sort gaps array by severity: critical first, then moderate, then minor.
+    3. priority_areas: list areas in order from highest to lowest priority for investment.
+       Prioritize areas where improvement creates the most downstream leverage.
+    4. recommendations: 1–5 specific, actionable recommendations per gap. Be concrete (name tools,
+       frameworks, cadences) rather than generic ("improve communications").
+    5. If benchmark_data is provided, reference it explicitly when justifying severity ratings.
+    6. Return ONLY the JSON output matching the output schema. No prose, no markdown.
+
+  SYSTEMS MATURITY CONTEXT: Consider the systems_maturity_score when rating severity.
+  A low systems_maturity_score (< 8) amplifies gaps in repeatability-dependent areas (communications, sales, management).
+
+output_schema:
+  $schema: "http://json-schema.org/draft-07/schema#"
+  title: "GapAnalysisOutput"
+  type: object
+  required:
+    - gaps
+    - priority_areas
+  properties:
+    gaps:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        required: [area, severity, description, recommendations]
+        additionalProperties: false
+        properties:
+          area:
+            type: string
+            enum: [brand, customer, offering, communications, sales, management]
+          severity:
+            type: string
+            enum: [critical, moderate, minor]
+          description:
+            type: string
+            minLength: 10
+            maxLength: 1000
+          recommendations:
+            type: array
+            items:
+              type: string
+              minLength: 5
+              maxLength: 500
+            minItems: 1
+            maxItems: 5
+    priority_areas:
+      type: array
+      items:
+        type: string
+        enum: [brand, customer, offering, communications, sales, management]
+      minItems: 1
+      maxItems: 6
+      uniqueItems: true
+      description: "Ordered list of areas to address first, most critical first."
+  additionalProperties: false
+
+input_schema:
+  $schema: "http://json-schema.org/draft-07/schema#"
+  title: "GapAnalysisInput"
+  type: object
+  required: [scorecard_output, systems_maturity_output]
+  properties:
+    scorecard_output:
+      type: object
+      required: [area_scores, composite_score, evidence_used, documented_strategy]
+      properties:
+        area_scores:          {type: object}
+        composite_score:      {type: integer, minimum: 0, maximum: 60}
+        evidence_used:        {type: object}
+        documented_strategy:  {type: object}
+    systems_maturity_output:
+      type: object
+      required: [systems_maturity_score, maturity_dimensions]
+      properties:
+        systems_maturity_score: {type: integer, minimum: 0, maximum: 20}
+        maturity_dimensions:    {type: object}
+    benchmark_data:
+      type: object
+      description: "Industry benchmark medians per area. Optional."
+      properties:
+        brand:          {type: number, minimum: 0, maximum: 10}
+        customer:       {type: number, minimum: 0, maximum: 10}
+        offering:       {type: number, minimum: 0, maximum: 10}
+        communications: {type: number, minimum: 0, maximum: 10}
+        sales:          {type: number, minimum: 0, maximum: 10}
+        management:     {type: number, minimum: 0, maximum: 10}
+  additionalProperties: false
+
+max_tokens: 3000
+temperature: 0.3
+
+notes: |
+  Skill 3 is SkillIndex = 2. Its full output is forwarded as gap_analysis_output to Skill 4.
+  SkillRunner does not read a specific scalar from Skill 3 output (no top-level composite_score
+  or confidence field) — skill_runs.activity_score and confidence_score will be null for this skill.
+  
+  The PolicyEngine BENCHMARK_OUTLIER rule uses benchmark data from the AuditContext, not from this
+  skill's output. The gap analysis benchmark_data input is separate from the policy evaluation benchmark set.
