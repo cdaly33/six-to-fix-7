@@ -161,6 +161,25 @@ Correlation ID propagates cross-cutting from request entry through all downstrea
 
 ---
 
+### ADR-012: Git Workflow — Dev Branches Only, Merge to Main via PR
+**Status:** Accepted | **Author:** Chris (via Copilot) | **Date:** 2026-05-10
+
+All implementation work must land on named development branches and reach `main` only through pull requests. Direct commits or pushes to `main` are prohibited. Phase branches use the `dev/phase-{N}-{slug}` convention, and contributors are expected to make regular, reviewable commits while work is in progress.
+
+**Key decisions:**
+- No direct commits or pushes to `main`
+- All work happens on dev or feature branches
+- Merge to `main` only through pull requests
+- Phase branch naming convention: `dev/phase-{N}-{slug}`
+- This directive applies to all agents and future phases
+
+**Resolved inbox references:**
+- `.squad/decisions/inbox/copilot-directive-git-workflow.md` — adopted by ADR-012
+- `.squad/decisions/inbox/neo-phase1-schema.md` — Phase 1 data-layer decisions recorded and implemented
+- `.squad/decisions/inbox/tank-phase1-infra.md` — Phase 1 infra, workflow, and test decisions recorded and implemented
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus
