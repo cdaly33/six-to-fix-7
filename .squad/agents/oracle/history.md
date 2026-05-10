@@ -74,3 +74,16 @@
 - 9 architecture ADRs (Morpheus, Neo) — all locked
 
 **Next:** Phase 1 gate is clear. Infrastructure teams can begin implementation from decisions.md.
+
+### 2026-05-10 — Phase 2: AI Services Implementation
+
+**Implementation status:** All Phase 2 AI services implemented on `dev/phase-2-ai-services` branch.
+
+**Key implementation decisions:**
+- `IRealtimeNotifier` abstraction added to Application layer to avoid circular dependency (Infrastructure → Web)
+- `HubSpotEvent` stub created in `Application.Models` — will converge with Neo's definition on merge
+- `Channel<HubSpotEvent>` registered as Singleton in `AiServiceExtensions` (not BusinessServiceExtensions) — coordinate with Neo to avoid double registration
+- Skill definitions are hard-coded stubs in `SkillRunner` — replace with YAML file loading when `docs/skills/` files are available
+- `CouncilSession.TenantId` and `SkillRunId` are resolved from `AuditRun`, `CategoryResult`, and matching `SkillRun` records inside `CouncilRunner`
+- JSON schema validation in SkillRunner relies on Azure OpenAI structured output + JSON parseability check — full JSON Schema validation can be added with `System.Text.Json.Schema` when needed
+- `GetSasUriAsync` requires BlobServiceClient to have shared key credentials — throws `InvalidOperationException` when using DefaultAzureCredential (token-based); alternative: pre-sign via storage account key stored in KV, or use user delegation SAS
