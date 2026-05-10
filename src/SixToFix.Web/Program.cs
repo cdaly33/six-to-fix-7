@@ -88,7 +88,7 @@ app.MapRazorComponents<SixToFix.Web.App>()
     .AddInteractiveServerRenderMode();
 
 // SignalR hub
-app.MapHub<SixToFix.Web.Hubs.AuditRunHub>("/hubs/audit-run");
+app.MapHub<SixToFix.Infrastructure.Hubs.AuditRunHub>("/hubs/audit-run");
 
 app.Run();
 

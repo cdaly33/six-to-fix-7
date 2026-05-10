@@ -1,5 +1,3 @@
-using System.Threading.Channels;
-using SixToFix.Application.Models;
 using SixToFix.Application.Services;
 using SixToFix.Infrastructure.Services;
 
@@ -16,8 +14,6 @@ public static class BusinessServiceExtensions
         services.AddScoped<IPublisher, Publisher>();
         services.AddScoped<ICalibrationTracker, CalibrationTracker>();
         services.AddScoped<ITelemetryCollector, TelemetryCollector>();
-
-        services.AddSingleton(_ => Channel.CreateUnbounded<HubSpotEvent>());
 
         return services;
     }

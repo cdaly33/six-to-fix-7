@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Identity;
 using SixToFix.Application.Auth;
 using SixToFix.Application.Data;
+using SixToFix.Application.Services;
 using SixToFix.Infrastructure.Auth;
 using SixToFix.Infrastructure.Data;
+using SixToFix.Infrastructure.Hubs;
 
 namespace SixToFix.Infrastructure.Extensions;
 
@@ -44,6 +46,13 @@ public static class InfrastructureServiceExtensions
 
         // pgBouncer-aware connection factory
         services.AddScoped<IDbConnectionFactory, NpgsqlConnectionFactory>();
+
+        // SignalR notifier (bridges IRealtimeNotifier → AuditRunHub)
+        services.AddScoped<IRealtimeNotifier, AuditRunHubNotifier>();
+
+        // Business + AI services
+        services.AddBusinessServices(configuration);
+        services.AddAiServices(configuration);
 
         return services;
     }
