@@ -1,0 +1,185 @@
+{
+  "schema_version": "1.0.0",
+
+  "engagement": {
+    "client_name": "Acme HVAC Services",
+    "client_slug": "acme-hvac",
+    "audit_date": "2026-04-27",
+    "audit_version": 1,
+    "next_rescore_date": "2026-10-27",
+    "industry": "HVAC services",
+    "revenue_band": "$3M-$5M",
+    "tier_recommendation": "tier_2",
+    "tier_recommendation_rationale": "Documented Strategy Coverage of 1/6 maps directly to the Tier 2 use case: producing documented strategy across all six areas in 30 days. Activity scores (24/60) suggest the work is happening but isn't a system. Tier 3 is the right destination once strategy is documented; Tier 2 is the bridge."
+  },
+
+  "scorecard": {
+    "total_marketing_maturity": 24,
+    "documented_strategy_coverage": 1,
+    "areas": {
+      "brand": {
+        "activity_score": 5,
+        "documented_strategy": "partial",
+        "documented_strategy_elements": [
+          { "name": "Positioning statement", "status": "stale", "evidence": "One-pager from 2022 found in shared drive; not referenced in current materials." },
+          { "name": "Target audience definition", "status": "stale", "evidence": "Mentioned in old website draft; current site uses different phrasing." },
+          { "name": "Brand voice and tone guide", "status": "missing", "evidence": "No documentation found; voice varies materially across email, social, and website." },
+          { "name": "Differentiation statement", "status": "missing", "evidence": "Owner articulates clearly in interviews but it isn't written down anywhere." }
+        ],
+        "top_gap": "No documented voice or differentiation statement",
+        "gap_narrative": "Brand activity is reasonable: a clean website, consistent visual identity, recognizable name in the local market. But the strategic substance behind the brand — voice, differentiation, audience — isn't documented. The owner can articulate the differentiation in conversation but can't hand it off. New marketing hires or vendors would be guessing. The 2022 positioning work has aged out without being refreshed.",
+        "evidence": [
+          "Intake interview: 'Honestly, I just told the web designer what felt right.'",
+          "Materials review: positioning one-pager dated March 2022, no updates since.",
+          "Asset crawl: website copy and email copy show divergent voice."
+        ]
+      },
+      "customer": {
+        "activity_score": 3,
+        "documented_strategy": "none",
+        "documented_strategy_elements": [
+          { "name": "ICP definition (firmographic + behavioral)", "status": "missing", "evidence": "Not documented. Owner describes 'good customers' anecdotally." },
+          { "name": "Primary persona", "status": "missing", "evidence": "No persona document exists." },
+          { "name": "Acquisition strategy", "status": "missing", "evidence": "Lead sources are tracked in HubSpot but no documented strategy for which channels matter and why." },
+          { "name": "Retention strategy", "status": "missing", "evidence": "No documented retention program. Service contracts are reactive, not strategic." },
+          { "name": "Customer journey map", "status": "missing", "evidence": "No journey documentation exists." }
+        ],
+        "top_gap": "ICP undefined; no retention strategy",
+        "gap_narrative": "Customer is the weakest area. Lead generation happens, but it's mostly inbound and undirected — referrals, Google search, occasional Facebook. There's no documented ICP, no persona, no acquisition strategy, no retention strategy. Service contracts auto-renew but aren't actively marketed. The owner has strong intuition about who the best customers are but none of it is captured. This is the area where Tier 2 will have the largest measurable impact.",
+        "evidence": [
+          "HubSpot review: 142 leads in last 12 months, 31 closed-won, no documented stage definitions.",
+          "Intake: 'We don't really do retention marketing — they call us when something breaks.'"
+        ]
+      },
+      "offering": {
+        "activity_score": 7,
+        "documented_strategy": "current",
+        "documented_strategy_elements": [
+          { "name": "Value proposition", "status": "current", "evidence": "Clearly articulated on website, in proposals, and in owner interview. Consistent." },
+          { "name": "USP", "status": "current", "evidence": "Same-day service guarantee documented in service agreements and marketing." },
+          { "name": "Primary and secondary offerings", "status": "current", "evidence": "Service catalog with pricing in operations binder, updated 2025." },
+          { "name": "Pricing strategy and rationale", "status": "current", "evidence": "Pricing model document, updated annually." },
+          { "name": "Competitive positioning", "status": "current", "evidence": "Competitor matrix in last quarterly review, accurate within 12 months." }
+        ],
+        "top_gap": "Strong USP, well-positioned vs. competitors",
+        "gap_narrative": "Offering is the strongest area. The same-day service guarantee is a clear, defensible USP and shows up consistently across every customer touchpoint. Pricing is documented and rational. The owner has done the strategic work here and it shows. The only opportunity is sharper articulation of secondary services in marketing — they exist but aren't prominently positioned.",
+        "evidence": [
+          "Materials review: pricing strategy doc, service catalog, competitor matrix all current.",
+          "Customer interview proxy: 5 of 5 reviewed reviews mention same-day service unprompted."
+        ]
+      },
+      "communications": {
+        "activity_score": 4,
+        "documented_strategy": "none",
+        "documented_strategy_elements": [
+          { "name": "Channel strategy", "status": "missing", "evidence": "Channels are active (email, FB, GMB, website) but no documented rationale for which channels matter." },
+          { "name": "Messaging framework", "status": "missing", "evidence": "No pillars, proof points, or CTAs documented." },
+          { "name": "Content cadence and editorial direction", "status": "missing", "evidence": "Posts happen ad-hoc; no calendar or editorial direction." },
+          { "name": "Campaign architecture", "status": "missing", "evidence": "No campaign planning documents found." }
+        ],
+        "top_gap": "Channels chosen ad-hoc; no editorial direction",
+        "gap_narrative": "Communications activity exists but is undirected. Email goes out monthly, Facebook posts a few times a week, Google Business Profile is updated. None of it follows a documented strategy. There's no messaging framework, no editorial direction, no campaign architecture. The result: communications work consumes time without compounding. Each post starts from zero rather than building on a documented thesis about what the brand says and why.",
+        "evidence": [
+          "Asset crawl: 47 social posts in last 90 days, no thematic through-line.",
+          "Email archive: monthly newsletter, no documented strategy for content selection."
+        ]
+      },
+      "sales": {
+        "activity_score": 3,
+        "documented_strategy": "partial",
+        "documented_strategy_elements": [
+          { "name": "Pipeline stages and qualification", "status": "current", "evidence": "HubSpot pipeline configured with stages; sales team uses it." },
+          { "name": "Sales process", "status": "stale", "evidence": "Process documented in 2023; not updated since pricing changed in 2025." },
+          { "name": "Objection handling", "status": "missing", "evidence": "No documented objection-handling guidance." },
+          { "name": "Marketing-to-sales handoff", "status": "missing", "evidence": "No documented handoff process. Leads are passed informally." }
+        ],
+        "top_gap": "Pipeline exists; no marketing handoff",
+        "gap_narrative": "Sales infrastructure exists — pipeline is in HubSpot, qualifications are defined. But the sales process documentation hasn't kept up with pricing changes, and there's no documented marketing-to-sales handoff. Marketing-qualified leads sometimes get worked, sometimes don't. The technician owners running sales have strong instincts but no documented playbook. This is also the area most under-leveraged: sales has the most marketing-adjacent levers and the least marketing investment.",
+        "evidence": [
+          "HubSpot review: pipeline in use, 4 stages, qualification fields populated inconsistently.",
+          "Intake: 'I keep meaning to update the sales doc but it's the last thing I get to.'"
+        ]
+      },
+      "management": {
+        "activity_score": 2,
+        "documented_strategy": "none",
+        "documented_strategy_elements": [
+          { "name": "KPI and metric framework", "status": "missing", "evidence": "Financial metrics tracked; marketing metrics not formally tracked." },
+          { "name": "Reporting cadence and dashboard", "status": "missing", "evidence": "No marketing dashboard. Owner reviews HubSpot ad-hoc." },
+          { "name": "Marketing budget", "status": "missing", "evidence": "Marketing spend is in QuickBooks but no documented budget." },
+          { "name": "Vendor and team structure", "status": "missing", "evidence": "Two contractors and one part-time staff; no documented roles or RACI." }
+        ],
+        "top_gap": "KPIs not tracked; no reporting cadence",
+        "gap_narrative": "Management is the lowest score and the area with the highest leverage. Without documented KPIs, no honest assessment of marketing performance is possible. Without a reporting cadence, no learning loop exists. Without a documented budget, marketing spend can't be optimized. The data is mostly there — HubSpot, QuickBooks, GA4 — but nothing is being aggregated or acted on. Building this layer first makes everything else measurable.",
+        "evidence": [
+          "Intake: 'I look at HubSpot when I remember to.'",
+          "QuickBooks review: marketing spend in 5 different categories, not aggregated."
+        ]
+      }
+    }
+  },
+
+  "systems_maturity": {
+    "total": 7,
+    "dimensions": {
+      "documented": { "score": 2, "narrative": "Offering is well-documented; everything else is partial or missing. The asymmetry between Offering documentation and the rest is the clearest signal that strategic discipline exists in pockets but isn't applied to marketing." },
+      "repeatable": { "score": 1, "narrative": "Most marketing work depends on the owner's involvement to happen at all. Email goes out when the owner remembers; campaigns happen when an idea strikes. Almost nothing runs as a repeatable process." },
+      "measurable": { "score": 2, "narrative": "Financial outcomes are measurable; marketing inputs and outputs are mostly not. Lead source data exists in HubSpot but isn't connected to revenue. No campaign-level ROI exists." },
+      "owner_independent": { "score": 2, "narrative": "Two contractors and one part-time staff member can execute marketing tasks, but every strategic decision routes back to the owner. The marketing function would stop if the owner stepped away for two weeks." }
+    }
+  },
+
+  "value_drivers": {
+    "drivers": [
+      { "name": "Recurring revenue", "score": 2, "max": 5, "peer_benchmark": 3, "narrative": "Service contracts exist but aren't actively marketed; recurring revenue is ~22% of total vs. peer median 35%." },
+      { "name": "Customer concentration risk", "score": 4, "max": 5, "peer_benchmark": 3, "narrative": "No customer >5% of revenue. Diverse base is a strength." },
+      { "name": "Documented processes", "score": 1, "max": 5, "peer_benchmark": 2, "narrative": "Operational processes exist; marketing processes do not." },
+      { "name": "Owner independence", "score": 1, "max": 5, "peer_benchmark": 2, "narrative": "Marketing function is fully owner-dependent." },
+      { "name": "Growth trajectory", "score": 3, "max": 5, "peer_benchmark": 3, "narrative": "8% YoY growth, in line with peers; not differentiated." },
+      { "name": "Brand equity", "score": 3, "max": 5, "peer_benchmark": 2, "narrative": "Strong local recognition, 4.7 Google rating across 412 reviews. Above-peer brand equity is the most exit-ready asset." }
+    ]
+  },
+
+  "ai_readiness": {
+    "automation_opportunity_pct": 62,
+    "labor_savings_annual": 215000,
+    "tier3_annual_cost": 58000,
+    "net_annual_benefit": 157000,
+    "capability_matrix": [
+      { "activity": "Content writing (email, social, blog)", "category": "creative", "ai_level": "ai_native", "notes": "Claude with brand voice skill and editorial calendar." },
+      { "activity": "ICP and persona development", "category": "customer", "ai_level": "ai_assisted", "notes": "AI drafts from data; human validates with sales conversations." },
+      { "activity": "Lead enrichment and scoring", "category": "customer", "ai_level": "ai_native", "notes": "Apollo + Clay + Claude scoring." },
+      { "activity": "Strategy development and prioritization", "category": "management", "ai_level": "human_essential", "notes": "AI scaffolds; final calls are human." },
+      { "activity": "Customer interviews and synthesis", "category": "research", "ai_level": "ai_assisted", "notes": "AI synthesizes; human conducts." }
+    ],
+    "implementation_roadmap": [
+      { "phase": 1, "title": "Content automation + reporting layer", "description": "Highest-leverage, lowest-risk AI deployment: editorial calendar, content drafting against brand voice, KPI dashboard automation." },
+      { "phase": 2, "title": "Lead enrichment and lifecycle automation", "description": "Apollo + Clay + HubSpot workflows for scoring and segmentation, n8n orchestration for campaign sequencing." },
+      { "phase": 3, "title": "Predictive and orchestrated campaigns", "description": "Cross-channel campaign orchestration, predictive lead scoring, and ABM-style personalization." }
+    ]
+  },
+
+  "roadmap": {
+    "items": [
+      { "id": "r1", "priority": 1, "title": "Document positioning, audience, voice, and differentiation", "area": "brand", "value_impact": "high", "execution_difficulty": "low", "human_or_ai": "ai_assisted", "activity_or_system": "system", "estimated_days": 5, "status": "not_started" },
+      { "id": "r2", "priority": 2, "title": "Define and document ICP and primary persona", "area": "customer", "value_impact": "high", "execution_difficulty": "medium", "human_or_ai": "ai_assisted", "activity_or_system": "system", "estimated_days": 7, "status": "not_started" },
+      { "id": "r3", "priority": 3, "title": "Build marketing KPI dashboard and reporting cadence", "area": "management", "value_impact": "high", "execution_difficulty": "medium", "human_or_ai": "ai_assisted", "activity_or_system": "system", "estimated_days": 10, "status": "not_started" },
+      { "id": "r4", "priority": 4, "title": "Document channel strategy and messaging framework", "area": "communications", "value_impact": "high", "execution_difficulty": "medium", "human_or_ai": "ai_assisted", "activity_or_system": "system", "estimated_days": 7, "status": "not_started" },
+      { "id": "r5", "priority": 5, "title": "Document marketing-to-sales handoff and update sales process", "area": "sales", "value_impact": "medium", "execution_difficulty": "low", "human_or_ai": "human_only", "activity_or_system": "system", "estimated_days": 4, "status": "not_started" },
+      { "id": "r6", "priority": 6, "title": "Build and launch retention program for service contracts", "area": "customer", "value_impact": "high", "execution_difficulty": "medium", "human_or_ai": "ai_assisted", "activity_or_system": "activity", "estimated_days": 14, "status": "not_started" },
+      { "id": "r7", "priority": 7, "title": "Establish 30-day content calendar and editorial cadence", "area": "communications", "value_impact": "medium", "execution_difficulty": "low", "human_or_ai": "ai_native", "activity_or_system": "system", "estimated_days": 5, "status": "not_started" },
+      { "id": "r8", "priority": 8, "title": "Sharpen secondary offerings positioning in marketing materials", "area": "offering", "value_impact": "low", "execution_difficulty": "low", "human_or_ai": "ai_assisted", "activity_or_system": "activity", "estimated_days": 3, "status": "not_started" }
+    ]
+  },
+
+  "documents": {
+    "scorecard_pdf": "https://portal.strategicglue.com/c/acme-hvac/audit/v1/scorecard.pdf",
+    "gap_analysis_pdf": "https://portal.strategicglue.com/c/acme-hvac/audit/v1/gap-analysis.pdf",
+    "systems_maturity_pdf": "https://portal.strategicglue.com/c/acme-hvac/audit/v1/systems-maturity.pdf",
+    "value_driver_pdf": "https://portal.strategicglue.com/c/acme-hvac/audit/v1/value-drivers.pdf",
+    "ai_readiness_pdf": "https://portal.strategicglue.com/c/acme-hvac/audit/v1/ai-readiness.pdf",
+    "roadmap_pdf": "https://portal.strategicglue.com/c/acme-hvac/audit/v1/roadmap.pdf",
+    "readout_recording": "https://portal.strategicglue.com/c/acme-hvac/audit/v1/readout.mp4",
+    "readout_slides": "https://portal.strategicglue.com/c/acme-hvac/audit/v1/readout.pdf"
+  }
+}

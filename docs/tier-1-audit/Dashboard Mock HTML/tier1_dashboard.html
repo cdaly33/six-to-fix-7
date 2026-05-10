@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tier 1 Audit Dashboard — Acme HVAC</title>
+<style>
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f6f0;
+  --bg-tertiary: #f1efe8;
+  --bg-info: #e6f1fb;
+  --bg-success: #eaf3de;
+  --bg-warning: #faeeda;
+  --bg-danger: #fcebeb;
+  --text-primary: #1a1a18;
+  --text-secondary: #5f5e5a;
+  --text-tertiary: #888780;
+  --text-info: #185fa5;
+  --text-success: #3b6d11;
+  --text-warning: #854f0b;
+  --text-danger: #a32d2d;
+  --border: rgba(0, 0, 0, 0.10);
+  --border-strong: rgba(0, 0, 0, 0.18);
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+.brand {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0 0 4px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.client-name { font-size: 22px; font-weight: 500; margin: 0; }
+.audit-meta { font-size: 13px; color: var(--text-secondary); margin: 4px 0 0; }
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 20px;
+  border-bottom: 0.5px solid var(--border);
+  margin-bottom: 24px;
+}
+.tier-pill {
+  background: var(--bg-info);
+  color: var(--text-info);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.metric-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+.metric-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0 0 4px;
+}
+.metric-value {
+  font-size: 26px;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.1;
+}
+.metric-suffix {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  margin-left: 4px;
+}
+.section-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  margin: 28px 0 12px;
+}
+.area-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.area-card {
+  background: var(--bg-primary);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.05s;
+}
+.area-card:hover {
+  border-color: var(--border-strong);
+}
+.area-card.active {
+  border: 1.5px solid var(--text-info);
+  padding: 14.5px 16.5px;
+}
+.area-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.area-name { font-size: 14px; font-weight: 500; margin: 0; }
+.pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.pill-current { background: var(--bg-success); color: var(--text-success); }
+.pill-partial { background: var(--bg-warning); color: var(--text-warning); }
+.pill-none { background: var(--bg-danger); color: var(--text-danger); }
+.activity-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+.activity-score {
+  font-size: 26px;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.1;
+}
+.activity-score-suffix {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.score-bar {
+  height: 4px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.score-bar-fill {
+  height: 100%;
+  background: var(--text-primary);
+}
+.top-gap {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 12px 0 0;
+  line-height: 1.4;
+}
+
+.drilldown {
+  background: var(--bg-primary);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-top: 16px;
+}
+.drilldown h3 {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+.drilldown-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 20px;
+}
+.drilldown-section-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  margin: 20px 0 10px;
+}
+.element-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 0.5px solid var(--border);
+  font-size: 13px;
+}
+.element-row:last-child { border-bottom: none; }
+.element-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.element-icon.current { color: var(--text-success); }
+.element-icon.stale { color: var(--text-warning); }
+.element-icon.missing { color: var(--text-danger); }
+.element-name { font-weight: 500; }
+.element-evidence { color: var(--text-secondary); font-size: 12px; margin-top: 2px; }
+.gap-narrative {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin: 0;
+}
+.support-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.support-card {
+  background: var(--bg-primary);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+}
+.support-title { font-size: 13px; font-weight: 500; margin: 0 0 12px; }
+.support-row-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.support-row-item:last-child { margin-bottom: 0; }
+.support-row-label { flex: 0 0 130px; color: var(--text-primary); }
+.support-row-bar {
+  height: 4px;
+  flex: 1;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.support-row-bar-fill { height: 100%; background: var(--text-primary); }
+.support-row-bar-fill.benchmark {
+  background: var(--text-secondary);
+  opacity: 0.4;
+}
+.support-row-num {
+  color: var(--text-secondary);
+  min-width: 28px;
+  text-align: right;
+}
+.kv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.kv-row:last-child { margin-bottom: 0; }
+.kv-label { font-size: 12px; color: var(--text-secondary); }
+.kv-value { font-size: 18px; font-weight: 500; }
+.kv-value-suffix { font-size: 11px; color: var(--text-secondary); margin-left: 2px; }
+.kv-row.highlight {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--border);
+}
+.kv-row.highlight .kv-value { color: var(--text-success); }
+
+.roadmap-table {
+  background: var(--bg-primary);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+}
+.roadmap-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 110px 90px 80px;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--border);
+  font-size: 13px;
+  align-items: center;
+}
+.roadmap-row:last-child { border-bottom: none; }
+.roadmap-row.header {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+  border-bottom: 0.5px solid var(--border-strong);
+  padding-bottom: 8px;
+}
+.priority-num {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+.tag.system { background: var(--bg-info); color: var(--text-info); }
+.tag.activity { background: var(--bg-warning); color: var(--text-warning); }
+.tag.high { background: var(--bg-success); color: var(--text-success); }
+.tag.medium { background: var(--bg-warning); color: var(--text-warning); }
+.tag.low { background: var(--bg-secondary); color: var(--text-secondary); }
+.docs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.docs-link {
+  background: var(--bg-secondary);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.docs-link:hover { background: var(--bg-tertiary); }
+.dev-banner {
+  background: #fef9e7;
+  border: 0.5px solid #f0d574;
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #5a4a0a;
+  margin-bottom: 24px;
+}
+.dev-banner code {
+  background: rgba(0,0,0,0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+@media (max-width: 800px) {
+  .metric-row, .area-grid, .support-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .roadmap-row { grid-template-columns: 28px 1fr 80px; }
+  .roadmap-row > :nth-child(4), .roadmap-row > :nth-child(5) { display: none; }
+}
+@media (max-width: 540px) {
+  .metric-row, .area-grid, .support-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<div class="dev-banner">
+  Wireframe build · this dashboard is bound to the embedded <code>auditData</code> JSON literal at the bottom of the file. In production, this becomes a fetch from the backend.
+</div>
+
+<div id="header" class="header"></div>
+<div id="metrics" class="metric-row"></div>
+
+<div class="section-label">6 To Fix scorecard</div>
+<div id="scorecard" class="area-grid"></div>
+
+<div id="drilldown-container"></div>
+
+<div class="section-label">Supporting deliverables</div>
+<div id="support" class="support-row"></div>
+
+<div class="section-label">90-day roadmap</div>
+<div id="roadmap" class="roadmap-table"></div>
+
+<div class="section-label">Audit documents</div>
+<div id="docs" class="docs-row"></div>
+
+</div>
+
+<script>
+
+const AUDIT_DATA = {
+  "schema_version": "1.0.0",
+  "engagement": {
+    "client_name": "Acme HVAC Services",
+    "client_slug": "acme-hvac",
+    "audit_date": "2026-04-27",
+    "audit_version": 1,
+    "next_rescore_date": "2026-10-27",
+    "industry": "HVAC services",
+    "revenue_band": "$3M-$5M",
+    "tier_recommendation": "tier_2",
+    "tier_recommendation_rationale": "Documented Strategy Coverage of 1/6 maps directly to Tier 2: producing documented strategy across all six areas in 30 days."
+  },
+  "scorecard": {
+    "total_marketing_maturity": 24,
+    "documented_strategy_coverage": 1,
+    "areas": {
+      "brand": { "activity_score": 5, "documented_strategy": "partial",
+        "documented_strategy_elements": [
+          { "name": "Positioning statement", "status": "stale", "evidence": "One-pager from 2022 found in shared drive; not referenced in current materials." },
+          { "name": "Target audience definition", "status": "stale", "evidence": "Mentioned in old website draft; current site uses different phrasing." },
+          { "name": "Brand voice and tone guide", "status": "missing", "evidence": "No documentation found; voice varies materially across email, social, and website." },
+          { "name": "Differentiation statement", "status": "missing", "evidence": "Owner articulates clearly in interviews but it isn't written down anywhere." }
+        ],
+        "top_gap": "No documented voice or differentiation statement",
+        "gap_narrative": "Brand activity is reasonable: a clean website, consistent visual identity, recognizable name in the local market. But the strategic substance behind the brand — voice, differentiation, audience — isn't documented. The owner can articulate the differentiation in conversation but can't hand it off. New marketing hires or vendors would be guessing. The 2022 positioning work has aged out without being refreshed."
+      },
+      "customer": { "activity_score": 3, "documented_strategy": "none",
+        "documented_strategy_elements": [
+          { "name": "ICP definition (firmographic + behavioral)", "status": "missing", "evidence": "Not documented. Owner describes 'good customers' anecdotally." },
+          { "name": "Primary persona", "status": "missing", "evidence": "No persona document exists." },
+          { "name": "Acquisition strategy", "status": "missing", "evidence": "Lead sources tracked in HubSpot; no documented strategy for which channels matter." },
+          { "name": "Retention strategy", "status": "missing", "evidence": "No documented retention program. Service contracts are reactive, not strategic." },
+          { "name": "Customer journey map", "status": "missing", "evidence": "No journey documentation exists." }
+        ],
+        "top_gap": "ICP undefined; no retention strategy",
+        "gap_narrative": "Customer is the weakest area. Lead generation happens, but it's mostly inbound and undirected — referrals, Google search, occasional Facebook. There's no documented ICP, no persona, no acquisition strategy, no retention strategy. Service contracts auto-renew but aren't actively marketed. The owner has strong intuition about who the best customers are but none of it is captured."
+      },
+      "offering": { "activity_score": 7, "documented_strategy": "current",
+        "documented_strategy_elements": [
+          { "name": "Value proposition", "status": "current", "evidence": "Clearly articulated on website, in proposals, and in owner interview. Consistent." },
+          { "name": "USP", "status": "current", "evidence": "Same-day service guarantee documented in service agreements and marketing." },
+          { "name": "Primary and secondary offerings", "status": "current", "evidence": "Service catalog with pricing in operations binder, updated 2025." },
+          { "name": "Pricing strategy and rationale", "status": "current", "evidence": "Pricing model document, updated annually." },
+          { "name": "Competitive positioning", "status": "current", "evidence": "Competitor matrix in last quarterly review, accurate within 12 months." }
+        ],
+        "top_gap": "Strong USP, well-positioned vs. competitors",
+        "gap_narrative": "Offering is the strongest area. The same-day service guarantee is a clear, defensible USP and shows up consistently across every customer touchpoint. Pricing is documented and rational. The owner has done the strategic work here and it shows. The only opportunity is sharper articulation of secondary services in marketing — they exist but aren't prominently positioned."
+      },
+      "communications": { "activity_score": 4, "documented_strategy": "none",
+        "documented_strategy_elements": [
+          { "name": "Channel strategy", "status": "missing", "evidence": "Channels active (email, FB, GMB, website) but no documented rationale for which channels matter." },
+          { "name": "Messaging framework", "status": "missing", "evidence": "No pillars, proof points, or CTAs documented." },
+          { "name": "Content cadence and editorial direction", "status": "missing", "evidence": "Posts happen ad-hoc; no calendar or editorial direction." },
+          { "name": "Campaign architecture", "status": "missing", "evidence": "No campaign planning documents found." }
+        ],
+        "top_gap": "Channels chosen ad-hoc; no editorial direction",
+        "gap_narrative": "Communications activity exists but is undirected. Email goes out monthly, Facebook posts a few times a week, Google Business Profile is updated. None of it follows a documented strategy. There's no messaging framework, no editorial direction, no campaign architecture. Each post starts from zero rather than building on a documented thesis about what the brand says and why."
+      },
+      "sales": { "activity_score": 3, "documented_strategy": "partial",
+        "documented_strategy_elements": [
+          { "name": "Pipeline stages and qualification", "status": "current", "evidence": "HubSpot pipeline configured with stages; sales team uses it." },
+          { "name": "Sales process", "status": "stale", "evidence": "Process documented in 2023; not updated since pricing changed in 2025." },
+          { "name": "Objection handling", "status": "missing", "evidence": "No documented objection-handling guidance." },
+          { "name": "Marketing-to-sales handoff", "status": "missing", "evidence": "No documented handoff process. Leads are passed informally." }
+        ],
+        "top_gap": "Pipeline exists; no marketing handoff",
+        "gap_narrative": "Sales infrastructure exists — pipeline is in HubSpot, qualifications are defined. But the sales process documentation hasn't kept up with pricing changes, and there's no documented marketing-to-sales handoff. Marketing-qualified leads sometimes get worked, sometimes don't. The technician owners running sales have strong instincts but no documented playbook."
+      },
+      "management": { "activity_score": 2, "documented_strategy": "none",
+        "documented_strategy_elements": [
+          { "name": "KPI and metric framework", "status": "missing", "evidence": "Financial metrics tracked; marketing metrics not formally tracked." },
+          { "name": "Reporting cadence and dashboard", "status": "missing", "evidence": "No marketing dashboard. Owner reviews HubSpot ad-hoc." },
+          { "name": "Marketing budget", "status": "missing", "evidence": "Marketing spend in QuickBooks but no documented budget." },
+          { "name": "Vendor and team structure", "status": "missing", "evidence": "Two contractors and one part-time staff; no documented roles or RACI." }
+        ],
+        "top_gap": "KPIs not tracked; no reporting cadence",
+        "gap_narrative": "Management is the lowest score and the area with the highest leverage. Without documented KPIs, no honest assessment of marketing performance is possible. Without a reporting cadence, no learning loop exists. Building this layer first makes everything else measurable."
+      }
+    }
+  },
+  "systems_maturity": { "total": 7,
+    "dimensions": {
+      "documented": { "score": 2, "narrative": "Offering is well-documented; everything else is partial or missing." },
+      "repeatable": { "score": 1, "narrative": "Most marketing work depends on the owner's involvement to happen at all." },
+      "measurable": { "score": 2, "narrative": "Financial outcomes are measurable; marketing inputs and outputs are mostly not." },
+      "owner_independent": { "score": 2, "narrative": "Marketing function is fully owner-dependent for strategic decisions." }
+    }
+  },
+  "value_drivers": { "drivers": [
+    { "name": "Recurring revenue", "score": 2, "max": 5, "peer_benchmark": 3 },
+    { "name": "Customer concentration", "score": 4, "max": 5, "peer_benchmark": 3 },
+    { "name": "Documented processes", "score": 1, "max": 5, "peer_benchmark": 2 },
+    { "name": "Owner independence", "score": 1, "max": 5, "peer_benchmark": 2 },
+    { "name": "Growth trajectory", "score": 3, "max": 5, "peer_benchmark": 3 },
+    { "name": "Brand equity", "score": 3, "max": 5, "peer_benchmark": 2 }
+  ]},
+  "ai_readiness": {
+    "automation_opportunity_pct": 62,
+    "labor_savings_annual": 215000,
+    "tier3_annual_cost": 58000,
+    "net_annual_benefit": 157000
+  },
+  "roadmap": { "items": [
+    { "id": "r1", "priority": 1, "title": "Document positioning, audience, voice, and differentiation", "area": "brand", "value_impact": "high", "execution_difficulty": "low", "human_or_ai": "ai_assisted", "activity_or_system": "system", "estimated_days": 5, "status": "not_started" },
+    { "id": "r2", "priority": 2, "title": "Define and document ICP and primary persona", "area": "customer", "value_impact": "high", "execution_difficulty": "medium", "human_or_ai": "ai_assisted", "activity_or_system": "system", "estimated_days": 7, "status": "not_started" },
+    { "id": "r3", "priority": 3, "title": "Build marketing KPI dashboard and reporting cadence", "area": "management", "value_impact": "high", "execution_difficulty": "medium", "human_or_ai": "ai_assisted", "activity_or_system": "system", "estimated_days": 10, "status": "not_started" },
+    { "id": "r4", "priority": 4, "title": "Document channel strategy and messaging framework", "area": "communications", "value_impact": "high", "execution_difficulty": "medium", "human_or_ai": "ai_assisted", "activity_or_system": "system", "estimated_days": 7, "status": "not_started" },
+    { "id": "r5", "priority": 5, "title": "Document marketing-to-sales handoff and update sales process", "area": "sales", "value_impact": "medium", "execution_difficulty": "low", "human_or_ai": "human_only", "activity_or_system": "system", "estimated_days": 4, "status": "not_started" },
+    { "id": "r6", "priority": 6, "title": "Build and launch retention program for service contracts", "area": "customer", "value_impact": "high", "execution_difficulty": "medium", "human_or_ai": "ai_assisted", "activity_or_system": "activity", "estimated_days": 14, "status": "not_started" },
+    { "id": "r7", "priority": 7, "title": "Establish 30-day content calendar and editorial cadence", "area": "communications", "value_impact": "medium", "execution_difficulty": "low", "human_or_ai": "ai_native", "activity_or_system": "system", "estimated_days": 5, "status": "not_started" },
+    { "id": "r8", "priority": 8, "title": "Sharpen secondary offerings positioning in marketing materials", "area": "offering", "value_impact": "low", "execution_difficulty": "low", "human_or_ai": "ai_assisted", "activity_or_system": "activity", "estimated_days": 3, "status": "not_started" }
+  ]},
+  "documents": {
+    "scorecard_pdf": "#scorecard.pdf",
+    "gap_analysis_pdf": "#gap-analysis.pdf",
+    "systems_maturity_pdf": "#systems-maturity.pdf",
+    "value_driver_pdf": "#value-drivers.pdf",
+    "ai_readiness_pdf": "#ai-readiness.pdf",
+    "roadmap_pdf": "#roadmap.pdf",
+    "readout_recording": "#readout.mp4",
+    "readout_slides": "#readout.pdf"
+  }
+};
+
+const TIER_LABELS = {
+  self_execute: "Recommended path: Self-execute",
+  tier_2: "Recommended path: Tier 2",
+  tier_3: "Recommended path: Tier 3"
+};
+
+const STATUS_ICONS = {
+  current: "✓",
+  stale: "~",
+  missing: "✗"
+};
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+}
+
+function fmtMoney(n) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+}
+
+function renderHeader(eng) {
+  return `
+    <div>
+      <p class="brand">Strategic Glue · Tier 1 Audit</p>
+      <p class="client-name">${eng.client_name}</p>
+      <p class="audit-meta">Audit baseline · ${fmtDate(eng.audit_date)} · Re-score ${fmtDate(eng.next_rescore_date)}</p>
+    </div>
+    <span class="tier-pill">${TIER_LABELS[eng.tier_recommendation]}</span>
+  `;
+}
+
+function renderMetrics(data) {
+  const sc = data.scorecard;
+  const sm = data.systems_maturity;
+  const ai = data.ai_readiness;
+  return `
+    <div class="metric-card">
+      <p class="metric-label">Marketing maturity</p>
+      <p class="metric-value">${sc.total_marketing_maturity}<span class="metric-suffix">/60</span></p>
+    </div>
+    <div class="metric-card">
+      <p class="metric-label">Documented strategy</p>
+      <p class="metric-value">${sc.documented_strategy_coverage}<span class="metric-suffix">/6 areas</span></p>
+    </div>
+    <div class="metric-card">
+      <p class="metric-label">Systems maturity</p>
+      <p class="metric-value">${sm.total}<span class="metric-suffix">/20</span></p>
+    </div>
+    <div class="metric-card">
+      <p class="metric-label">AI-readiness</p>
+      <p class="metric-value">${ai.automation_opportunity_pct}<span class="metric-suffix">%</span></p>
+    </div>
+  `;
+}
+
+function renderAreaCard(key, area, isActive) {
+  const pillClass = `pill pill-${area.documented_strategy}`;
+  const pillText = area.documented_strategy.charAt(0).toUpperCase() + area.documented_strategy.slice(1);
+  const fillPct = (area.activity_score / 10) * 100;
+  return `
+    <div class="area-card ${isActive ? 'active' : ''}" data-area="${key}">
+      <div class="area-header">
+        <p class="area-name">${key.charAt(0).toUpperCase() + key.slice(1)}</p>
+        <span class="${pillClass}">${pillText}</span>
+      </div>
+      <p class="activity-label">Activity</p>
+      <p class="activity-score">${area.activity_score}<span class="activity-score-suffix">/10</span></p>
+      <div class="score-bar"><div class="score-bar-fill" style="width: ${fillPct}%"></div></div>
+      <p class="top-gap">${area.top_gap}</p>
+    </div>
+  `;
+}
+
+function renderScorecard(scorecard, activeArea) {
+  return Object.entries(scorecard.areas).map(([key, area]) => renderAreaCard(key, area, key === activeArea)).join("");
+}
+
+function renderDrilldown(key, area) {
+  const elements = area.documented_strategy_elements.map(el => `
+    <div class="element-row">
+      <span class="element-icon ${el.status}">${STATUS_ICONS[el.status]}</span>
+      <div style="flex: 1;">
+        <span class="element-name">${el.name}</span>
+        <span style="color: var(--text-tertiary); margin-left: 8px;">${el.status}</span>
+        <p class="element-evidence">${el.evidence}</p>
+      </div>
+    </div>
+  `).join("");
+  return `
+    <div class="drilldown">
+      <h3>${key.charAt(0).toUpperCase() + key.slice(1)} · drill-down</h3>
+      <p class="drilldown-meta">Activity ${area.activity_score}/10 · Documented strategy: ${area.documented_strategy}</p>
+      <p class="drilldown-section-label">Documented strategy elements</p>
+      ${elements}
+      <p class="drilldown-section-label">Gap narrative</p>
+      <p class="gap-narrative">${area.gap_narrative}</p>
+    </div>
+  `;
+}
+
+function renderSupport(data) {
+  const driverRows = data.value_drivers.drivers.map(d => `
+    <div class="support-row-item">
+      <span class="support-row-label">${d.name}</span>
+      <div class="support-row-bar"><div class="support-row-bar-fill" style="width: ${(d.score / d.max) * 100}%"></div></div>
+      <span class="support-row-num">${d.score}/${d.max}</span>
+    </div>
+  `).join("");
+
+  const sm = data.systems_maturity;
+  const dimensions = [
+    ["Documented", sm.dimensions.documented.score],
+    ["Repeatable", sm.dimensions.repeatable.score],
+    ["Measurable", sm.dimensions.measurable.score],
+    ["Owner-independent", sm.dimensions.owner_independent.score]
+  ];
+  const dimRows = dimensions.map(([label, score]) => `
+    <div class="support-row-item">
+      <span class="support-row-label">${label}</span>
+      <div class="support-row-bar"><div class="support-row-bar-fill" style="width: ${(score / 5) * 100}%"></div></div>
+      <span class="support-row-num">${score}/5</span>
+    </div>
+  `).join("");
+
+  const ai = data.ai_readiness;
+  return `
+    <div class="support-card">
+      <p class="support-title">Value drivers</p>
+      ${driverRows}
+    </div>
+    <div class="support-card">
+      <p class="support-title">Systems maturity</p>
+      ${dimRows}
+      <div class="kv-row" style="margin-top: 14px; padding-top: 10px; border-top: 0.5px solid var(--border);">
+        <span class="kv-label">Total</span>
+        <span style="font-size: 14px; font-weight: 500;">${sm.total}/20</span>
+      </div>
+    </div>
+    <div class="support-card">
+      <p class="support-title">AI-readiness</p>
+      <div class="kv-row"><span class="kv-label">AI-executable</span><span class="kv-value">${ai.automation_opportunity_pct}%</span></div>
+      <div class="kv-row"><span class="kv-label">Avoided labor cost</span><span class="kv-value">${fmtMoney(ai.labor_savings_annual)}<span class="kv-value-suffix">/yr</span></span></div>
+      <div class="kv-row"><span class="kv-label">Tier 3 cost</span><span class="kv-value">${fmtMoney(ai.tier3_annual_cost)}<span class="kv-value-suffix">/yr</span></span></div>
+      <div class="kv-row highlight"><span class="kv-label">Net annual benefit</span><span class="kv-value">${fmtMoney(ai.net_annual_benefit)}</span></div>
+    </div>
+  `;
+}
+
+function renderRoadmap(roadmap) {
+  const header = `
+    <div class="roadmap-row header">
+      <span>#</span>
+      <span>Item</span>
+      <span>Area</span>
+      <span>Impact</span>
+      <span>Type</span>
+    </div>
+  `;
+  const rows = roadmap.items.map(item => `
+    <div class="roadmap-row">
+      <span class="priority-num">${item.priority}</span>
+      <span>${item.title}</span>
+      <span class="tag">${item.area}</span>
+      <span class="tag ${item.value_impact}">${item.value_impact}</span>
+      <span class="tag ${item.activity_or_system}">${item.activity_or_system}</span>
+    </div>
+  `).join("");
+  return header + rows;
+}
+
+function renderDocs(documents) {
+  const labels = {
+    scorecard_pdf: "Scorecard",
+    gap_analysis_pdf: "Gap analysis",
+    systems_maturity_pdf: "Systems maturity",
+    value_driver_pdf: "Value drivers",
+    ai_readiness_pdf: "AI-readiness",
+    roadmap_pdf: "Roadmap",
+    readout_slides: "Readout slides",
+    readout_recording: "Readout recording"
+  };
+  return Object.entries(documents).map(([key, url]) => `
+    <a class="docs-link" href="${url}">${labels[key] || key}</a>
+  `).join("");
+}
+
+let activeArea = null;
+
+function render() {
+  document.getElementById("header").innerHTML = renderHeader(AUDIT_DATA.engagement);
+  document.getElementById("metrics").innerHTML = renderMetrics(AUDIT_DATA);
+  document.getElementById("scorecard").innerHTML = renderScorecard(AUDIT_DATA.scorecard, activeArea);
+  document.getElementById("drilldown-container").innerHTML = activeArea
+    ? renderDrilldown(activeArea, AUDIT_DATA.scorecard.areas[activeArea])
+    : "";
+  document.getElementById("support").innerHTML = renderSupport(AUDIT_DATA);
+  document.getElementById("roadmap").innerHTML = renderRoadmap(AUDIT_DATA.roadmap);
+  document.getElementById("docs").innerHTML = renderDocs(AUDIT_DATA.documents);
+
+  document.querySelectorAll(".area-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const key = card.dataset.area;
+      activeArea = activeArea === key ? null : key;
+      render();
+      if (activeArea) {
+        setTimeout(() => {
+          document.querySelector(".drilldown")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 50);
+      }
+    });
+  });
+}
+
+render();
+</script>
+
+</body>
+</html>

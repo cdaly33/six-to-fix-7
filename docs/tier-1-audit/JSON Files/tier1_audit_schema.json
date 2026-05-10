@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strategicglue.com/schemas/tier1-audit/v1.json",
+  "title": "Tier 1 Audit Output",
+  "description": "Single structured output from a Strategic Glue Tier 1 Audit. Drives both the PDF deliverable bundle and the client portal dashboard. Produced by the Skills Library; consumed by the dashboard and the PDF generator.",
+  "type": "object",
+  "required": ["schema_version", "engagement", "scorecard", "systems_maturity", "value_drivers", "ai_readiness", "roadmap", "documents"],
+  "properties": {
+
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Lock to the schema version this audit was scored against. Bump on breaking changes."
+    },
+
+    "engagement": {
+      "type": "object",
+      "description": "Audit metadata. Drives the dashboard headline strip.",
+      "required": ["client_name", "client_slug", "audit_date", "audit_version", "industry", "revenue_band", "tier_recommendation"],
+      "properties": {
+        "client_name": { "type": "string" },
+        "client_slug": { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "URL-safe identifier; routes to portal.strategicglue.com/c/{slug}" },
+        "audit_date": { "type": "string", "format": "date" },
+        "audit_version": { "type": "integer", "minimum": 1, "description": "Increments on each re-score; v1 is the baseline." },
+        "next_rescore_date": { "type": "string", "format": "date" },
+        "industry": { "type": "string" },
+        "revenue_band": { "type": "string", "enum": ["<$1M", "$1M-$3M", "$3M-$5M", "$5M-$10M", "$10M-$15M", ">$15M"] },
+        "tier_recommendation": { "type": "string", "enum": ["self_execute", "tier_2", "tier_3"] },
+        "tier_recommendation_rationale": { "type": "string", "description": "One paragraph explaining why this tier was recommended. Surfaced in dashboard tooltip and on readout slide." }
+      }
+    },
+
+    "scorecard": {
+      "type": "object",
+      "description": "The 6 To Fix Scorecard: dual-criterion scoring across the six strategic areas.",
+      "required": ["total_marketing_maturity", "documented_strategy_coverage", "areas"],
+      "properties": {
+        "total_marketing_maturity": { "type": "integer", "minimum": 0, "maximum": 60, "description": "Sum of the six activity scores." },
+        "documented_strategy_coverage": { "type": "integer", "minimum": 0, "maximum": 6, "description": "Count of areas where documented_strategy == 'current'." },
+        "areas": {
+          "type": "object",
+          "required": ["brand", "customer", "offering", "communications", "sales", "management"],
+          "additionalProperties": false,
+          "patternProperties": {
+            "^(brand|customer|offering|communications|sales|management)$": { "$ref": "#/$defs/scorecardArea" }
+          }
+        }
+      }
+    },
+
+    "systems_maturity": {
+      "type": "object",
+      "description": "Independent score: how the marketing operation runs as a system, irrespective of activity quality.",
+      "required": ["total", "dimensions"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "dimensions": {
+          "type": "object",
+          "required": ["documented", "repeatable", "measurable", "owner_independent"],
+          "properties": {
+            "documented": { "$ref": "#/$defs/dimensionScore" },
+            "repeatable": { "$ref": "#/$defs/dimensionScore" },
+            "measurable": { "$ref": "#/$defs/dimensionScore" },
+            "owner_independent": { "$ref": "#/$defs/dimensionScore" }
+          }
+        }
+      }
+    },
+
+    "value_drivers": {
+      "type": "object",
+      "description": "The 6 Value Drivers Marketing Owns. Bridges marketing maturity to enterprise value.",
+      "required": ["drivers"],
+      "properties": {
+        "drivers": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "required": ["name", "score", "max", "narrative"],
+            "properties": {
+              "name": { "type": "string" },
+              "score": { "type": "integer", "minimum": 0, "maximum": 5 },
+              "max": { "type": "integer", "const": 5 },
+              "peer_benchmark": { "type": "integer", "minimum": 0, "maximum": 5, "description": "Median peer score for clients in this industry/revenue band." },
+              "narrative": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "ai_readiness": {
+      "type": "object",
+      "description": "AI-Readiness Assessment: the conversion accelerator. Drives the economic case for Tier 3.",
+      "required": ["automation_opportunity_pct", "labor_savings_annual", "tier3_annual_cost", "net_annual_benefit"],
+      "properties": {
+        "automation_opportunity_pct": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Percentage of marketing work that could be AI-executed under Tier 3." },
+        "labor_savings_annual": { "type": "integer", "minimum": 0, "description": "Annual cost in USD to staff equivalent in-house team (loaded)." },
+        "tier3_annual_cost": { "type": "integer", "minimum": 0, "description": "Annual Strategic Glue Tier 3 retainer in USD." },
+        "net_annual_benefit": { "type": "integer", "description": "labor_savings_annual − tier3_annual_cost. Can be negative on small clients." },
+        "capability_matrix": {
+          "type": "array",
+          "description": "Per-activity AI capability classifications.",
+          "items": {
+            "type": "object",
+            "required": ["activity", "category", "ai_level"],
+            "properties": {
+              "activity": { "type": "string" },
+              "category": { "type": "string", "enum": ["brand", "customer", "offering", "communications", "sales", "management", "research", "creative", "ops"] },
+              "ai_level": { "type": "string", "enum": ["ai_native", "ai_assisted", "human_essential"] },
+              "notes": { "type": "string" }
+            }
+          }
+        },
+        "implementation_roadmap": {
+          "type": "array",
+          "description": "Sequencing for which AI capabilities go live in which Tier 3 phase.",
+          "items": {
+            "type": "object",
+            "required": ["phase", "title"],
+            "properties": {
+              "phase": { "type": "integer", "minimum": 1, "maximum": 3 },
+              "title": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "roadmap": {
+      "type": "object",
+      "description": "Prioritized 90-Day Roadmap. The action layer; client-mutable in Phase 2 dashboard (status updates, notes).",
+      "required": ["items"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "required": ["id", "priority", "title", "area", "value_impact", "execution_difficulty", "human_or_ai", "activity_or_system", "status"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^r[0-9]+$" },
+              "priority": { "type": "integer", "minimum": 1 },
+              "title": { "type": "string" },
+              "area": { "type": "string", "enum": ["brand", "customer", "offering", "communications", "sales", "management"] },
+              "value_impact": { "type": "string", "enum": ["high", "medium", "low"] },
+              "execution_difficulty": { "type": "string", "enum": ["high", "medium", "low"] },
+              "human_or_ai": { "type": "string", "enum": ["human_only", "ai_assisted", "ai_native"] },
+              "activity_or_system": { "type": "string", "enum": ["activity", "system"], "description": "Builds activity (do more work) or builds systems (make work repeatable, documented, measurable, owner-independent)." },
+              "estimated_days": { "type": "integer", "minimum": 1 },
+              "status": { "type": "string", "enum": ["not_started", "in_progress", "complete", "deferred"] },
+              "notes": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "documents": {
+      "type": "object",
+      "description": "URLs to the archived PDF deliverables. The dashboard links to these; the PDFs are the snapshot artifact.",
+      "properties": {
+        "scorecard_pdf": { "type": "string", "format": "uri" },
+        "gap_analysis_pdf": { "type": "string", "format": "uri" },
+        "systems_maturity_pdf": { "type": "string", "format": "uri" },
+        "value_driver_pdf": { "type": "string", "format": "uri" },
+        "ai_readiness_pdf": { "type": "string", "format": "uri" },
+        "roadmap_pdf": { "type": "string", "format": "uri" },
+        "readout_recording": { "type": "string", "format": "uri" },
+        "readout_slides": { "type": "string", "format": "uri" }
+      }
+    }
+  },
+
+  "$defs": {
+
+    "scorecardArea": {
+      "type": "object",
+      "description": "One of the six strategic areas. Carries both the activity score and the documented-strategy criterion.",
+      "required": ["activity_score", "documented_strategy", "documented_strategy_elements", "top_gap", "gap_narrative"],
+      "properties": {
+        "activity_score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Quality and maturity of work happening in this area."
+        },
+        "documented_strategy": {
+          "type": "string",
+          "enum": ["none", "partial", "current"],
+          "description": "Whether documented strategy exists for this area. 'Current' = required elements present and updated within 12 months. 'Partial' = some present but missing critical pieces or stale. 'None' = no documented strategy."
+        },
+        "documented_strategy_elements": {
+          "type": "array",
+          "description": "Per-element checklist for this area's required strategy documentation. Surfaced as a checklist in the dashboard drill-down panel.",
+          "items": {
+            "type": "object",
+            "required": ["name", "status"],
+            "properties": {
+              "name": { "type": "string", "description": "e.g. 'Positioning statement', 'ICP definition', 'Channel strategy'" },
+              "status": { "type": "string", "enum": ["current", "stale", "missing"], "description": "current = present and <12mo old; stale = present but >12mo or incomplete; missing = doesn't exist" },
+              "evidence": { "type": "string", "description": "Where this was found (or not found). Surfaces as tooltip in dashboard." }
+            }
+          }
+        },
+        "top_gap": {
+          "type": "string",
+          "description": "One-line summary of the most material gap in this area. Renders on the area card."
+        },
+        "gap_narrative": {
+          "type": "string",
+          "description": "Full paragraph from the Gap Analysis Report. Renders in the drill-down panel."
+        },
+        "evidence": {
+          "type": "array",
+          "description": "Citations from intake transcripts, materials review, asset inventory.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "dimensionScore": {
+      "type": "object",
+      "required": ["score", "narrative"],
+      "properties": {
+        "score": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "narrative": { "type": "string" }
+      }
+    }
+  }
+}
