@@ -6,13 +6,28 @@ How to decide who handles what.
 
 | Work Type | Route To | Examples |
 |-----------|----------|----------|
-| {domain 1} | {Name} | {example tasks} |
-| {domain 2} | {Name} | {example tasks} |
-| {domain 3} | {Name} | {example tasks} |
-| Code review | {Name} | Review PRs, check quality, suggest improvements |
-| Testing | {Name} | Write tests, find edge cases, verify fixes |
-| Scope & priorities | {Name} | What to build next, trade-offs, decisions |
+| Solution architecture, DI setup, project structure | Morpheus | Namespace layout, service lifetimes, interface contracts, `Program.cs` config |
+| Code review, architectural decisions | Morpheus | PR review, cross-cutting concerns, integration surface design |
+| Blazor Server components, Razor pages | Trinity | All `.razor` files, component state, cascading parameters |
+| CSS design system, UI styling | Trinity | Design tokens, layout, all 13 screen implementations |
+| SignalR real-time UI | Trinity | Skill chain runner progress, connecting to `/hubs/audit-run` |
+| Service layer implementation | Neo | AuditOrchestrator, SkillRunner, PolicyEngine, CouncilRunner, ReviewerWorkflow, Publisher, CalibrationTracker, TelemetryCollector |
+| EF Core, database schema, migrations | Neo | Entity models, DbContext, 15-table schema, multi-tenant queries |
+| ASP.NET Core Identity + JWT | Neo | User store, JWT issuance, tenant claims, refresh tokens |
+| REST API endpoints | Neo | Minimal API endpoints for /api/*, /health, /webhooks |
+| Background workers | Neo | HubSpotEvent Channel worker |
+| Azure OpenAI integration, skill execution | Oracle | IAIClient implementation, Polly resilience pipeline, JSON Schema validation |
+| AI Council deliberation | Oracle | 3-persona council (Advocate/Skeptic/Method Judge), CouncilDecision |
+| HubSpot CRM sync, webhook HMAC | Oracle | Inbound webhook validation, outbound company/audit sync |
+| Azure AI Search, document indexing | Oracle | Search client implementation, tenant-scoped queries |
+| Azure Bicep, infrastructure provisioning | Tank | All resources in rg-StrategicGlue-CommandCenter |
+| GitHub Actions CI/CD | Tank | deploy-infra.yml, deploy-app.yml, validate-skills.yml, test.yml |
+| App Service configuration | Tank | ARR affinity, always-on, Key Vault references, managed identity grants |
+| Unit tests, component tests | Tank | xUnit, bUnit, test project setup |
+| Integration tests, E2E tests | Tank | Testcontainers (PostgreSQL), Playwright |
+| Test coverage enforcement | Tank | 80% gate, compiler warnings gate |
 | Session logging | Scribe | Automatic — never needs routing |
+| Work queue monitoring | Ralph | Automatic when activated |
 
 ## Issue Routing
 

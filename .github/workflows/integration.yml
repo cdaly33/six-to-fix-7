@@ -1,0 +1,142 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  restore:
+    name: Restore
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
+
+      - name: Restore
+        run: dotnet restore SixToFix.slnx
+
+  build:
+    name: Build
+    needs: restore
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
+
+      - name: Restore
+        run: dotnet restore SixToFix.slnx
+
+      - name: Build
+        run: dotnet build SixToFix.slnx --no-restore --configuration Release --warnaserror
+
+  integration-tests:
+    name: Integration Tests (PostgreSQL Testcontainers)
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      # Prevent Ryuk reaper issues on CI — Testcontainers will clean up via normal disposal
+      TESTCONTAINERS_RYUK_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
+
+      - name: Restore
+        run: dotnet restore SixToFix.slnx
+
+      - name: Run Infrastructure integration tests
+        run: |
+          dotnet test tests/SixToFix.Infrastructure.Tests \
+            --no-restore \
+            --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            --logger "trx;LogFileName=infrastructure.trx"
+
+      - name: Run API integration tests
+        run: |
+          dotnet test tests/SixToFix.Api.Tests \
+            --no-restore \
+            --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            --logger "trx;LogFileName=api.trx"
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: |
+            TestResults/**/*.trx
+            TestResults/**/coverage.cobertura.xml
+
+  coverage-report:
+    name: Coverage Report (non-blocking)
+    needs: integration-tests
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: integration-test-results
+          path: ./TestResults
+
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+      - name: Generate combined coverage report
+        run: |
+          reportgenerator \
+            -reports:"./TestResults/**/coverage.cobertura.xml" \
+            -targetdir:coverage-report \
+            -reporttypes:"HtmlInline_AzurePipelines;MarkdownSummaryGithub"
+
+      - name: Post coverage summary
+        run: |
+          if [ -f coverage-report/SummaryGithub.md ]; then
+            cat coverage-report/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-html
+          path: coverage-report/
+          retention-days: 14

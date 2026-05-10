@@ -1,0 +1,31 @@
+@* Real-time skill chain progress indicator (5 segments, one per skill). *@
+@* Receives state via parameters — no direct SignalR subscription. *@
+
+<div class="skill-progress-bar" role="progressbar"
+     aria-valuenow="@CompletedCount" aria-valuemax="@TotalCount"
+     aria-label="@CompletedCount of @TotalCount skills completed">
+    <div class="skill-steps" aria-hidden="true">
+        @for (int i = 0; i < TotalCount; i++)
+        {
+            var stepIndex = i;
+            var stepStatus = stepIndex < CompletedCount ? "completed" :
+                             stepIndex == CompletedCount && IsRunning ? "running" :
+                             "pending";
+            <div class="skill-step @stepStatus"></div>
+        }
+    </div>
+    <div class="skill-progress-label">
+        @CompletedCount of @TotalCount skills completed
+    </div>
+</div>
+
+@code {
+    /// <summary>Total number of skills in the chain (5 for this system).</summary>
+    [Parameter, EditorRequired] public int TotalCount { get; set; } = 5;
+
+    /// <summary>Number of skills completed so far.</summary>
+    [Parameter, EditorRequired] public int CompletedCount { get; set; }
+
+    /// <summary>Whether the skill chain is currently executing.</summary>
+    [Parameter] public bool IsRunning { get; set; }
+}

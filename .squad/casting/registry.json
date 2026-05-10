@@ -1,3 +1,39 @@
 {
-  "agents": {}
+  "agents": {
+    "blazor-dev": {
+      "universe": "The Matrix",
+      "status": "active",
+      "created_at": "2026-05-10T14:51:07-05:00",
+      "legacy_named": false,
+      "persistent_name": "Trinity"
+    },
+    "ai-integration-dev": {
+      "universe": "The Matrix",
+      "status": "active",
+      "created_at": "2026-05-10T14:51:07-05:00",
+      "legacy_named": false,
+      "persistent_name": "Oracle"
+    },
+    "lead-architect": {
+      "universe": "The Matrix",
+      "status": "active",
+      "created_at": "2026-05-10T14:51:07-05:00",
+      "legacy_named": false,
+      "persistent_name": "Morpheus"
+    },
+    "backend-dev": {
+      "universe": "The Matrix",
+      "status": "active",
+      "created_at": "2026-05-10T14:51:07-05:00",
+      "legacy_named": false,
+      "persistent_name": "Neo"
+    },
+    "devops-qa": {
+      "universe": "The Matrix",
+      "status": "active",
+      "created_at": "2026-05-10T14:51:07-05:00",
+      "legacy_named": false,
+      "persistent_name": "Tank"
+    }
+  }
 }

@@ -1,0 +1,27 @@
+@* Displays a policy flag with severity styling. *@
+@* Severity: Warning (amber) | Trigger (red). *@
+
+<span class="badge policy-flag-badge @GetBadgeClass()" title="@Detail">
+    @RuleCode
+</span>
+
+@code {
+    /// <summary>
+    /// Policy rule code: LOW_CONFIDENCE | MISSING_EVIDENCE | BENCHMARK_OUTLIER |
+    /// INSUFFICIENT_EVIDENCE | SCORE_STRATEGY_MISMATCH
+    /// </summary>
+    [Parameter, EditorRequired] public string RuleCode { get; set; } = string.Empty;
+
+    /// <summary>Severity (Warning | Trigger).</summary>
+    [Parameter, EditorRequired] public string Severity { get; set; } = "Warning";
+
+    /// <summary>Optional detail message shown as tooltip.</summary>
+    [Parameter] public string? Detail { get; set; }
+
+    private string GetBadgeClass() => Severity switch
+    {
+        "Trigger" => "flag-trigger",
+        "Warning" => "flag-warning",
+        _         => "flag-warning"
+    };
+}

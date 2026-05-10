@@ -1,0 +1,43 @@
+@* Displays a 0-10 activity score for a single marketing category. *@
+
+<div class="score-card card">
+    <div class="card-header">
+        <h3 class="score-card-title">@Category</h3>
+        @if (!string.IsNullOrEmpty(Tier))
+        {
+            <span class="tier-badge @GetTierClass()">@Tier</span>
+        }
+    </div>
+    <div class="card-body">
+        <div class="score-display">
+            <span class="score-value" aria-label="Score: @Score out of 10">@Score</span>
+            <span class="score-out-of">/ 10</span>
+        </div>
+        @if (!string.IsNullOrEmpty(Status))
+        {
+            <div class="score-status text-muted">@Status</div>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>Marketing category name (one of the 6 areas).</summary>
+    [Parameter, EditorRequired] public string Category { get; set; } = string.Empty;
+
+    /// <summary>Activity score 0-10.</summary>
+    [Parameter, EditorRequired] public int Score { get; set; }
+
+    /// <summary>Optional tier label (tier_1 | tier_2 | tier_3).</summary>
+    [Parameter] public string? Tier { get; set; }
+
+    /// <summary>Review status (pending | reviewed | approved | rejected).</summary>
+    [Parameter] public string? Status { get; set; }
+
+    private string GetTierClass() => Tier switch
+    {
+        "tier_1" => "tier-1",
+        "tier_2" => "tier-2",
+        "tier_3" => "tier-3",
+        _ => string.Empty
+    };
+}

@@ -1,0 +1,46 @@
+/* All values via CSS custom properties from tokens.css */
+
+.top-nav {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  background-color: var(--bg-dark);
+  border-bottom: 1px solid rgba(245, 240, 232, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  flex-shrink: 0;
+}
+
+.top-nav-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.top-nav-brand {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--accent);
+}
+
+.top-nav-tenant {
+  font-size: var(--text-sm);
+  color: rgba(245, 240, 232, 0.6);
+  padding: var(--space-1) var(--space-3);
+  background-color: rgba(245, 240, 232, 0.1);
+  border-radius: var(--radius-full);
+}
+
+.top-nav-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.top-nav-user {
+  font-size: var(--text-sm);
+  color: rgba(245, 240, 232, 0.8);
+}

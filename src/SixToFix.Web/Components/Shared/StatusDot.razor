@@ -1,0 +1,15 @@
+@* Status dot indicator. Pulses when status is "running". *@
+
+<span class="status-dot status-@Status" aria-hidden="true"></span>
+@if (ShowLabel)
+{
+    <span class="status-label text-muted">@Status</span>
+}
+
+@code {
+    /// <summary>Status (pending | running | completed | failed).</summary>
+    [Parameter, EditorRequired] public string Status { get; set; } = "pending";
+
+    /// <summary>Whether to show the text label next to the dot.</summary>
+    [Parameter] public bool ShowLabel { get; set; } = true;
+}

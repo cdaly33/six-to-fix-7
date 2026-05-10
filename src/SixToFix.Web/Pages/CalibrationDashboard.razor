@@ -1,0 +1,27 @@
+@page "/calibration"
+@attribute [Authorize(Roles = "TenantAdmin,SuperAdmin")]
+@inject NavigationManager Navigation
+
+<PageTitle>Calibration Dashboard — Six to Fix</PageTitle>
+
+<h1>Calibration Dashboard</h1>
+@* Full implementation — Phase 4 *@
+<p class="text-muted">Under construction.</p>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState;
+        if (!auth.User.Identity?.IsAuthenticated ?? true)
+        {
+            Navigation.NavigateTo("/login", forceLoad: false);
+            return;
+        }
+        if (!auth.User.IsInRole("TenantAdmin") && !auth.User.IsInRole("SuperAdmin"))
+        {
+            Navigation.NavigateTo("/audits", forceLoad: false);
+        }
+    }
+}

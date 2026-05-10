@@ -1,0 +1,32 @@
+@* Tier badge pill. Maps tier_1/tier_2/tier_3 to colored pills. *@
+
+<span class="tier-badge @GetTierClass()">
+    @if (ShowLabel)
+    {
+        @GetTierLabel()
+    }
+</span>
+
+@code {
+    /// <summary>Tier value: "tier_1" | "tier_2" | "tier_3".</summary>
+    [Parameter, EditorRequired] public string Tier { get; set; } = string.Empty;
+
+    /// <summary>Whether to display the text label.</summary>
+    [Parameter] public bool ShowLabel { get; set; } = true;
+
+    private string GetTierClass() => Tier switch
+    {
+        "tier_1" => "tier-1",
+        "tier_2" => "tier-2",
+        "tier_3" => "tier-3",
+        _        => string.Empty
+    };
+
+    private string GetTierLabel() => Tier switch
+    {
+        "tier_1" => "Tier 1",
+        "tier_2" => "Tier 2",
+        "tier_3" => "Tier 3",
+        _        => Tier
+    };
+}

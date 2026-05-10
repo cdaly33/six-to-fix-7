@@ -1,0 +1,28 @@
+@page "/login"
+@layout AuthLayout
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>Sign In — Six to Fix</PageTitle>
+
+<div class="login-container">
+    <div class="card login-card">
+        <div class="card-body">
+            <h1>Sign In</h1>
+            <p class="text-secondary">Access your Six to Fix audit platform.</p>
+            @* Login form — Phase 4 *@
+            <p class="text-muted">Login form coming in Phase 4.</p>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        if (auth.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/audits", forceLoad: false);
+        }
+    }
+}
