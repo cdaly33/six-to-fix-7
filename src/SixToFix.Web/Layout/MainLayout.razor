@@ -4,8 +4,8 @@
     <AuthorizeView>
         <Authorized>
             <div class="app-shell">
-                <aside class="sidebar" role="complementary" aria-label="Navigation">
-                    <NavSidebar />
+                <aside class="sidebar @(_sidebarCollapsed ? "sidebar-collapsed" : "")" role="complementary" aria-label="Navigation">
+                    <NavSidebar OnCollapsedChanged="c => { _sidebarCollapsed = c; StateHasChanged(); }" />
                 </aside>
                 <div class="main-content">
                     <TopNav />
@@ -22,3 +22,7 @@
         </NotAuthorized>
     </AuthorizeView>
 </CascadingAuthenticationState>
+
+@code {
+    private bool _sidebarCollapsed;
+}

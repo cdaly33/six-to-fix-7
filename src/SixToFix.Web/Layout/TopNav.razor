@@ -1,4 +1,4 @@
-@* Top navigation bar. Displays tenant slug, user display name, and sign-out. *@
+@* Top navigation bar. Displays tenant slug, user avatar initials, name, and sign-out. *@
 @* Reads AuthenticationState via CascadingParameter — no service injection. *@
 
 <header class="top-nav" role="banner">
@@ -19,9 +19,25 @@
     <div class="top-nav-right">
         <AuthorizeView>
             <Authorized Context="authState">
-                <span class="top-nav-user">@authState.User.Identity?.Name</span>
+                @{
+                    var userName = authState.User.Identity?.Name ?? string.Empty;
+                    var initials = GetInitials(userName);
+                }
+                <span class="top-nav-avatar" aria-hidden="true" title="@userName">@initials</span>
+                <span class="top-nav-user">@userName</span>
                 <a class="btn btn-ghost btn-sm" href="/logout" aria-label="Sign out">Sign out</a>
             </Authorized>
         </AuthorizeView>
     </div>
 </header>
+
+@code {
+    private static string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{char.ToUpper(parts[0][0])}{char.ToUpper(parts[^1][0])}"
+            : char.ToUpper(parts[0][0]).ToString();
+    }
+}
