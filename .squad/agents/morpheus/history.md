@@ -112,3 +112,47 @@ Fix commits: `06661cf` (cherry-pick), `640cefe` (compatibility fixes)
 - Tests: **79 passed, 0 failed** (49 Infrastructure + 18 Web + 12 API)
 - Merge commit: `5bc21b9`
 
+### 2026-05-10 — Phase 6 Cross-Agent PR Review and Merge Completed
+
+**PRs reviewed and merged: #17 (Neo — ClientService) then #18 (Oracle — YAML Loading)**
+
+#### PR #17 — dev/phase-6-client-service (Neo)
+
+**Issues found and fixed:**
+
+1. **Interface and DTOs in wrong layer** — Neo placed `IClientService` in `Infrastructure/Interfaces/` and DTOs in `Infrastructure/Models/`. Convention is: all service interfaces go in `Application/Services/`, models in `Application/Models/`. Dependency arrow is Infrastructure → Application. Relocated all four files, updated namespaces and usings. Fix commit: `92f4e00`.
+
+2. **Tenant assignment used parameter instead of ITenantContext** — `CreateClientAsync` set `TenantId = tenantId` (the parameter) instead of `_tenant.TenantId`. A buggy or malicious caller could assign a new client to a different tenant. Fixed to use `_tenant.TenantId` (same authoritative source as the EF Core global query filter). Fix commit: `92f4e00`.
+
+**Verified clean:**
+- Soft-delete: `IsActive = false` ✓
+- Service lifetime: Scoped ✓ (injects SixToFixDbContext + ITenantContext, both Scoped)
+- DTOs: no entity types at boundary ✓
+- Structured logging: no string interpolation, no PII ✓
+- Global query filter: correct single enforcement point, no redundant .Where(c => c.TenantId) ✓
+
+**Merged:** `8b58a1b`
+
+#### PR #18 — dev/phase-6-yaml-loading (Oracle)
+
+**Issues found and fixed: None.** Oracle's implementation was architecturally correct.
+
+**Verified clean:**
+- `ISkillLoader` correctly in `Application/Services/` ✓
+- `SkillLoader` Singleton: stateless after construction, no per-request context, safe for concurrent reads ✓
+- Path-walking logic: walks up from ContentRootPath then AppContext.BaseDirectory to find `docs/skills/` ✓
+- Inline fallback intact in `SkillRunner.GetSkillDefinitionAsync`: YAML failure → inline dict → SkillNotFoundException ✓
+- `output_schema` YAML→JSON: `NormalizeYamlValue` recursive normalization → `JsonSerializer.Serialize` → valid JSON ✓
+- YamlDotNet 17.x in both Infrastructure.csproj and Tests.csproj: no NU1605 ✓
+- 5 new `SkillLoader_LoadAsync_ReturnsValidSkillDefinition` parameterized tests all pass ✓
+
+**Merged:** `73bf103`
+
+**Final state on main:**
+- Build: 0 errors, 2 × NU1904 (allowed)
+- Tests: **84 passed, 0 failed** (54 Infrastructure + 18 Web + 12 API)
+- Merge commits: `8b58a1b` (PR #17), `73bf103` (PR #18)
+- Fix commit: `92f4e00` (PR #17 architecture and security fixes)
+
+**Architecture reinforced:** Interface location convention (`Application/Services/` for all service interfaces) is non-negotiable. Dependency direction Infrastructure → Application must be preserved. `CreateClientAsync` pattern: always use `_tenant.TenantId` for new entity tenant assignment, never the method parameter.
+
