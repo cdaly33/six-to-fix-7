@@ -1,0 +1,30 @@
+@* Horizontal score bar (0-10 scale). Uses CSS custom property for dynamic width. *@
+<div class="score-bar-container">
+    <div class="score-bar-header">
+        @if (!string.IsNullOrEmpty(Label))
+        {
+            <span class="score-bar-label">@Label</span>
+        }
+        <span class="score-bar-value @GetScoreClass()">@Score / @Max</span>
+    </div>
+    <div class="score-bar-track" role="progressbar"
+         aria-valuenow="@Score" aria-valuemin="0" aria-valuemax="@Max"
+         aria-label="@Label">
+        <div class="score-bar-fill @GetScoreClass()" style="--bar-width: @(GetPercent().ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public int Score { get; set; }
+    [Parameter] public int Max { get; set; } = 10;
+    [Parameter] public string Label { get; set; } = string.Empty;
+
+    private double GetPercent() => Max > 0 ? Math.Min(100, Score * 100.0 / Max) : 0;
+
+    private string GetScoreClass() => Score switch
+    {
+        <= 3 => "score-low",
+        <= 6 => "score-mid",
+        _    => "score-high"
+    };
+}
