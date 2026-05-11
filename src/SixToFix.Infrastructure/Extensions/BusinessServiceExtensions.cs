@@ -14,6 +14,7 @@ public static class BusinessServiceExtensions
         services.AddScoped<IPublisher, Publisher>();
         services.AddScoped<ICalibrationTracker, CalibrationTracker>();
         services.AddScoped<ITelemetryCollector, TelemetryCollector>();
+        services.AddScoped<IClientService, ClientService>();
 
         return services;
     }
