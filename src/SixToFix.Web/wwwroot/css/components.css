@@ -655,3 +655,6 @@ select.input-field {
 .tenant-selector {
   min-width: 200px;
 }
+
+/* Confirm modal title alias */
+.confirm-modal-title { margin-bottom: var(--space-3); }
