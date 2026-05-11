@@ -14,10 +14,13 @@
 
     private string GetBadgeClass() => Status switch
     {
-        "completed" or "approved" or "published" => "badge-success",
-        "running"   or "pending"                  => "badge-info",
-        "failed"    or "rejected"                 => "badge-error",
-        "escalated" or "warning"                  => "badge-warning",
-        _                                          => "badge-info"
+        "pending" => "badge-pending",
+        "running" => "badge-running",
+        "awaiting_review" => "badge-awaiting-review",
+        "completed" or "approved" => "badge-completed",
+        "published" => "badge-published",
+        "failed" or "rejected" => "badge-failed",
+        "escalated" or "warning" => "badge-warning",
+        _ => "badge-info"
     };
 }

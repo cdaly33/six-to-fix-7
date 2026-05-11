@@ -144,7 +144,8 @@
   box-shadow: 0 0 0 3px var(--color-error-light);
 }
 
-textarea.input-field {
+textarea.input-field,
+textarea.form-control {
   min-height: 80px;
   resize: vertical;
 }
@@ -374,6 +375,36 @@ select.input-field {
   color: var(--color-info);
 }
 
+.badge-pending {
+  background-color: var(--status-pending-bg);
+  color: var(--status-pending-text);
+}
+
+.badge-running {
+  background-color: var(--status-running-bg);
+  color: var(--status-running-text);
+}
+
+.badge-awaiting-review {
+  background-color: var(--status-awaiting-bg);
+  color: var(--status-awaiting-text);
+}
+
+.badge-completed {
+  background-color: var(--status-completed-bg);
+  color: var(--status-completed-text);
+}
+
+.badge-failed {
+  background-color: var(--status-failed-bg);
+  color: var(--status-failed-text);
+}
+
+.badge-published {
+  background-color: var(--status-published-bg);
+  color: var(--status-published-text);
+}
+
 /* ==========================================
    POLICY FLAG BADGES
    ========================================== */
@@ -416,8 +447,16 @@ select.input-field {
 .status-dot.status-failed    { background-color: var(--color-error); }
 .status-dot.status-running   { background-color: var(--accent); }
 
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .status-dot.status-running {
+  .status-dot.status-running,
+  .live-dot {
     animation: pulse-ring 1.5s ease-out infinite;
   }
 }
