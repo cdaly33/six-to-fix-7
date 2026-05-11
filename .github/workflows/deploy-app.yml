@@ -1,0 +1,99 @@
+name: Deploy Application
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Restore
+        run: dotnet restore SixToFix.slnx
+
+      - name: Build and publish
+        run: |
+          dotnet publish src/SixToFix.Web/SixToFix.Web.csproj \
+            -c Release \
+            -o ./publish \
+            --no-self-contained
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-app
+          path: ./publish
+
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: dev
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'dev'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-app
+          path: ./publish
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to App Service (dev)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME_DEV }}
+          package: ./publish
+
+      - name: Deployment summary
+        run: |
+          echo '## 🚀 App Deployment — Dev' >> "$GITHUB_STEP_SUMMARY"
+          echo '**Commit:** ${{ github.sha }}' >> "$GITHUB_STEP_SUMMARY"
+          echo '**Status:** ✅ Deployed' >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-prod:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: prod
+    if: github.event.inputs.environment == 'prod'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-app
+          path: ./publish
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to App Service (prod)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME_PROD }}
+          package: ./publish
