@@ -16,6 +16,7 @@ namespace SixToFix.Infrastructure.Tests.Services;
 /// Integration tests for Publisher.PublishAuditAsync precondition guards.
 /// Each test uses IntegrationTestBase's per-test transaction rollback.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class PublisherPreconditionTests : IntegrationTestBase
 {
     private static readonly string[] AllCategories =

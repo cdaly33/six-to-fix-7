@@ -15,6 +15,7 @@ namespace SixToFix.Infrastructure.Tests.Services;
 /// 24-hour / 3-rejection window rules — fully testable without triggering CheckLockoutAsync's
 /// serializable transaction (which cannot nest inside the test's outer transaction).
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class ReviewerWorkflowLockoutTests : IntegrationTestBase
 {
     private const int LockoutWindowHours = 24;

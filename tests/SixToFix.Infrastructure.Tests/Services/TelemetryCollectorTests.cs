@@ -13,6 +13,7 @@ namespace SixToFix.Infrastructure.Tests.Services;
 /// Integration tests for TelemetryCollector against a real PostgreSQL database.
 /// Each test is isolated via IntegrationTestBase transaction rollback.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class TelemetryCollectorTests : IntegrationTestBase
 {
     private readonly TelemetryCollector _sut;
