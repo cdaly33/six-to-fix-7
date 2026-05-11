@@ -76,8 +76,13 @@ public sealed class Publisher : IPublisher
 
         var clientSlug = client?.Slug ?? auditRunId.ToString("N");
 
+        var auditPublishScores = BuildAuditPublishScores(categoryResults, systemsMaturityScore, (int)aiReadinessPct, publishedAt);
         await _hubSpotChannel.Writer.WriteAsync(
-            new HubSpotEvent(auditRunId, clientSlug, tier, composite, publishedAt),
+            new HubSpotEvent(auditRunId, clientSlug, tier, composite, publishedAt)
+            {
+                HubSpotCompanyId = client?.HubSpotCompanyId,
+                Scores = auditPublishScores
+            },
             ct);
 
         _logger.LogInformation(
@@ -189,7 +194,31 @@ public sealed class Publisher : IPublisher
             .OrderByDescending(s => s.CompletedAt)
             .FirstOrDefaultAsync(ct);
 
-        return skillRun?.ConfidenceScore ?? 0m;
+        // ActivityScore stores the canonical score for each skill:
+        //   systems-maturity-scoring → systems_maturity_score (0–20)
+        //   derive-tier              → ai_readiness (0–100)
+        return (decimal)(skillRun?.ActivityScore ?? 0);
+    }
+
+    private static AuditPublishScores BuildAuditPublishScores(
+        IReadOnlyList<CategoryResult> categoryResults,
+        decimal systemsMaturityScore,
+        int aiReadiness,
+        DateTimeOffset publishedAt)
+    {
+        static int Score(IReadOnlyList<CategoryResult> results, string category)
+            => results.FirstOrDefault(r => r.Category == category)?.ActivityScore ?? 0;
+
+        return new AuditPublishScores(
+            BrandScore: Score(categoryResults, "brand"),
+            CustomerScore: Score(categoryResults, "customer"),
+            OfferingScore: Score(categoryResults, "offering"),
+            CommunicationsScore: Score(categoryResults, "communications"),
+            SalesScore: Score(categoryResults, "sales"),
+            ManagementScore: Score(categoryResults, "management"),
+            SystemsMaturityScore: systemsMaturityScore,
+            AiReadiness: aiReadiness,
+            PublishedAt: publishedAt);
     }
 
     private static decimal ComputeComposite(IReadOnlyList<CategoryResult> results)
