@@ -15,6 +15,22 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-05-10 — Phase 6: YAML Loading for SkillRunner
+
+**ISkillLoader / SkillLoader Design**
+- `ISkillLoader` placed in `Application.Services` (maintains Application layer as the contract surface)
+- `SkillLoader` is **Singleton** — reads YAML from disk on every call, stateless, safe for concurrent access. Scoped `SkillRunner` → Singleton `ISkillLoader` is the safe one-way direction per ADR-001.
+- `SkillLoader` uses `IHostEnvironment.ContentRootPath` + `AppContext.BaseDirectory` walk-up to find `docs/skills/`. Works for dev (content root = project dir), test runs, and Azure App Service deployments where docs/ is co-located.
+- YamlDotNet deserializes to `Dictionary<object, object>` (generic map). `output_schema` is recursively converted to JSON via `NormalizeYamlValue` → `JsonSerializer.Serialize`. YAML booleans (`false`), integers, and strings all survive the round-trip correctly.
+- **Inline fallback preserved**: `SkillRunner.GetSkillDefinitionAsync` catches all exceptions from `ISkillLoader.LoadAsync`, logs a Warning, and falls back to the static `SkillDefinitions` dictionary. This prevents production regression if a YAML file is missing or corrupt.
+- `SkillRunner.GetSkillDefinitionAsync` changed from synchronous to `async Task<SkillDefinition>` to accommodate the async loader interface.
+
+**YamlDotNet version alignment**: Test project had `YamlDotNet 16.*`; Infrastructure added `17.1.0`. Updated test project to `17.*` to prevent NU1605 downgrade error (TreatWarningsAsErrors=true).
+
+**Path resolution**: Morpheus deferral doc recommended `ISkillDefinitionRepository` dual-impl. We implemented `ISkillLoader` instead (simpler, single-impl, inline fallback in SkillRunner). The outcome is equivalent: YAML is authoritative, inline is resilience backstop.
+
+**Skill index**: YAML does not declare skill index. `SkillLoader.LoadAsync` accepts `skillIndex` parameter from the caller. `SkillRunner` provides it from `Array.IndexOf(SkillChain, skillName)` — chain order is the canonical source of truth for skill index.
+
 ### 2026-05-10 — Phase 0: Skill Schemas, Polly Config, AI Council Spec, HubSpot Mapping
 
 **Skill JSON Schema Contracts (docs/architecture/skill-schemas.md)**

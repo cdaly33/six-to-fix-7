@@ -20,9 +20,9 @@ public sealed class SkillRunner : ISkillRunner
         "derive-tier"
     ];
 
-    // Skill definitions: source of truth is docs/skills/{skill-name}/skill.yaml.
-    // These inline definitions mirror those YAML files exactly and must be kept in sync.
-    // Future: replace with YAML file loading (requires YamlDotNet + IHostedService pre-load).
+    // Inline fallback definitions — used only when YAML file loading fails.
+    // Source of truth is docs/skills/{skill-name}/skill.yaml; these must stay in sync.
+    // ISkillLoader attempts YAML loading first; if it throws, SkillRunner falls back here.
     private static readonly IReadOnlyDictionary<string, SkillDefinition> SkillDefinitions =
         new Dictionary<string, SkillDefinition>(StringComparer.Ordinal)
         {
@@ -90,29 +90,45 @@ public sealed class SkillRunner : ISkillRunner
     private readonly IRealtimeNotifier _notifier;
     private readonly ResiliencePipelineProvider<string> _pipelineProvider;
     private readonly ILogger<SkillRunner> _logger;
+    private readonly ISkillLoader _skillLoader;
 
     public SkillRunner(
         IAIClient aiClient,
         SixToFixDbContext dbContext,
         IRealtimeNotifier notifier,
         ResiliencePipelineProvider<string> pipelineProvider,
-        ILogger<SkillRunner> logger)
+        ILogger<SkillRunner> logger,
+        ISkillLoader skillLoader)
     {
         _aiClient = aiClient;
         _dbContext = dbContext;
         _notifier = notifier;
         _pipelineProvider = pipelineProvider;
         _logger = logger;
+        _skillLoader = skillLoader;
     }
 
-    public Task<SkillDefinition> GetSkillDefinitionAsync(string skillName, CancellationToken ct = default)
+    public async Task<SkillDefinition> GetSkillDefinitionAsync(string skillName, CancellationToken ct = default)
     {
-        if (SkillDefinitions.TryGetValue(skillName, out var definition))
-        {
-            return Task.FromResult(definition);
-        }
+        var chainIndex = Array.IndexOf(SkillChain, skillName);
+        if (chainIndex < 0)
+            throw new SkillNotFoundException(skillName);
 
-        throw new SkillNotFoundException(skillName);
+        try
+        {
+            return await _skillLoader.LoadAsync(skillName, chainIndex, ct);
+        }
+        catch (Exception ex)
+        {
+            if (SkillDefinitions.TryGetValue(skillName, out var fallback))
+            {
+                _logger.LogWarning(ex,
+                    "YAML loading failed for skill {SkillName}; falling back to inline definition",
+                    skillName);
+                return fallback;
+            }
+            throw new SkillNotFoundException(skillName);
+        }
     }
 
     public async Task<SkillResult> ExecuteSkillAsync(Guid auditRunId, string skillName, CancellationToken ct = default)

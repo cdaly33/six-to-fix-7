@@ -39,6 +39,9 @@ public static class AiServiceExtensions
                 });
         });
 
+        // Singleton: stateless file reader, safe for concurrent access. Scoped SkillRunner → Singleton ISkillLoader is the safe one-way direction per ADR-001.
+        services.AddSingleton<ISkillLoader, SkillLoader>();
+
         services.AddScoped<ISkillRunner, SkillRunner>();
         services.AddScoped<IPolicyEngine, PolicyEngine>();
         services.AddScoped<ICouncilRunner, CouncilRunner>();
