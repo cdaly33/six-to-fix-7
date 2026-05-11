@@ -1,0 +1,127 @@
+name: "value-driver-rating"
+version: "1.0"
+description: >
+  Rate each value driver based on the current state and potential improvement given the gap
+  analysis findings. Value drivers represent levers that, if improved, produce the most measurable
+  client value. Output is the final enrichment layer before tier derivation.
+model: "gpt-4o"
+output_schema_pointer: "#/output_schema"
+depends_on:
+  - "6tofix-scorecard-rubric"
+  - "systems-maturity-scoring"
+  - "gap-analysis-template"
+
+system_prompt: |
+  You are a B2B marketing ROI specialist and strategic advisor. Based on the client's gap analysis,
+  scorecard scores, and systems maturity, identify and rate the key value drivers in their marketing
+  function — the levers that, if improved, would produce the most significant business impact.
+
+  VALUE DRIVER DEFINITION: A value driver is a specific, actionable marketing capability or practice
+  whose improvement would directly increase the client's business value (revenue, retention, or
+  competitive position). Examples: "Customer Retention Programs", "Brand Clarity & Differentiation",
+  "Pipeline Velocity", "Marketing Accountability & Budget Ownership", "Content Repeatability".
+
+  IDENTIFICATION RULES:
+    1. Identify 3–8 value drivers. More is not better — focus on the highest-leverage opportunities.
+    2. Each driver must relate to at least one of the six marketing areas.
+    3. Name drivers specifically (e.g., "CRM-Driven Customer Retention" not just "CRM").
+    4. linked_area: the primary Six-to-Fix area most closely associated with this driver.
+    5. current_rating (0–10): how well the client currently performs on this driver, based on their scores and evidence.
+    6. potential_rating (0–10): the realistic rating achievable within 12 months given focused effort and typical SMB constraints.
+    7. impact: "high" = unlocks multiple other improvements or directly drives revenue; "medium" = meaningful improvement
+       to one area; "low" = quality-of-life improvement with limited business leverage.
+    8. rationale: 2–4 sentences explaining why this driver matters for THIS client specifically, citing evidence.
+
+  PRIORITIZATION PRINCIPLE: High-impact drivers with the largest gap between current_rating and
+  potential_rating represent the best investment opportunities. Drivers where current_rating is
+  already ≥ 8 should be included only if their impact rating is "high" and they are in a priority area.
+
+  SYSTEMS MATURITY CONTEXT: If systems_maturity_score < 8, weight operational/repeatability drivers
+  more heavily. Low maturity clients benefit more from foundational improvements than advanced tactics.
+
+  Return ONLY the JSON output matching the output schema. No prose, no markdown.
+
+output_schema:
+  $schema: "http://json-schema.org/draft-07/schema#"
+  title: "ValueDriverRatingOutput"
+  type: object
+  required:
+    - value_drivers
+  properties:
+    value_drivers:
+      type: array
+      minItems: 1
+      maxItems: 12
+      items:
+        type: object
+        required: [driver_name, current_rating, potential_rating, impact]
+        additionalProperties: false
+        properties:
+          driver_name:
+            type: string
+            minLength: 2
+            maxLength: 100
+            description: "Human-readable name for the value driver."
+          current_rating:
+            type: integer
+            minimum: 0
+            maximum: 10
+            description: "Current performance rating for this driver (0–10)."
+          potential_rating:
+            type: integer
+            minimum: 0
+            maximum: 10
+            description: "Realistic potential rating achievable within 12 months (0–10)."
+          impact:
+            type: string
+            enum: [high, medium, low]
+            description: "Estimated business impact if this driver is improved."
+          linked_area:
+            type: string
+            enum: [brand, customer, offering, communications, sales, management]
+            description: "Primary marketing area this driver relates to."
+          rationale:
+            type: string
+            minLength: 10
+            maxLength: 500
+  additionalProperties: false
+
+input_schema:
+  $schema: "http://json-schema.org/draft-07/schema#"
+  title: "ValueDriverRatingInput"
+  type: object
+  required: [gap_analysis_output, scorecard_output]
+  properties:
+    gap_analysis_output:
+      type: object
+      required: [gaps, priority_areas]
+      properties:
+        gaps:
+          type: array
+          items: {type: object}
+        priority_areas:
+          type: array
+          items: {type: string}
+    scorecard_output:
+      type: object
+      required: [area_scores, composite_score]
+      properties:
+        area_scores:     {type: object}
+        composite_score: {type: integer}
+    systems_maturity_output:
+      type: object
+      required: [systems_maturity_score]
+      properties:
+        systems_maturity_score: {type: integer, minimum: 0, maximum: 20}
+  additionalProperties: false
+
+max_tokens: 2500
+temperature: 0.3
+
+notes: |
+  Skill 4 is SkillIndex = 3. Its full output (value_drivers array) is forwarded to Skill 5.
+  SkillRunner does not read a specific scalar from Skill 4 output — skill_runs.activity_score
+  and confidence_score will be null for this skill. That is expected.
+  
+  The value_drivers array from this skill is used directly in Skill 5's input as the
+  primary evidence for AI readiness scoring and next-step prioritization.

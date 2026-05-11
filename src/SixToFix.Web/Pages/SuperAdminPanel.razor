@@ -1,12 +1,22 @@
-@page "/admin/super"
+﻿@page "/admin/super"
 @attribute [Authorize(Roles = "SuperAdmin")]
 @inject NavigationManager Navigation
 
 <PageTitle>Super Admin — Six to Fix</PageTitle>
 
 <h1>Super Admin Panel</h1>
-@* Full implementation — Phase 4 *@
-<p class="text-muted">Under construction.</p>
+
+@*
+  TODO (Phase 4): Implement super admin panel.
+  Requires cross-tenant service paths not yet defined, such as:
+    - ITenantAdminService.GetAllTenantsAsync() → IReadOnlyList<Tenant>
+    - ITenantAdminService.ImpersonateTenantAsync(Guid tenantId) (or similar)
+    - ITelemetryCollector.GetGlobalMetricsAsync() for platform-wide telemetry
+  SuperAdmin role is the only role that should access cross-tenant data.
+  Use careful authorization checks — never expose one tenant's data to another.
+*@
+
+<p class="text-muted">Super admin tools coming in Phase 4.</p>
 
 @code {
     [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
@@ -20,8 +30,6 @@
             return;
         }
         if (!auth.User.IsInRole("SuperAdmin"))
-        {
             Navigation.NavigateTo("/audits", forceLoad: false);
-        }
     }
 }

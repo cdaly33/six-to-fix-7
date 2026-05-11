@@ -1,0 +1,168 @@
+name: "derive-tier"
+version: "1.0"
+description: >
+  Synthesize all prior skill outputs into a final tier classification (tier_1/tier_2/tier_3),
+  AI readiness percentage, and executive-grade rationale. This is the terminal skill in the chain.
+  Its output drives the published audit record, HubSpot push, and client-facing report.
+model: "gpt-4o"
+output_schema_pointer: "#/output_schema"
+depends_on:
+  - "6tofix-scorecard-rubric"
+  - "systems-maturity-scoring"
+  - "gap-analysis-template"
+  - "value-driver-rating"
+
+system_prompt: |
+  You are acting as a Chief Marketing Officer synthesizing a complete marketing maturity audit
+  into an executive-grade classification. You have the full output of a four-skill AI assessment
+  chain. Your job is to classify the client into one of three tiers, assess their AI readiness,
+  and produce a compelling narrative that will be shared with the client.
+
+  TIER CLASSIFICATION — ENFORCE STRICTLY:
+    tier_1: composite_score ≥ 45 (high maturity — market leader or advanced practitioner)
+    tier_2: 25 ≤ composite_score < 45 (developing — established but significant gaps remain)
+    tier_3: composite_score < 25 (foundation building — early-stage or informal marketing function)
+
+  TIER RULES (non-negotiable):
+    1. The tier MUST match the composite_score boundaries above. Do not override based on
+       qualitative judgment if the score clearly falls in a tier. The score is authoritative.
+    2. If composite_score is exactly on a boundary (25 or 45), assign the higher tier.
+    3. If systems_maturity_score is very low (< 5) and composite_score is in tier_2 range,
+       you may note this tension in tier_rationale, but the tier is still determined by composite_score.
+
+  AI READINESS SCORING (ai_readiness: 0–100):
+    Estimate this client's readiness for AI augmentation of their marketing operations based on:
+    - Data infrastructure: Does the client have CRM, analytics, and tracking in place? (40% weight)
+    - Process maturity: Are processes documented and repeatable enough for AI to augment? (30% weight)
+    - Measurement culture: Are outcomes measured and reported regularly? (30% weight)
+    High (70–100): Strong data foundation, documented processes, active measurement culture.
+    Medium (40–69): Some infrastructure exists but gaps in data quality or process documentation.
+    Low (0–39): Minimal infrastructure; AI would have little to augment.
+    ai_readiness MUST be an integer (0–100, not a float).
+
+  NEXT STEPS (1–6 items):
+    - Prioritize by: (1) impact on composite_score, (2) feasibility for this client's maturity level.
+    - Be specific and actionable, not generic. Reference the client's actual gaps.
+    - For tier_3 clients: focus on foundational actions. For tier_1: focus on optimization.
+
+  tier_rationale (20–2000 characters):
+    Write 3–5 sentences that explain WHY this tier was assigned. Reference the composite_score,
+    the highest and lowest area scores, systems maturity, and 1–2 key value drivers.
+    Tone: professional, honest, forward-looking. Avoid being discouraging for tier_3 clients.
+
+  Return ONLY the JSON output matching the output schema. No prose, no markdown.
+
+output_schema:
+  $schema: "http://json-schema.org/draft-07/schema#"
+  title: "DeriveTierOutput"
+  type: object
+  required:
+    - tier
+    - ai_readiness
+    - tier_rationale
+    - next_steps
+  properties:
+    tier:
+      type: string
+      enum: [tier_1, tier_2, tier_3]
+      description: "tier_1 = composite ≥ 45, tier_2 = 25–44, tier_3 = < 25."
+    ai_readiness:
+      type: integer
+      minimum: 0
+      maximum: 100
+      description: "AI readiness percentage (integer 0–100)."
+    tier_rationale:
+      type: string
+      minLength: 20
+      maxLength: 2000
+      description: "Narrative explanation for the tier assignment, referencing key evidence."
+    next_steps:
+      type: array
+      items:
+        type: string
+        minLength: 5
+        maxLength: 500
+      minItems: 1
+      maxItems: 6
+      description: "Prioritized recommended next steps for the client."
+    tier_score_ranges:
+      type: object
+      description: "Informational: the composite score ranges that anchor the tier assignment."
+      properties:
+        tier_1_min: {type: integer}
+        tier_2_min: {type: integer}
+        tier_3_min: {type: integer}
+  additionalProperties: false
+
+input_schema:
+  $schema: "http://json-schema.org/draft-07/schema#"
+  title: "DeriveTierInput"
+  type: object
+  required: [composite_score, systems_maturity_score, value_drivers]
+  properties:
+    composite_score:
+      type: integer
+      minimum: 0
+      maximum: 60
+      description: "Sum of all 6 area activity scores. Source: Skill 1 output."
+    systems_maturity_score:
+      type: integer
+      minimum: 0
+      maximum: 20
+      description: "Systems maturity aggregate score. Source: Skill 2 output."
+    value_drivers:
+      type: array
+      items:
+        type: object
+        required: [driver_name, current_rating, potential_rating, impact]
+        properties:
+          driver_name:      {type: string}
+          current_rating:   {type: integer, minimum: 0, maximum: 10}
+          potential_rating: {type: integer, minimum: 0, maximum: 10}
+          impact:           {type: string, enum: [high, medium, low]}
+      minItems: 1
+      description: "Source: Skill 4 output value_drivers array."
+    area_scores:
+      type: object
+      description: "Full area scores from Skill 1 for contextual reference."
+      properties:
+        brand:          {type: integer, minimum: 0, maximum: 10}
+        customer:       {type: integer, minimum: 0, maximum: 10}
+        offering:       {type: integer, minimum: 0, maximum: 10}
+        communications: {type: integer, minimum: 0, maximum: 10}
+        sales:          {type: integer, minimum: 0, maximum: 10}
+        management:     {type: integer, minimum: 0, maximum: 10}
+    maturity_dimensions:
+      type: object
+      description: "Per-dimension scores from Skill 2 for contextual reference."
+  additionalProperties: false
+
+max_tokens: 2000
+temperature: 0.2
+
+tier_logic:
+  description: "Tier boundaries enforced by system prompt instruction and output schema enum."
+  tier_1:
+    label: "Market Leader"
+    composite_min: 45
+    composite_max: 60
+  tier_2:
+    label: "Developing"
+    composite_min: 25
+    composite_max: 44
+  tier_3:
+    label: "Foundation Building"
+    composite_min: 0
+    composite_max: 24
+
+notes: |
+  Skill 5 is SkillIndex = 4 — the terminal skill in the chain.
+  SkillRunner does not read composite_score from this skill's output (the composite_score in
+  DeriveTierOutput is the same value from Skill 1, not a new score). The tier string is
+  written to audit_runs.tier by the Publisher service after the full chain completes.
+  
+  ai_readiness is an INTEGER (0–100), not a float. Schema enforces this.
+  The HubSpot UpdateAuditResultAsync call receives the tier string from this output.
+  
+  Post-chain: Publisher.PublishAuditAsync reads the latest category_result_versions rows
+  and the derive-tier skill output to populate audit_runs.tier, audit_runs.ai_readiness_score.

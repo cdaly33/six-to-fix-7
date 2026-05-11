@@ -66,3 +66,28 @@
 - 9 architecture ADRs (Morpheus, Neo) — all locked
 
 **Team updates:** All team history.md files appended with Phase 0 seal notification. Phase 1 gate: CLEAR.
+
+### 2026-05-10 — Phase 3: Blazor Page Wiring
+
+**Pages implemented (wired to real services):**
+- `Login.razor` — EditForm + DataAnnotationsValidator, IHttpClientFactory POST to `/api/auth/login`, JWT stored via `localStorage.setItem`. NOTE: endpoint not yet implemented by Neo.
+- `Dashboard.razor` (new) — nav hub at `/` and `/dashboard` with role-gated cards for all four roles.
+- `AuditList.razor` — `IAuditOrchestrator.GetAuditRunsForClientAsync(Guid)`. Requires `?clientId=` query param; no tenant-wide run list exists on the service.
+- `AuditDetail.razor` — `IAuditOrchestrator.GetAuditRunAsync`, `IPublisher.PublishAuditAsync`, SignalR via `HubConnectionBuilder` to `/hubs/audit-run`, `JoinAuditRun`/`LeaveAuditRun` hub methods, `IAsyncDisposable`.
+- `CategoryReview.razor` — `IReviewerWorkflow.GetLockoutStatusAsync`, `ApproveAsync`, `RerunAsync`, `EscalateAsync`. `RejectAsync` is missing from the interface (TODO left for Neo).
+- `ReviewerQueue.razor` — GUID nav helper; full queue listing requires a new `GetPendingCategoriesAsync` service method.
+- `PublishedResults.razor` (new) — `IPublisher.GetPublishedAuditAsync(string clientSlug)` and `GetPublishedVersionsAsync`. Route is `/results/{clientSlug}` (string, not Guid).
+
+**8 remaining stubs updated** with detailed Phase 4 TODO comments: CalibrationDashboard, ClientManagement, DocumentManagement, SkillChainRunner, SuperAdminPanel, TelemetryDashboard, TenantAdminPanel, TenantOnboarding.
+
+**_Imports.razor additions:** `System.ComponentModel.DataAnnotations`, `System.Security.Claims`, `Microsoft.AspNetCore.SignalR.Client`, `SixToFix.Application.Services`, `SixToFix.Application.Models`, `SixToFix.Domain.Entities`, `static Microsoft.AspNetCore.Components.Web.RenderMode`.
+
+**Key service constraints discovered:**
+- `IAuditOrchestrator` has no `GetAuditRunsForTenantAsync` — only per-client lists.
+- `IReviewerWorkflow` has no `RejectAsync` — only Approve, Edit, Rerun, Escalate, GetLockoutStatus.
+- `IPublisher.GetPublishedAuditAsync` uses `string clientSlug` not `Guid auditRunId`.
+- `ScoreCard` component is a full display card (required `Category` + `Score` params) — not an inline badge.
+- `@rendermode InteractiveServer` requires `@using static Microsoft.AspNetCore.Components.Web.RenderMode` in `_Imports.razor`.
+- `SixToFix.Domain.Entities` namespace must be explicitly imported in Web project (not transitive via GlobalUsings).
+
+**PR:** https://github.com/cdaly33/six-to-fix-7/pull/12

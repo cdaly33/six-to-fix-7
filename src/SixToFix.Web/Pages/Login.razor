@@ -1,7 +1,9 @@
-@page "/login"
+﻿@page "/login"
 @layout AuthLayout
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthState
+@inject IHttpClientFactory HttpFactory
+@inject IJSRuntime JS
 
 <PageTitle>Sign In — Six to Fix</PageTitle>
 
@@ -10,19 +12,85 @@
         <div class="card-body">
             <h1>Sign In</h1>
             <p class="text-secondary">Access your Six to Fix audit platform.</p>
-            @* Login form — Phase 4 *@
-            <p class="text-muted">Login form coming in Phase 4.</p>
+
+            @if (_error is not null)
+            {
+                <div class="alert alert-error" role="alert">@_error</div>
+            }
+
+            <EditForm Model="_model" OnValidSubmit="HandleLogin" FormName="login">
+                <DataAnnotationsValidator />
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <InputText id="email" @bind-Value="_model.Email" class="form-control" type="email" autocomplete="username" />
+                    <ValidationMessage For="@(() => _model.Email)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <InputText id="password" @bind-Value="_model.Password" class="form-control" type="password" autocomplete="current-password" />
+                    <ValidationMessage For="@(() => _model.Password)" />
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" disabled="@_submitting">
+                    @if (_submitting) { <span>Signing in…</span> } else { <span>Sign In</span> }
+                </button>
+            </EditForm>
+
+            @* TODO (Neo): POST /api/auth/login endpoint not yet implemented.
+               Login will return 404 until Neo adds the endpoint in ApiEndpointExtensions or a controller. *@
         </div>
     </div>
 </div>
 
 @code {
+    private readonly LoginModel _model = new();
+    private string? _error;
+    private bool _submitting;
+
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthState.GetAuthenticationStateAsync();
         if (auth.User.Identity?.IsAuthenticated == true)
+            Navigation.NavigateTo("/dashboard", forceLoad: false);
+    }
+
+    private async Task HandleLogin()
+    {
+        _submitting = true;
+        _error = null;
+        try
         {
-            Navigation.NavigateTo("/audits", forceLoad: false);
+            var http = HttpFactory.CreateClient();
+            var resp = await http.PostAsJsonAsync("/api/auth/login", new { _model.Email, _model.Password });
+            if (!resp.IsSuccessStatusCode)
+            {
+                _error = resp.StatusCode == System.Net.HttpStatusCode.Unauthorized
+                    ? "Invalid email or password."
+                    : $"Login failed ({(int)resp.StatusCode}).";
+                return;
+            }
+            var payload = await resp.Content.ReadFromJsonAsync<LoginResponse>();
+            if (payload?.Token is null) { _error = "No token returned."; return; }
+            await JS.InvokeVoidAsync("localStorage.setItem", "six_to_fix_token", payload.Token);
+            Navigation.NavigateTo("/dashboard", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Unexpected error: {ex.Message}";
+        }
+        finally
+        {
+            _submitting = false;
         }
     }
+
+    private sealed class LoginModel
+    {
+        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+        [Required, MinLength(8)] public string Password { get; set; } = string.Empty;
+    }
+
+    private sealed record LoginResponse(string Token);
 }

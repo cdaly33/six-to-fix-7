@@ -1,12 +1,21 @@
-@page "/audits/{AuditRunId}/run"
+﻿@page "/audits/{AuditRunId}/run"
 @attribute [Authorize(Roles = "TenantAdmin,SuperAdmin")]
 @inject NavigationManager Navigation
 
 <PageTitle>Skill Chain Runner — Six to Fix</PageTitle>
 
 <h1>Skill Chain Runner</h1>
-@* Full implementation — Phase 4 *@
-<p class="text-muted">Under construction. Audit run: @AuditRunId</p>
+
+@*
+  TODO (Phase 4 / Architecture Decision): This page is likely superseded by AuditDetail.razor
+  which shows live SignalR events from the running skill chain.
+  If a separate manual trigger UI is still required:
+    - Wire IAuditOrchestrator.StartAuditRunAsync(AuditRunId) to a "Start" button.
+    - Display real-time skill run progress via the /hubs/audit-run SignalR hub.
+  Discuss with team whether this route (/audits/{id}/run) should redirect to /audits/{id} instead.
+*@
+
+<p class="text-muted">Audit run: @AuditRunId — see <a href="/audits/@AuditRunId">Audit Detail</a> for live progress.</p>
 
 @code {
     [Parameter] public string AuditRunId { get; set; } = string.Empty;
@@ -22,8 +31,6 @@
             return;
         }
         if (!auth.User.IsInRole("TenantAdmin") && !auth.User.IsInRole("SuperAdmin"))
-        {
             Navigation.NavigateTo($"/audits/{AuditRunId}", forceLoad: false);
-        }
     }
 }

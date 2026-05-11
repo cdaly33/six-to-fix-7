@@ -75,6 +75,27 @@
 
 **Next:** Phase 1 gate is clear. Infrastructure teams can begin implementation from decisions.md.
 
+### 2026-05-10 — Phase 3: AI Skill Definitions
+
+**Skill files created:** `docs/skills/{skill-name}/skill.yaml` for all 5 skills. YAML is authoritative source of truth — inline SkillDefinitions in SkillRunner mirror them exactly.
+
+**Phase 2 stub schemas corrected:** All 5 skills now use canonical schemas from `skill-schemas.md`. Critical differences vs stubs:
+- Skill 1 output: nested `area_scores`, `confidence_scores`, `evidence_used`, `documented_strategy`, `composite_score` (not flat fields)
+- Skill 2 output: `systems_maturity_score` (not `overall_systems_score`), nested `maturity_dimensions`, top-level `confidence`
+- Skill 3 output: `gaps[{area, severity, description, recommendations[]}]` + `priority_areas[]` (not `category`, `current_score`, `target_score`)
+- Skill 4 output: `value_drivers[{driver_name, current_rating, potential_rating, impact, linked_area, rationale}]` (not `driver`, `impact_score`, `effort_score`)
+- Skill 5 output: `tier` is string enum `tier_1/tier_2/tier_3` (not integer 1–4), `ai_readiness` integer 0–100
+
+**YAML file loading deferred:** Requires YamlDotNet + IHostedService pre-loader. Inline definitions are functionally equivalent. Future implementor: fail fast on startup if YAML is missing/invalid.
+
+**CouncilRunner personas confirmed correct:** Hard-coded constants match ai-council-spec.md exactly. No file loading needed.
+
+**Azure Search index schema documented:** Three indexes: `six-to-fix-evidence` (vector search for Skill 1 evidence retrieval), `six-to-fix-skill-outputs` (audit trail), `six-to-fix-calibration` (model improvement).
+
+**HubSpot gaps found:** `UpdateAuditResultAsync` sends only 2 of 11 required audit result fields. `ISearchClient.SearchAsync` has no caller-supplied additional filter support (evidence retrieval can't scope to clientId/area). Both documented in oracle-phase3-hubspot.md.
+
+**Policy Engine field path update needed:** LOW_CONFIDENCE now reads `confidence_scores.{area}` not top-level `confidence`. SCORE_STRATEGY_MISMATCH reads `documented_strategy.{area}`. Owner: Neo to update rule implementations.
+
 ### 2026-05-10 — Phase 2: AI Services Implementation
 
 **Implementation status:** All Phase 2 AI services implemented on `dev/phase-2-ai-services` branch.

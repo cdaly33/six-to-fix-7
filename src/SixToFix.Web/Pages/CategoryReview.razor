@@ -1,29 +1,159 @@
-@page "/review/{CategoryId}"
+﻿@page "/review/{CategoryId:guid}"
 @attribute [Authorize(Roles = "Reviewer,TenantAdmin,SuperAdmin")]
-@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@inject IReviewerWorkflow ReviewerWorkflow
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthState
+@inject ILogger<CategoryReview> Logger
 
 <PageTitle>Category Review — Six to Fix</PageTitle>
 
-<h1>Category Review</h1>
-@* Full implementation — Phase 4 *@
-<p class="text-muted">Under construction. Category: @CategoryId</p>
+@if (_loading)
+{
+    <LoadingSpinner Label="Loading category…" />
+}
+else if (_lockout?.IsLockedOut == true)
+{
+    <div class="alert alert-error">
+        <strong>You are locked out of this category.</strong>
+        @if (_lockout.LockoutExpiresAt.HasValue)
+        {
+            <span> Expires @_lockout.LockoutExpiresAt.Value.LocalDateTime.ToString("MMM d, h:mm tt").</span>
+        }
+    </div>
+}
+else if (_error is not null)
+{
+    <div class="alert alert-error">@_error</div>
+}
+else if (_ready)
+{
+    <div class="page-header">
+        <div class="page-header-left">
+            @if (_auditRunId.HasValue)
+            {
+                <a href="/audits/@_auditRunId" class="btn btn-ghost btn-sm">← Audit Detail</a>
+            }
+            <h1 class="page-title">Category Review</h1>
+            <span class="text-secondary">ID: @CategoryId</span>
+        </div>
+    </div>
+
+    @* TODO (Service Layer): Add IAuditOrchestrator.GetCategoryResultAsync(Guid categoryId) or
+       IReviewerWorkflow.GetCategoryResultAsync so we can display category name, score, and status here.
+       Currently those details are only visible on the parent AuditDetail page. *@
+
+    @if (_actionError is not null)
+    {
+        <div class="alert alert-error">@_actionError</div>
+    }
+    @if (_actionSuccess is not null)
+    {
+        <div class="alert alert-success">@_actionSuccess</div>
+    }
+
+    <div class="review-action-block">
+        <h2>Review Actions</h2>
+
+        <button class="btn btn-primary" @onclick="ApproveAsync" disabled="@_busy">Approve</button>
+
+        <button class="btn btn-secondary" @onclick="RerunAsync" disabled="@_busy">Rerun AI Analysis</button>
+
+        <button class="btn btn-ghost" @onclick="EscalateAsync" disabled="@_busy">Escalate to Council</button>
+
+        @* TODO (Neo / Service Layer): IReviewerWorkflow.RejectAsync does not exist yet.
+           Add RejectAsync(Guid auditRunId, Guid categoryId, Guid reviewerId, string reason) to IReviewerWorkflow
+           so this button can be wired up. *@
+        <button class="btn btn-danger" disabled title="Reject not yet available — service method pending">Reject</button>
+    </div>
+
+    @if (_council is not null)
+    {
+        <div class="alert alert-success" style="margin-top:var(--space-4)">
+            <strong>Council decision:</strong> @_council.DecisionType — confidence @_council.OverallConfidence.ToString("P0")
+            @if (!string.IsNullOrEmpty(_council.Rationale)) { <span> — @_council.Rationale</span> }
+        </div>
+    }
+}
 
 @code {
-    [Parameter] public string CategoryId { get; set; } = string.Empty;
+    [Parameter] public Guid CategoryId { get; set; }
+    [SupplyParameterFromQuery] private Guid? AuditRunId { get; set; }
 
-    [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
+    private ReviewerLockoutStatus? _lockout;
+    private CouncilDecisionModel? _council;
+    private Guid? _auditRunId;
+    private Guid _reviewerId;
+    private bool _loading;
+    private bool _busy;
+    private bool _ready;
+    private string? _error;
+    private string? _actionError;
+    private string? _actionSuccess;
 
     protected override async Task OnInitializedAsync()
     {
-        var auth = await AuthState;
-        if (!auth.User.Identity?.IsAuthenticated ?? true)
+        _auditRunId = AuditRunId;
+        _loading = true;
+        try
         {
-            Navigation.NavigateTo("/login", forceLoad: false);
-            return;
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            var userIdStr = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdStr, out _reviewerId)) { _error = "Could not identify current user."; return; }
+
+            if (!_auditRunId.HasValue) { _error = "Missing auditRunId query parameter."; return; }
+
+            _lockout = await ReviewerWorkflow.GetLockoutStatusAsync(_auditRunId.Value, CategoryId, _reviewerId);
+
+            if (!_lockout.IsLockedOut) _ready = true;
         }
-        if (!auth.User.IsInRole("Reviewer") && !auth.User.IsInRole("TenantAdmin") && !auth.User.IsInRole("SuperAdmin"))
+        catch (Exception ex)
         {
-            Navigation.NavigateTo("/audits", forceLoad: false);
+            Logger.LogError(ex, "Failed to load category {CategoryId}", CategoryId);
+            _error = "Failed to load category.";
         }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ApproveAsync()
+    {
+        if (!_auditRunId.HasValue) return;
+        _busy = true; _actionError = null; _actionSuccess = null;
+        try
+        {
+            await ReviewerWorkflow.ApproveAsync(_auditRunId.Value, CategoryId, _reviewerId);
+            _actionSuccess = "Category approved.";
+        }
+        catch (Exception ex) { Logger.LogError(ex, "Approve failed"); _actionError = "Approve failed."; }
+        finally { _busy = false; }
+    }
+
+    private async Task RerunAsync()
+    {
+        if (!_auditRunId.HasValue) return;
+        _busy = true; _actionError = null; _actionSuccess = null;
+        try
+        {
+            await ReviewerWorkflow.RerunAsync(_auditRunId.Value, CategoryId, _reviewerId);
+            _actionSuccess = "Rerun triggered. Watch the audit detail for live events.";
+        }
+        catch (Exception ex) { Logger.LogError(ex, "Rerun failed"); _actionError = "Rerun failed."; }
+        finally { _busy = false; }
+    }
+
+    private async Task EscalateAsync()
+    {
+        if (!_auditRunId.HasValue) return;
+        _busy = true; _actionError = null; _actionSuccess = null;
+        try
+        {
+            _council = await ReviewerWorkflow.EscalateAsync(_auditRunId.Value, CategoryId, _reviewerId);
+            _actionSuccess = "Escalated to council.";
+        }
+        catch (Exception ex) { Logger.LogError(ex, "Escalate failed"); _actionError = "Escalate failed."; }
+        finally { _busy = false; }
     }
 }
