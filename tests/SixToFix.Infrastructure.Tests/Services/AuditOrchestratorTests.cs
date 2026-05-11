@@ -20,6 +20,7 @@ namespace SixToFix.Infrastructure.Tests.Services;
 /// External AI dependencies (ISkillRunner, IPolicyEngine, ICouncilRunner, ITelemetryCollector,
 /// SignalR hub) are fully mocked with NSubstitute.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class AuditOrchestratorTests : IntegrationTestBase
 {
     private readonly AuditOrchestrator _sut;

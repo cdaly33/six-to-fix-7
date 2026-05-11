@@ -15,6 +15,7 @@ namespace SixToFix.Infrastructure.Tests.Services;
 /// Tests RecordDeltaAsync and GetDeltasForAuditRunAsync via EF Core.
 /// Tenant isolation is verified: tenant A cannot see tenant B's deltas.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class CalibrationTrackerTests : IntegrationTestBase
 {
     private readonly CalibrationTracker _sut;
