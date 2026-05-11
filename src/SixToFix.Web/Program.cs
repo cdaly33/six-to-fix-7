@@ -7,7 +7,6 @@ using SixToFix.Infrastructure.Extensions;
 using SixToFix.Infrastructure.Multitenancy;
 using SixToFix.Web.Middleware;
 using SixToFix.Web.Navigation;
-using SixToFix.Web.Realtime;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
