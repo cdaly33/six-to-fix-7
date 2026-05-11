@@ -38,8 +38,6 @@
                 </button>
             </EditForm>
 
-            @* TODO (Neo): POST /api/auth/login endpoint not yet implemented.
-               Login will return 404 until Neo adds the endpoint in ApiEndpointExtensions or a controller. *@
         </div>
     </div>
 </div>
@@ -92,5 +90,5 @@
         [Required, MinLength(8)] public string Password { get; set; } = string.Empty;
     }
 
-    private sealed record LoginResponse(string Token);
+    private sealed record LoginResponse([property: System.Text.Json.Serialization.JsonPropertyName("accessToken")] string Token);
 }

@@ -6,6 +6,7 @@ using SixToFix.Application.Multitenancy;
 using SixToFix.Infrastructure.Extensions;
 using SixToFix.Infrastructure.Multitenancy;
 using SixToFix.Web.Middleware;
+using SixToFix.Web.Realtime;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,6 +56,7 @@ builder.Services.AddRazorComponents()
 
 // SignalR — ARR Affinity required for Blazor Server (see ADR-001)
 builder.Services.AddSignalR();
+builder.Services.AddScoped<IAuditRunHubClientFactory, AuditRunHubClientFactory>();
 
 // Antiforgery
 builder.Services.AddAntiforgery();
