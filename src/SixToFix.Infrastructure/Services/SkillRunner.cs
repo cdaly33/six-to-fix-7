@@ -177,9 +177,17 @@ public sealed class SkillRunner : ISkillRunner
             stopwatch.Stop();
             skillRun.Status = "completed";
             skillRun.CompletedAt = DateTimeOffset.UtcNow;
-            skillRun.ConfidenceScore = ReadDecimal(outputJson.RootElement, "confidence");
+            // Try top-level "confidence" first (systems-maturity-scoring);
+            // fall back to the average of "confidence_scores" sub-object (6tofix-scorecard-rubric).
+            skillRun.ConfidenceScore = ReadDecimal(outputJson.RootElement, "confidence")
+                ?? ReadAverageFromObject(outputJson.RootElement, "confidence_scores");
+            // Try each skill's canonical score property in priority order:
+            //   composite_score       → 6tofix-scorecard-rubric (0–60)
+            //   systems_maturity_score → systems-maturity-scoring (0–20)
+            //   ai_readiness          → derive-tier (0–100)
             skillRun.ActivityScore = ReadInt(outputJson.RootElement, "composite_score")
-                ?? ReadInt(outputJson.RootElement, "systems_maturity_score");
+                ?? ReadInt(outputJson.RootElement, "systems_maturity_score")
+                ?? ReadInt(outputJson.RootElement, "ai_readiness");
             await _dbContext.SaveChangesAsync(ct);
 
             await NotifyAsync(
@@ -312,6 +320,26 @@ public sealed class SkillRunner : ISkillRunner
         }
 
         return property.TryGetDecimal(out var value) ? value : null;
+    }
+
+    /// <summary>
+    /// Computes the average of all numeric values in a JSON sub-object.
+    /// Used to derive a single confidence score from per-area confidence_scores.
+    /// Returns null if the property is missing or has no numeric values.
+    /// </summary>
+    private static decimal? ReadAverageFromObject(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var obj) || obj.ValueKind != JsonValueKind.Object)
+            return null;
+
+        var values = new List<decimal>();
+        foreach (var prop in obj.EnumerateObject())
+        {
+            if (prop.Value.ValueKind == JsonValueKind.Number && prop.Value.TryGetDecimal(out var v))
+                values.Add(v);
+        }
+
+        return values.Count > 0 ? values.Average() : null;
     }
 
     private static int? ReadInt(JsonElement element, string propertyName)
