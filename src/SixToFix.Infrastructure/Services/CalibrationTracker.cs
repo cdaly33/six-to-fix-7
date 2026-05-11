@@ -70,6 +70,26 @@ public sealed class CalibrationTracker : ICalibrationTracker
         return MapToModel(delta);
     }
 
+    public async Task<IReadOnlyList<CalibrationDeltaModel>> GetCalibrationHistoryAsync(Guid clientId, CancellationToken ct = default)
+    {
+        var auditIds = await _db.Audits
+            .Where(a => a.ClientId == clientId)
+            .Select(a => a.Id)
+            .ToListAsync(ct);
+
+        var auditRunIds = await _db.AuditRuns
+            .Where(r => auditIds.Contains(r.AuditId))
+            .Select(r => r.Id)
+            .ToListAsync(ct);
+
+        var deltas = await _db.CalibrationDeltas
+            .Where(d => auditRunIds.Contains(d.AuditRunId))
+            .OrderByDescending(d => d.CreatedAt)
+            .ToListAsync(ct);
+
+        return deltas.Select(MapToModel).ToList();
+    }
+
     public async Task<IReadOnlyList<CalibrationDeltaModel>> GetDeltasForAuditRunAsync(Guid auditRunId, CancellationToken ct = default)
     {
         var deltas = await _db.CalibrationDeltas

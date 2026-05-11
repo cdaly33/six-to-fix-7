@@ -93,7 +93,23 @@
 - .csproj modifications (Morpheus owns)
 - EFCore.NamingConventions package (Morpheus must add to Infrastructure csproj)
 
-## Phase 2 — Business Services (2026-05-10)
+## Phase 3 — Minimal API Endpoints (2026-05-10)
+
+### Completed
+- 12 Minimal API endpoints in `SixToFix.Api/Endpoints/ApiEndpointExtensions.cs`
+- Request record types in `SixToFix.Api/Models/ApiModels.cs`
+- `IAuthService` / `AuthService` for UserManager-backed login (avoids coupling Api → Infrastructure)
+- `IReviewerWorkflow.RejectAsync` — serializable tx + pg_advisory_xact_lock, increments ReviewerLockout counter
+- `IPublisher.GetPublishedAuditByRunIdAsync(Guid)` — fetch by run ID vs client slug
+- `ICalibrationTracker.GetCalibrationHistoryAsync(Guid clientId)` — cross-run history
+- PR #11: `dev/phase-3-api-endpoints` → `main`
+
+### Key Implementation Decisions
+- `SixToFix.Api` only references `SixToFix.Application` — login routing through `IAuthService` keeps this clean
+- HubSpot webhook reads raw body (EnableBuffering), validates HMAC via `IHubSpotClient.ValidateWebhookSignatureAsync`, pushes to `Channel<HubSpotEvent>`
+- Auth policies in `Program.cs` are hierarchical: TenantAdmin policy includes SuperAdmin+TenantAdmin roles; Reviewer includes those plus Reviewer; Viewer includes all four. Endpoint `RequireAuthorization("TenantAdmin")` enforces this.
+- `RejectAsync` reuses the same serializable-tx + pg_advisory_xact_lock pattern as `CheckLockoutAsync` so both read and write happen atomically
+- `Program.cs` already had `app.MapApiEndpoints()` — no changes needed there
 
 ### Completed
 - 5 Application service interfaces: IAuditOrchestrator, IReviewerWorkflow, IPublisher, ICalibrationTracker, ITelemetryCollector

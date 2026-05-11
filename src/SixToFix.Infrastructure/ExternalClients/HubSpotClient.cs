@@ -62,17 +62,30 @@ public sealed class HubSpotClient : IHubSpotClient
         string hubSpotCompanyId,
         string tier,
         decimal compositeScore,
+        AuditPublishScores? scores = null,
         CancellationToken ct = default)
     {
-        var payload = new
+        var properties = new Dictionary<string, object>
         {
-            properties = new Dictionary<string, object>
-            {
-                ["strategicglue_tier"] = tier,
-                ["strategicglue_composite_score"] = compositeScore
-            }
+            ["strategicglue_tier"] = tier,
+            ["strategicglue_composite_score"] = compositeScore
         };
 
+        if (scores is not null)
+        {
+            properties["strategicglue_brand_score"] = scores.BrandScore;
+            properties["strategicglue_customer_score"] = scores.CustomerScore;
+            properties["strategicglue_offering_score"] = scores.OfferingScore;
+            properties["strategicglue_communications_score"] = scores.CommunicationsScore;
+            properties["strategicglue_sales_score"] = scores.SalesScore;
+            properties["strategicglue_management_score"] = scores.ManagementScore;
+            properties["strategicglue_systems_maturity_score"] = scores.SystemsMaturityScore;
+            properties["strategicglue_ai_readiness"] = scores.AiReadiness;
+            // HubSpot date type requires date-only (no time component)
+            properties["strategicglue_last_audit_date"] = scores.PublishedAt.ToString("yyyy-MM-dd");
+        }
+
+        var payload = new { properties };
         using var response = await _httpClient.PatchAsJsonAsync($"crm/v3/objects/companies/{hubSpotCompanyId}", payload, ct);
         response.EnsureSuccessStatusCode();
     }
