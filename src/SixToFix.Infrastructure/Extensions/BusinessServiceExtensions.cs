@@ -1,5 +1,4 @@
 using SixToFix.Application.Services;
-using SixToFix.Infrastructure.Interfaces;
 using SixToFix.Infrastructure.Services;
 
 namespace SixToFix.Infrastructure.Extensions;

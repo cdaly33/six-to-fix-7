@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
+using SixToFix.Application.Models;
+using SixToFix.Application.Services;
 using SixToFix.Infrastructure.Data;
-using SixToFix.Infrastructure.Interfaces;
-using SixToFix.Infrastructure.Models;
 
 namespace SixToFix.Infrastructure.Services;
 
@@ -57,7 +57,7 @@ public sealed partial class ClientService : IClientService
         var client = new Client
         {
             Id = Guid.NewGuid(),
-            TenantId = tenantId,
+            TenantId = _tenant.TenantId,
             Name = request.Name,
             Slug = slug,
             Industry = request.Industry,

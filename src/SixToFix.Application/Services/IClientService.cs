@@ -1,6 +1,6 @@
-using SixToFix.Infrastructure.Models;
+using SixToFix.Application.Models;
 
-namespace SixToFix.Infrastructure.Interfaces;
+namespace SixToFix.Application.Services;
 
 public interface IClientService
 {

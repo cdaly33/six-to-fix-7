@@ -1,4 +1,4 @@
-namespace SixToFix.Infrastructure.Models;
+namespace SixToFix.Application.Models;
 
 public sealed record UpdateClientRequest(
     string? Name = null,
