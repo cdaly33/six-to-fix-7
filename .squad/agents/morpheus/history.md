@@ -63,5 +63,52 @@ All agent self-reported gaps were already resolved. Morpheus cross-referenced th
 
 **Deferred to Phase 4:** YAML runtime loading (see `morpheus-yaml-loading.md`); per-category SkillRun architecture for PolicyEngine alignment.
 
-Both PRs merged to main at 0 build errors. Merge order: PR #11 → PR #12 (ai-skills branch pre-merged api-endpoints before squash).
+### 2026-05-11 — Phase 4+5 Cross-Agent PR Review and Merge Completed
+
+**PRs reviewed and merged: #15 (Tank — Phase 5 Infra+QA) then #16 (Trinity — Phase 4 UI)**
+
+#### PR #15 — dev/phase-5-infra-qa (Tank)
+
+**Issues found and fixed:**
+
+1. **Bicep linter: hardcoded `@secure()` parameter default** — `postgresAdminPassword` had `= 'ChangeMe!RotateImmediately123'`. Per Azure best practices, `@secure()` parameters must have no default (forces callers to supply value via param files or pipeline secrets). Removed the default. Fix commit: `478a22a`.
+
+**Verification:**
+- Build: `dotnet build SixToFix.slnx -v q` → 0 errors, 2 × NU1904 (allowed pre-existing)
+- Tests: `dotnet test --filter "Category!=Integration&Category!=E2E"` → **79 passed, 0 failed**
+- E2E tests (`[Trait("Category", "E2E")]`) are correctly skipped with `[Fact(Skip = ...)]`
+- Integration tests (`[Trait("Category", "Integration")]`) are Testcontainers-backed, correctly filtered out
+- `clientAffinityEnabled: true` confirmed in `infra/modules/appservice.bicep` — SignalR sticky sessions intact
+
+**Merged:** `c5e3401` — 61 files changed, +1982 −752
+
+#### PR #16 — dev/phase-4-ui (Trinity)
+
+**Issues found and fixed:**
+
+1. **Missing Tank's test stabilization fix (60b2e8d)** — `SkillYamlValidationTests` used 4 directory levels (`..` × 4) to find repo root, but should be 5. Cherry-picked `60b2e8d` onto phase-4-ui. Conflicts resolved:
+   - `Login.razor` — removed stale `LoginResponse` record (replaced by `Dictionary<string, string>`)
+   - `Program.cs` — conflict on `using SixToFix.Web.Realtime` (not yet present in phase-4-ui); removed the spurious using
+   - `GlobalUsings.cs` and `LoginPageTests.cs` — "deleted by us" (not in phase-4-ui); accepted the cherry-picked versions
+
+2. **Missing Moq package in Web.Tests** — `LoginPageTests.cs` uses Moq but csproj only had NSubstitute. Added `Moq 4.*` to `SixToFix.Web.Tests.csproj`.
+
+3. **GlobalUsings.cs referenced non-existent namespaces** — `SixToFix.Web.Realtime` and `SixToFix.Web.Tests.Fakes` don't exist in phase-4-ui. Removed them so branch builds cleanly.
+
+Fix commits: `06661cf` (cherry-pick), `640cefe` (compatibility fixes)
+
+**CSS law verification:**
+- Zero hardcoded hex values in `.razor` files — confirmed via grep
+- Zero inline `style=` attributes with color/spacing — confirmed via grep
+- All styling via CSS custom properties — compliant
+
+**Merge into main — conflicts resolved:**
+- `infra/main.bicep` — both branches added it; kept main's version (Tank's with the required-param fix)
+- `Program.cs` — kept `using SixToFix.Web.Realtime` from main (namespace exists post phase-5 merge)
+- `GlobalUsings.cs` — kept main's version with Realtime and Fakes usings (both exist on main)
+
+**Final state on main:**
+- Build: 0 errors, 2 × NU1904 (allowed)
+- Tests: **79 passed, 0 failed** (49 Infrastructure + 18 Web + 12 API)
+- Merge commit: `5bc21b9`
 
