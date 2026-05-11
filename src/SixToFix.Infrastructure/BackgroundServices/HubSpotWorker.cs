@@ -27,10 +27,15 @@ public sealed class HubSpotWorker : BackgroundService
         {
             try
             {
+                // Use the stored HubSpot company ID when available (audit-publish path);
+                // fall back to ClientSlug for inbound webhook echo events.
+                var companyId = hubSpotEvent.HubSpotCompanyId ?? hubSpotEvent.ClientSlug;
+
                 await _hubSpotClient.UpdateAuditResultAsync(
-                    hubSpotEvent.ClientSlug,
+                    companyId,
                     hubSpotEvent.Tier,
                     hubSpotEvent.CompositeScore,
+                    hubSpotEvent.Scores,
                     stoppingToken);
             }
             catch (Exception ex)

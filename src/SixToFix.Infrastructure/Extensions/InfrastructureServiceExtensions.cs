@@ -44,6 +44,9 @@ public static class InfrastructureServiceExtensions
         // JWT token service
         services.AddScoped<ITokenService, JwtTokenService>();
 
+        // Auth service (login + token re-issue)
+        services.AddScoped<IAuthService, Services.AuthService>();
+
         // pgBouncer-aware connection factory
         services.AddScoped<IDbConnectionFactory, NpgsqlConnectionFactory>();
 

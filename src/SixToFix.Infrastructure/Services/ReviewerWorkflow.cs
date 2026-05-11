@@ -33,6 +33,82 @@ public sealed class ReviewerWorkflow : IReviewerWorkflow
         _logger = logger;
     }
 
+    public async Task RejectAsync(Guid auditRunId, Guid categoryId, Guid reviewerId, string? reason, CancellationToken ct = default)
+    {
+        await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+
+        var lockKey = (long)(categoryId.GetHashCode() * 31L + reviewerId.GetHashCode());
+        await _db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({lockKey})", ct);
+
+        var windowStart = DateTimeOffset.UtcNow.AddHours(-LockoutWindowHours);
+
+        var lockout = await _db.ReviewerLockouts
+            .Where(rl => rl.AuditRunId == auditRunId
+                      && rl.Category == categoryId.ToString()
+                      && rl.ReviewerUserId == reviewerId)
+            .FirstOrDefaultAsync(ct);
+
+        if (lockout is not null && lockout.WindowStartedAt > windowStart && lockout.RejectionCount >= LockoutThreshold)
+        {
+            throw new ReviewerLockoutException(new ReviewerLockoutStatus(
+                true,
+                lockout.RejectionCount,
+                lockout.WindowStartedAt.AddHours(LockoutWindowHours)));
+        }
+
+        var categoryResult = await GetCategoryResultAsync(auditRunId, categoryId, ct);
+
+        categoryResult.Status = "rejected";
+        categoryResult.ReviewedByUserId = reviewerId;
+        categoryResult.ReviewedAt = DateTimeOffset.UtcNow;
+        categoryResult.ReviewNotes = reason;
+        categoryResult.UpdatedAt = DateTimeOffset.UtcNow;
+
+        _db.ReviewerActions.Add(new ReviewerAction
+        {
+            Id = Guid.NewGuid(),
+            TenantId = _tenant.TenantId,
+            AuditRunId = auditRunId,
+            CategoryId = categoryId.ToString(),
+            ReviewerId = reviewerId,
+            ActionType = "reject",
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+
+        var now = DateTimeOffset.UtcNow;
+        if (lockout is null)
+        {
+            _db.ReviewerLockouts.Add(new ReviewerLockout
+            {
+                Id = Guid.NewGuid(),
+                TenantId = _tenant.TenantId,
+                AuditRunId = auditRunId,
+                Category = categoryId.ToString(),
+                ReviewerUserId = reviewerId,
+                RejectionCount = 1,
+                WindowStartedAt = now,
+                IsLocked = false,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+        else
+        {
+            lockout.RejectionCount++;
+            if (lockout.RejectionCount >= LockoutThreshold)
+                lockout.IsLocked = true;
+            lockout.UpdatedAt = now;
+        }
+
+        await _db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+
+        _logger.LogInformation(
+            "Category {CategoryId} rejected by {ReviewerId} for AuditRun {AuditRunId} (count now {Count})",
+            categoryId, reviewerId, auditRunId,
+            lockout?.RejectionCount ?? 1);
+    }
+
     public async Task ApproveAsync(Guid auditRunId, Guid categoryId, Guid reviewerId, CancellationToken ct = default)
     {
         var categoryResult = await GetCategoryResultAsync(auditRunId, categoryId, ct);

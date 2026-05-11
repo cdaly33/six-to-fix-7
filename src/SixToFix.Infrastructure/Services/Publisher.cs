@@ -76,8 +76,13 @@ public sealed class Publisher : IPublisher
 
         var clientSlug = client?.Slug ?? auditRunId.ToString("N");
 
+        var auditPublishScores = BuildAuditPublishScores(categoryResults, systemsMaturityScore, (int)aiReadinessPct, publishedAt);
         await _hubSpotChannel.Writer.WriteAsync(
-            new HubSpotEvent(auditRunId, clientSlug, tier, composite, publishedAt),
+            new HubSpotEvent(auditRunId, clientSlug, tier, composite, publishedAt)
+            {
+                HubSpotCompanyId = client?.HubSpotCompanyId,
+                Scores = auditPublishScores
+            },
             ct);
 
         _logger.LogInformation(
@@ -89,6 +94,35 @@ public sealed class Publisher : IPublisher
             composite);
 
         return new PublishResult(composite, systemsMaturityScore, aiReadinessPct, tier, publishedAt);
+    }
+
+    public async Task<PublishedAuditSummary> GetPublishedAuditByRunIdAsync(Guid auditRunId, CancellationToken ct = default)
+    {
+        var auditRun = await _db.AuditRuns
+            .FirstOrDefaultAsync(r => r.Id == auditRunId && r.Status == "published", ct)
+            ?? throw new AuditRunNotFoundException(auditRunId);
+
+        var audit = await _db.Audits.FirstOrDefaultAsync(a => a.Id == auditRun.AuditId, ct);
+        var client = audit is not null
+            ? await _db.Clients.FirstOrDefaultAsync(c => c.Id == audit.ClientId, ct)
+            : null;
+
+        var clientSlug = client?.Slug ?? auditRunId.ToString("N");
+
+        var categoryResults = await _db.CategoryResults
+            .Where(r => r.AuditRunId == auditRunId)
+            .ToListAsync(ct);
+
+        var categoryScores = categoryResults.ToDictionary(r => r.Category, r => (decimal)r.ActivityScore);
+
+        return new PublishedAuditSummary(
+            clientSlug,
+            auditRun.Tier ?? "tier_3",
+            (decimal)(auditRun.CompositeScore ?? 0),
+            auditRun.SystemsMaturityScore ?? 0m,
+            auditRun.AiReadinessScore ?? 0m,
+            auditRun.CompletedAt ?? auditRun.CreatedAt,
+            categoryScores);
     }
 
     public async Task<PublishedAuditSummary> GetPublishedAuditAsync(string clientSlug, CancellationToken ct = default)
@@ -160,7 +194,31 @@ public sealed class Publisher : IPublisher
             .OrderByDescending(s => s.CompletedAt)
             .FirstOrDefaultAsync(ct);
 
-        return skillRun?.ConfidenceScore ?? 0m;
+        // ActivityScore stores the canonical score for each skill:
+        //   systems-maturity-scoring → systems_maturity_score (0–20)
+        //   derive-tier              → ai_readiness (0–100)
+        return (decimal)(skillRun?.ActivityScore ?? 0);
+    }
+
+    private static AuditPublishScores BuildAuditPublishScores(
+        IReadOnlyList<CategoryResult> categoryResults,
+        decimal systemsMaturityScore,
+        int aiReadiness,
+        DateTimeOffset publishedAt)
+    {
+        static int Score(IReadOnlyList<CategoryResult> results, string category)
+            => results.FirstOrDefault(r => r.Category == category)?.ActivityScore ?? 0;
+
+        return new AuditPublishScores(
+            BrandScore: Score(categoryResults, "brand"),
+            CustomerScore: Score(categoryResults, "customer"),
+            OfferingScore: Score(categoryResults, "offering"),
+            CommunicationsScore: Score(categoryResults, "communications"),
+            SalesScore: Score(categoryResults, "sales"),
+            ManagementScore: Score(categoryResults, "management"),
+            SystemsMaturityScore: systemsMaturityScore,
+            AiReadiness: aiReadiness,
+            PublishedAt: publishedAt);
     }
 
     private static decimal ComputeComposite(IReadOnlyList<CategoryResult> results)
