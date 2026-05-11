@@ -12,6 +12,7 @@ public sealed class LoginPageTests
         using var ctx = new TestContext();
         ctx.AddTestAuthorization();
         ctx.Services.AddSingleton(CreateHttpClientFactory(_ => new HttpResponseMessage(HttpStatusCode.OK)));
+        ctx.Services.AddSingleton(Mock.Of<ILoginNavigator>());
 
         var cut = ctx.RenderComponent<Login>();
 
@@ -30,6 +31,7 @@ public sealed class LoginPageTests
         using var ctx = new TestContext();
         ctx.AddTestAuthorization();
         ctx.Services.AddSingleton(CreateHttpClientFactory(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized)));
+        ctx.Services.AddSingleton(Mock.Of<ILoginNavigator>());
 
         var cut = ctx.RenderComponent<Login>();
 
@@ -49,18 +51,18 @@ public sealed class LoginPageTests
         {
             Content = JsonContent.Create(new { accessToken = "jwt-token" })
         }));
+        var storageInvocation = ctx.JSInterop.SetupVoid("localStorage.setItem");
+        var navigator = new Mock<ILoginNavigator>();
+        ctx.Services.AddSingleton(navigator.Object);
 
         var cut = ctx.RenderComponent<Login>();
 
         cut.Find("#email").Change("reviewer@strategicglue.com");
         cut.Find("#password").Change("Password123!");
         cut.Find("form").Submit();
+        storageInvocation.SetVoidResult();
 
-        cut.WaitForAssertion(() =>
-        {
-            ctx.JSInterop.VerifyInvoke("localStorage.setItem");
-            ctx.Services.GetRequiredService<NavigationManager>().Uri.Should().EndWith("/dashboard");
-        });
+        cut.WaitForAssertion(() => navigator.Verify(service => service.NavigateToDashboard(), Times.Once));
     }
 
     private static IHttpClientFactory CreateHttpClientFactory(Func<HttpRequestMessage, HttpResponseMessage> responder)

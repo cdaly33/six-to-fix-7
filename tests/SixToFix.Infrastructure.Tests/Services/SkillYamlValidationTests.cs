@@ -5,7 +5,7 @@ namespace SixToFix.Infrastructure.Tests.Services;
 
 public sealed class SkillYamlValidationTests
 {
-    private static readonly string RepositoryRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+    private static readonly string RepositoryRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
     private static readonly string SkillsRoot = Path.Combine(RepositoryRoot, "docs", "skills");
     private static readonly IDeserializer Deserializer = new DeserializerBuilder().Build();
     private static readonly string[] RequiredFields = ["name", "version", "system_prompt", "input_schema", "output_schema"];

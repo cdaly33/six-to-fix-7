@@ -1,6 +1,6 @@
 ﻿@page "/login"
 @layout AuthLayout
-@inject NavigationManager Navigation
+@inject SixToFix.Web.Navigation.ILoginNavigator LoginNavigator
 @inject AuthenticationStateProvider AuthState
 @inject IHttpClientFactory HttpFactory
 @inject IJSRuntime JS
@@ -51,7 +51,7 @@
     {
         var auth = await AuthState.GetAuthenticationStateAsync();
         if (auth.User.Identity?.IsAuthenticated == true)
-            Navigation.NavigateTo("/dashboard", forceLoad: false);
+            LoginNavigator.NavigateToDashboard();
     }
 
     private async Task HandleLogin()
@@ -69,10 +69,15 @@
                     : $"Login failed ({(int)resp.StatusCode}).";
                 return;
             }
-            var payload = await resp.Content.ReadFromJsonAsync<LoginResponse>();
-            if (payload?.Token is null) { _error = "No token returned."; return; }
-            await JS.InvokeVoidAsync("localStorage.setItem", "six_to_fix_token", payload.Token);
-            Navigation.NavigateTo("/dashboard", forceLoad: true);
+            var payload = await resp.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+            if (payload is null || !payload.TryGetValue("accessToken", out var token) || string.IsNullOrWhiteSpace(token))
+            {
+                _error = "No token returned.";
+                return;
+            }
+            var persistTokenTask = JS.InvokeVoidAsync("localStorage.setItem", "six_to_fix_token", token).AsTask();
+            LoginNavigator.NavigateToDashboard();
+            await persistTokenTask;
         }
         catch (Exception ex)
         {
@@ -90,5 +95,4 @@
         [Required, MinLength(8)] public string Password { get; set; } = string.Empty;
     }
 
-    private sealed record LoginResponse([property: System.Text.Json.Serialization.JsonPropertyName("accessToken")] string Token);
 }

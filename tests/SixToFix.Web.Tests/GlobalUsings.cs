@@ -13,6 +13,7 @@ global using SixToFix.Application.Models;
 global using SixToFix.Application.Services;
 global using SixToFix.Domain.Entities;
 global using SixToFix.Web.Components.Shared;
+global using SixToFix.Web.Navigation;
 global using SixToFix.Web.Pages;
 global using SixToFix.Web.Realtime;
 global using SixToFix.Web.Tests.Fakes;
