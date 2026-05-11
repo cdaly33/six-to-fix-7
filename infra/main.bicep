@@ -11,7 +11,7 @@ param appName string = 'six-to-fix'
 param tenantId string
 param postgresAdminLogin string = 'sfadmin'
 @secure()
-param postgresAdminPassword string = 'ChangeMe!RotateImmediately123'
+param postgresAdminPassword string
 param openAiAccountName string = ''
 
 var databaseName = 'sixtofix'
