@@ -1,22 +1,48 @@
-﻿@page "/admin/super"
+@page "/admin/super"
 @attribute [Authorize(Roles = "SuperAdmin")]
-@inject NavigationManager Navigation
 
 <PageTitle>Super Admin — Six to Fix</PageTitle>
 
-<h1>Super Admin Panel</h1>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Super Admin Panel</h1>
+    </div>
+</div>
 
-@*
-  TODO (Phase 4): Implement super admin panel.
-  Requires cross-tenant service paths not yet defined, such as:
-    - ITenantAdminService.GetAllTenantsAsync() → IReadOnlyList<Tenant>
-    - ITenantAdminService.ImpersonateTenantAsync(Guid tenantId) (or similar)
-    - ITelemetryCollector.GetGlobalMetricsAsync() for platform-wide telemetry
-  SuperAdmin role is the only role that should access cross-tenant data.
-  Use careful authorization checks — never expose one tenant's data to another.
-*@
+<div class="stat-grid">
+    <div class="stat-card">
+        <span class="stat-card-label">Total Tenants</span>
+        <span class="stat-card-value">—</span>
+        <span class="stat-card-sub">Platform-wide</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-card-label">Total Users</span>
+        <span class="stat-card-value">—</span>
+        <span class="stat-card-sub">All tenants</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-card-label">Active Runs</span>
+        <span class="stat-card-value">—</span>
+        <span class="stat-card-sub">Right now</span>
+    </div>
+</div>
 
-<p class="text-muted">Super admin tools coming in Phase 4.</p>
+<section>
+    <h2>Tenant Management</h2>
+    <div class="placeholder-section">
+        @* TODO (Phase 5): Wire ITenantAdminService.GetAllTenantsAsync() and ITenantAdminService.ImpersonateTenantAsync().
+           SuperAdmin is the only role that may access cross-tenant data.
+           Use careful authorization checks — never expose one tenant's data to another. *@
+        <p>Cross-tenant management tools coming in Phase 5.</p>
+    </div>
+</section>
+
+<section>
+    <h2>Platform Telemetry</h2>
+    <div class="placeholder-section">
+        <p>Platform-wide metrics coming in Phase 5. See <a href="/telemetry">Telemetry Dashboard</a> for current data.</p>
+    </div>
+</section>
 
 @code {
     [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
@@ -25,11 +51,6 @@
     {
         var auth = await AuthState;
         if (!auth.User.Identity?.IsAuthenticated ?? true)
-        {
-            Navigation.NavigateTo("/login", forceLoad: false);
             return;
-        }
-        if (!auth.User.IsInRole("SuperAdmin"))
-            Navigation.NavigateTo("/audits", forceLoad: false);
     }
 }
