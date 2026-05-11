@@ -1,4 +1,5 @@
 ﻿@page "/audits/{AuditRunId:guid}"
+@page "/audit-runs/{AuditRunId:guid}"
 @attribute [Authorize]
 @rendermode InteractiveServer
 @implements IAsyncDisposable
@@ -23,7 +24,7 @@ else if (_run is not null)
 {
     <div class="page-header">
         <div class="page-header-left">
-            <a href="/audits" class="btn btn-ghost btn-sm">← Audit Runs</a>
+            <a href="/audit-runs" class="btn btn-ghost btn-sm">← Audit Runs</a>
             <h1 class="page-title">Audit Run</h1>
         </div>
         <div class="page-header-actions">
@@ -79,7 +80,7 @@ else if (_run is not null)
                         <ScoreCard Category="@cat.Category" Score="@cat.ActivityScore" Status="@cat.Status" />
                     </div>
                     <div class="category-result-actions">
-                        <a href="/review/@cat.Id?auditRunId=@AuditRunId" class="btn btn-ghost btn-sm">Review →</a>
+                        <a href="/audit-runs/@AuditRunId/categories/@cat.Id" class="btn btn-ghost btn-sm">Review →</a>
                     </div>
                 </div>
             }

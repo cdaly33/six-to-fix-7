@@ -15,21 +15,21 @@ else if (_summary is null)
 {
     <div class="error-boundary">
         <strong>No published results found for this client.</strong>
-        <a href="/audits" class="btn btn-ghost btn-sm" style="margin-left: var(--space-4);">← Audit Runs</a>
+        <a href="/audit-runs" class="btn btn-ghost btn-sm page-inline-action">← Audit Runs</a>
     </div>
 }
 else
 {
     <div class="page-header">
         <div class="page-header-left">
-            <a href="/audits" class="btn btn-ghost btn-sm">← Back</a>
+            <a href="/audit-runs" class="btn btn-ghost btn-sm">← Back</a>
             <h1 class="page-title">Published Results</h1>
             <TierBadge Tier="@_summary.Tier" ShowLabel="true" />
         </div>
     </div>
 
     @* Summary card *@
-    <div class="card" style="margin-bottom: var(--space-6);">
+    <div class="card card-spaced">
         <div class="card-body">
             <dl class="meta-grid">
                 <div class="meta-item">
@@ -66,13 +66,13 @@ else
     </div>
 
     @* Category Scores *@
-    <div class="card" style="margin-bottom: var(--space-6);">
+    <div class="card card-spaced">
         <div class="card-header">
-            <h2 style="font-size: var(--text-xl); margin: 0;">Category Scores</h2>
+            <h2 class="card-section-title">Category Scores</h2>
         </div>
         @if (_summary.CategoryScores.Any())
         {
-            <div class="card-body" style="padding: 0;">
+            <div class="card-body card-body-flush">
                 @foreach (var (category, score) in _summary.CategoryScores.OrderByDescending(kv => kv.Value))
                 {
                     var scoreInt = (int)Math.Round(score);
@@ -86,7 +86,7 @@ else
                         <div class="score-gap-bar">
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill"
-                                     style="width: @((score / 10m * 100).ToString("F0"))%;"
+                                     style="--bar-width: @((score / 10m * 100).ToString("F0"))%;"
                                      aria-valuenow="@score" aria-valuemin="0" aria-valuemax="10">
                                 </div>
                             </div>
@@ -108,7 +108,7 @@ else
     {
         <div class="card">
             <div class="card-header">
-                <h2 style="font-size: var(--text-xl); margin: 0;">Publish History</h2>
+                <h2 class="card-section-title">Publish History</h2>
             </div>
             <div class="data-table-scroll-container">
                 <table class="data-table">

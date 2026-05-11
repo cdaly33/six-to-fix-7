@@ -1,4 +1,5 @@
 ﻿@page "/review/{CategoryId:guid}"
+@page "/audit-runs/{RouteAuditRunId:guid}/categories/{CategoryId:guid}"
 @attribute [Authorize(Roles = "Reviewer,TenantAdmin,SuperAdmin")]
 @rendermode InteractiveServer
 @inject IReviewerWorkflow ReviewerWorkflow
@@ -32,7 +33,7 @@ else if (_ready)
         <div class="page-header-left">
             @if (_auditRunId.HasValue)
             {
-                <a href="/audits/@_auditRunId" class="btn btn-ghost btn-sm">← Audit Detail</a>
+                <a href="/audit-runs/@_auditRunId" class="btn btn-ghost btn-sm">← Audit Detail</a>
             }
             <h1 class="page-title">Category Review</h1>
             <span class="text-secondary">ID: @CategoryId</span>
@@ -69,7 +70,7 @@ else if (_ready)
 
     @if (_council is not null)
     {
-        <div class="alert alert-success" style="margin-top:var(--space-4)">
+        <div class="alert alert-success">
             <strong>Council decision:</strong> @_council.DecisionType — confidence @_council.OverallConfidence.ToString("P0")
             @if (!string.IsNullOrEmpty(_council.Rationale)) { <span> — @_council.Rationale</span> }
         </div>
@@ -78,6 +79,7 @@ else if (_ready)
 
 @code {
     [Parameter] public Guid CategoryId { get; set; }
+    [Parameter] public Guid? RouteAuditRunId { get; set; }
     [SupplyParameterFromQuery] private Guid? AuditRunId { get; set; }
 
     private ReviewerLockoutStatus? _lockout;
@@ -93,7 +95,7 @@ else if (_ready)
 
     protected override async Task OnInitializedAsync()
     {
-        _auditRunId = AuditRunId;
+        _auditRunId = RouteAuditRunId ?? AuditRunId;
         _loading = true;
         try
         {
