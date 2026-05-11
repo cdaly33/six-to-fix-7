@@ -1,0 +1,103 @@
+<nav class="nav-menu" aria-label="Main navigation">
+    <div class="nav-header">
+        <div class="sidebar-brand-lockup">
+            <span class="nav-logo" aria-hidden="true">◆</span>
+            <div class="sidebar-lockup-copy">
+                <span class="nav-title">Six-to-Fix</span>
+                <span class="page-subtitle">StrategicGlue</span>
+            </div>
+        </div>
+    </div>
+
+    <ul class="nav-list" role="list">
+        <li>
+            <NavLink class="nav-item" href="/dashboard" Match="NavLinkMatch.All" @onclick="NotifyNavigate">
+                <span class="nav-icon" aria-hidden="true">🏠</span>
+                <span class="nav-label">Dashboard</span>
+            </NavLink>
+        </li>
+        <AuthorizeView Roles="TenantAdmin,Reviewer">
+            <li>
+                <NavLink class="nav-item" href="/audit-runs" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
+                    <span class="nav-icon" aria-hidden="true">📋</span>
+                    <span class="nav-label">Audit Runs</span>
+                </NavLink>
+            </li>
+        </AuthorizeView>
+        <AuthorizeView Roles="Reviewer">
+            <li>
+                <NavLink class="nav-item" href="/reviewer-queue" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
+                    <span class="nav-icon" aria-hidden="true">✅</span>
+                    <span class="nav-label">Reviewer Queue</span>
+                </NavLink>
+            </li>
+        </AuthorizeView>
+        <AuthorizeView Roles="TenantAdmin,SuperAdmin">
+            <li>
+                <NavLink class="nav-item" href="/clients" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
+                    <span class="nav-icon" aria-hidden="true">🏢</span>
+                    <span class="nav-label">Clients</span>
+                </NavLink>
+            </li>
+            <li>
+                <NavLink class="nav-item" href="/calibration" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
+                    <span class="nav-icon" aria-hidden="true">📈</span>
+                    <span class="nav-label">Calibration</span>
+                </NavLink>
+            </li>
+            <li>
+                <NavLink class="nav-item" href="/admin/tenant" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
+                    <span class="nav-icon" aria-hidden="true">⚙️</span>
+                    <span class="nav-label">Admin</span>
+                </NavLink>
+            </li>
+        </AuthorizeView>
+        <AuthorizeView Roles="SuperAdmin">
+            <li>
+                <NavLink class="nav-item" href="/telemetry" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
+                    <span class="nav-icon" aria-hidden="true">📊</span>
+                    <span class="nav-label">Telemetry</span>
+                </NavLink>
+            </li>
+            <li>
+                <NavLink class="nav-item" href="/admin/super" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
+                    <span class="nav-icon" aria-hidden="true">🛡️</span>
+                    <span class="nav-label">Super Admin</span>
+                </NavLink>
+            </li>
+        </AuthorizeView>
+    </ul>
+
+    <AuthorizeView>
+        <Authorized Context="authState">
+            <div class="sidebar-user">
+                <span class="top-nav-avatar" aria-hidden="true">@GetInitials(authState.User.Identity?.Name)</span>
+                <div class="sidebar-user-copy">
+                    <div class="sidebar-user-name">@(authState.User.Identity?.Name ?? "Signed in")</div>
+                    <div class="sidebar-user-role">@GetRoleLabel(authState.User)</div>
+                </div>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</nav>
+
+@code {
+    [Parameter] public EventCallback OnNavigate { get; set; }
+
+    private Task NotifyNavigate() => OnNavigate.InvokeAsync();
+
+    private static string GetInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 1 ? $"{char.ToUpperInvariant(parts[0][0])}{char.ToUpperInvariant(parts[^1][0])}" : char.ToUpperInvariant(parts[0][0]).ToString();
+    }
+
+    private static string GetRoleLabel(ClaimsPrincipal user)
+    {
+        if (user.IsInRole("SuperAdmin")) return "Super Admin";
+        if (user.IsInRole("TenantAdmin")) return "Tenant Admin";
+        if (user.IsInRole("Reviewer")) return "Reviewer";
+        return "Viewer";
+    }
+}

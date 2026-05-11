@@ -21,16 +21,14 @@
     @* Welcome card *@
     <div class="card dashboard-welcome">
         <div class="card-body">
-            <h2 style="font-size: var(--text-2xl); margin-bottom: var(--space-2);">
-                Welcome to Six to Fix
-            </h2>
+            <h3>Welcome to Six to Fix</h3>
             <p class="text-secondary">
                 Six to Fix automates marketing maturity audits across six key domains,
                 delivering actionable insights with AI-powered analysis.
             </p>
             <AuthorizeView Roles="TenantAdmin,SuperAdmin">
                 <Authorized>
-                    <p class="text-muted" style="font-size: var(--text-sm); margin-top: var(--space-2);">
+                    <p class="text-muted">
                         To start an audit run, go to <a href="/clients">Clients</a>,
                         select a client, then choose <strong>View Audits</strong>.
                     </p>
@@ -40,7 +38,7 @@
     </div>
 
     @* Quick-access cards *@
-    <a href="/audits" class="card dashboard-nav-card">
+    <a href="/audit-runs" class="card dashboard-nav-card">
         <div class="card-body">
             <div class="nav-card-icon" aria-hidden="true">📋</div>
             <h3 class="nav-card-title">Audit Runs</h3>
@@ -50,7 +48,7 @@
 
     <AuthorizeView Roles="Reviewer,TenantAdmin,SuperAdmin">
         <Authorized>
-            <a href="/review" class="card dashboard-nav-card">
+            <a href="/reviewer-queue" class="card dashboard-nav-card">
                 <div class="card-body">
                     <div class="nav-card-icon" aria-hidden="true">✅</div>
                     <h3 class="nav-card-title">Review Queue</h3>

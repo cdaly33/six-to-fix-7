@@ -1,4 +1,5 @@
-﻿@page "/review/{CategoryId:guid}"
+@page "/review/{CategoryId:guid}"
+@page "/audit-runs/{RouteAuditRunId:guid}/categories/{CategoryId:guid}"
 @attribute [Authorize(Roles = "Reviewer,TenantAdmin,SuperAdmin")]
 @rendermode InteractiveServer
 @inject IReviewerWorkflow ReviewerWorkflow
@@ -10,74 +11,117 @@
 
 @if (_loading)
 {
-    <LoadingSpinner Label="Loading category…" />
-}
-else if (_lockout?.IsLockedOut == true)
-{
-    <div class="alert alert-error">
-        <strong>You are locked out of this category.</strong>
-        @if (_lockout.LockoutExpiresAt.HasValue)
-        {
-            <span> Expires @_lockout.LockoutExpiresAt.Value.LocalDateTime.ToString("MMM d, h:mm tt").</span>
-        }
-    </div>
+    <LoadingSpinner Label="Loading category review…" />
 }
 else if (_error is not null)
 {
-    <div class="alert alert-error">@_error</div>
+    <AlertBanner Type="error" Title="Unable to load review" Message="@_error" Dismissable="false" />
 }
-else if (_ready)
+else
 {
-    <div class="page-header">
-        <div class="page-header-left">
+    <PageHeader Title="Category Review" Subtitle="Review AI output, capture notes, and record the final disposition.">
+        <Actions>
             @if (_auditRunId.HasValue)
             {
-                <a href="/audits/@_auditRunId" class="btn btn-ghost btn-sm">← Audit Detail</a>
+                <a href="/audit-runs/@_auditRunId" class="btn btn-secondary btn-sm">Back to Audit Run</a>
             }
-            <h1 class="page-title">Category Review</h1>
-            <span class="text-secondary">ID: @CategoryId</span>
-        </div>
-    </div>
+        </Actions>
+    </PageHeader>
 
-    @* TODO (Service Layer): Add IAuditOrchestrator.GetCategoryResultAsync(Guid categoryId) or
-       IReviewerWorkflow.GetCategoryResultAsync so we can display category name, score, and status here.
-       Currently those details are only visible on the parent AuditDetail page. *@
+    @if (_lockout?.IsLockedOut == true)
+    {
+        <AlertBanner Type="error" Title="Rejection lockout active" Message="@GetLockoutMessage()" Dismissable="false" />
+    }
+    else if ((_lockout?.RejectionCount ?? 0) >= 2)
+    {
+        <AlertBanner Type="warning" Title="Rejection warning" Message="One more rejection will trigger the 24-hour lockout for this category." Dismissable="false" />
+    }
 
     @if (_actionError is not null)
     {
-        <div class="alert alert-error">@_actionError</div>
+        <AlertBanner Type="error" Title="Action failed" Message="@_actionError" />
     }
+
     @if (_actionSuccess is not null)
     {
-        <div class="alert alert-success">@_actionSuccess</div>
+        <AlertBanner Type="success" Title="Review updated" Message="@_actionSuccess" />
     }
 
-    <div class="review-action-block">
-        <h2>Review Actions</h2>
-
-        <button class="btn btn-primary" @onclick="ApproveAsync" disabled="@_busy">Approve</button>
-
-        <button class="btn btn-secondary" @onclick="RerunAsync" disabled="@_busy">Rerun AI Analysis</button>
-
-        <button class="btn btn-ghost" @onclick="EscalateAsync" disabled="@_busy">Escalate to Council</button>
-
-        @* TODO (Neo / Service Layer): IReviewerWorkflow.RejectAsync does not exist yet.
-           Add RejectAsync(Guid auditRunId, Guid categoryId, Guid reviewerId, string reason) to IReviewerWorkflow
-           so this button can be wired up. *@
-        <button class="btn btn-danger" disabled title="Reject not yet available — service method pending">Reject</button>
-    </div>
-
-    @if (_council is not null)
-    {
-        <div class="alert alert-success" style="margin-top:var(--space-4)">
-            <strong>Council decision:</strong> @_council.DecisionType — confidence @_council.OverallConfidence.ToString("P0")
-            @if (!string.IsNullOrEmpty(_council.Rationale)) { <span> — @_council.Rationale</span> }
+    <div class="reviewer-queue-layout">
+        <div class="card">
+            <div class="card-header">
+                <h2>Review summary</h2>
+                <StatusBadge Status="@(IsLockedOut ? "failed" : "awaiting_review")" Label="@(IsLockedOut ? "Locked" : "Awaiting decision")" />
+            </div>
+            <div class="card-body">
+                <dl class="meta-grid">
+                    <div class="meta-item">
+                        <dt>Category ID</dt>
+                        <dd>@CategoryId</dd>
+                    </div>
+                    <div class="meta-item">
+                        <dt>Audit run</dt>
+                        <dd>@(_auditRunId?.ToString() ?? "Unknown")</dd>
+                    </div>
+                    <div class="meta-item">
+                        <dt>Rejections in window</dt>
+                        <dd>@(_lockout?.RejectionCount ?? 0)</dd>
+                    </div>
+                </dl>
+            </div>
         </div>
-    }
+
+        <div class="card">
+            <div class="card-header">
+                <h2>AI rationale and evidence</h2>
+            </div>
+            <div class="card-body">
+                <p class="text-secondary">The service layer does not yet expose category evidence text directly, so this drawer preserves the review workflow shell without duplicating business logic.</p>
+                <div class="placeholder-section">
+                    <p>Evidence and narrative will render here once a category detail query is added by the service layer.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Reviewer comments</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label class="form-label" for="review-comments">Comments</label>
+                    <InputTextArea id="review-comments" class="form-control" @bind-Value="_comments" />
+                    <div class="page-subtitle">Comments are used as the rejection reason when you reject this category.</div>
+                </div>
+                <div class="page-header-actions">
+                    <button class="btn btn-primary" @onclick="ApproveAsync" disabled="@(_busy || IsLockedOut)">Approve</button>
+                    <button class="btn btn-danger" @onclick="RejectAsync" disabled="@(_busy || IsLockedOut)">Reject</button>
+                    <button class="btn btn-secondary" @onclick="EscalateAsync" disabled="@(_busy || IsLockedOut)">Escalate</button>
+                    <button class="btn btn-ghost" @onclick="RerunAsync" disabled="@(_busy || IsLockedOut)">Rerun</button>
+                </div>
+            </div>
+        </div>
+
+        @if (_council is not null)
+        {
+            <div class="card">
+                <div class="card-header">
+                    <h2>Council result</h2>
+                    <StatusBadge Status="completed" Label="Decision returned" />
+                </div>
+                <div class="card-body">
+                    <p><strong>Decision:</strong> @_council.DecisionType</p>
+                    <p><strong>Confidence:</strong> @_council.OverallConfidence.ToString("P0")</p>
+                    <p class="text-secondary">@_council.Rationale</p>
+                </div>
+            </div>
+        }
+    </div>
 }
 
 @code {
     [Parameter] public Guid CategoryId { get; set; }
+    [Parameter] public Guid? RouteAuditRunId { get; set; }
     [SupplyParameterFromQuery] private Guid? AuditRunId { get; set; }
 
     private ReviewerLockoutStatus? _lockout;
@@ -86,31 +130,40 @@ else if (_ready)
     private Guid _reviewerId;
     private bool _loading;
     private bool _busy;
-    private bool _ready;
     private string? _error;
     private string? _actionError;
     private string? _actionSuccess;
+    private string _comments = string.Empty;
+
+    private bool IsLockedOut => _lockout?.IsLockedOut == true;
 
     protected override async Task OnInitializedAsync()
     {
-        _auditRunId = AuditRunId;
+        _auditRunId = RouteAuditRunId ?? AuditRunId;
         _loading = true;
+
         try
         {
             var auth = await AuthState.GetAuthenticationStateAsync();
             var userIdStr = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdStr, out _reviewerId)) { _error = "Could not identify current user."; return; }
+            if (!Guid.TryParse(userIdStr, out _reviewerId))
+            {
+                _error = "Could not identify the current reviewer.";
+                return;
+            }
 
-            if (!_auditRunId.HasValue) { _error = "Missing auditRunId query parameter."; return; }
+            if (!_auditRunId.HasValue)
+            {
+                _error = "An audit run ID is required to review this category.";
+                return;
+            }
 
             _lockout = await ReviewerWorkflow.GetLockoutStatusAsync(_auditRunId.Value, CategoryId, _reviewerId);
-
-            if (!_lockout.IsLockedOut) _ready = true;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to load category {CategoryId}", CategoryId);
-            _error = "Failed to load category.";
+            Logger.LogError(ex, "Failed to load category review {CategoryId}", CategoryId);
+            _error = "The category review could not be loaded.";
         }
         finally
         {
@@ -121,39 +174,72 @@ else if (_ready)
     private async Task ApproveAsync()
     {
         if (!_auditRunId.HasValue) return;
-        _busy = true; _actionError = null; _actionSuccess = null;
-        try
+        await RunActionAsync(async () =>
         {
             await ReviewerWorkflow.ApproveAsync(_auditRunId.Value, CategoryId, _reviewerId);
             _actionSuccess = "Category approved.";
-        }
-        catch (Exception ex) { Logger.LogError(ex, "Approve failed"); _actionError = "Approve failed."; }
-        finally { _busy = false; }
+        });
+    }
+
+    private async Task RejectAsync()
+    {
+        if (!_auditRunId.HasValue) return;
+        await RunActionAsync(async () =>
+        {
+            await ReviewerWorkflow.RejectAsync(_auditRunId.Value, CategoryId, _reviewerId, _comments);
+            _actionSuccess = "Category rejected.";
+            _lockout = await ReviewerWorkflow.GetLockoutStatusAsync(_auditRunId.Value, CategoryId, _reviewerId);
+        });
     }
 
     private async Task RerunAsync()
     {
         if (!_auditRunId.HasValue) return;
-        _busy = true; _actionError = null; _actionSuccess = null;
-        try
+        await RunActionAsync(async () =>
         {
             await ReviewerWorkflow.RerunAsync(_auditRunId.Value, CategoryId, _reviewerId);
-            _actionSuccess = "Rerun triggered. Watch the audit detail for live events.";
-        }
-        catch (Exception ex) { Logger.LogError(ex, "Rerun failed"); _actionError = "Rerun failed."; }
-        finally { _busy = false; }
+            _actionSuccess = "Rerun requested. Watch the audit detail screen for live progress.";
+        });
     }
 
     private async Task EscalateAsync()
     {
         if (!_auditRunId.HasValue) return;
-        _busy = true; _actionError = null; _actionSuccess = null;
-        try
+        await RunActionAsync(async () =>
         {
             _council = await ReviewerWorkflow.EscalateAsync(_auditRunId.Value, CategoryId, _reviewerId);
-            _actionSuccess = "Escalated to council.";
+            _actionSuccess = "Escalated to the council.";
+        });
+    }
+
+    private async Task RunActionAsync(Func<Task> action)
+    {
+        _busy = true;
+        _actionError = null;
+        _actionSuccess = null;
+
+        try
+        {
+            await action();
         }
-        catch (Exception ex) { Logger.LogError(ex, "Escalate failed"); _actionError = "Escalate failed."; }
-        finally { _busy = false; }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Reviewer action failed for category {CategoryId}", CategoryId);
+            _actionError = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private string GetLockoutMessage()
+    {
+        if (_lockout?.LockoutExpiresAt is null)
+        {
+            return "This category cannot be rejected again until the lockout window resets.";
+        }
+
+        return $"This category is locked until {_lockout.LockoutExpiresAt.Value.LocalDateTime:MMM d, h:mm tt}.";
     }
 }

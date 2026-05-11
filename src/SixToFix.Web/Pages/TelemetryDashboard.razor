@@ -1,28 +1,44 @@
 @page "/telemetry"
-@attribute [Authorize(Roles = "TenantAdmin,SuperAdmin")]
-@inject NavigationManager Nav
+@attribute [Authorize(Roles = "SuperAdmin")]
 
 <PageTitle>Telemetry Dashboard — Six to Fix</PageTitle>
 
 <div class="page-header">
-    <h1 class="page-title">Telemetry Dashboard</h1>
-</div>
-
-<div class="card" style="margin-top: var(--space-6);">
-    <div class="card-body empty-state">
-        <p class="text-secondary">Telemetry Dashboard is coming in a future release.</p>
-        <p class="text-muted" style="font-size: var(--text-sm);">
-            @* TODO (Phase 5): Implement telemetry dashboard.
-               Requires: ITelemetryCollector.GetTelemetrySnapshotsAsync(tenantId, dateRange)
-               and ITelemetryCollector.GetTelemetryEventsAsync(auditRunId).
-               Visualize: audit run durations, skill success/failure rates, AI cost per run,
-               Council escalation frequency, reviewer action patterns, HubSpot sync outcomes.
-               Use date-range picker component and simple bar/line chart primitives. *@
-            This dashboard will provide operational insights into audit pipeline performance,
-            AI spend, and reviewer throughput for your tenant.
-        </p>
+    <div class="page-header-left">
+        <h1 class="page-title">Telemetry Dashboard</h1>
     </div>
 </div>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <span class="stat-card-label">Audit Runs (30d)</span>
+        <span class="stat-card-value">—</span>
+        <span class="stat-card-sub">Platform-wide</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-card-label">Avg Run Duration</span>
+        <span class="stat-card-value">—</span>
+        <span class="stat-card-sub">seconds</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-card-label">Council Escalations</span>
+        <span class="stat-card-value">—</span>
+        <span class="stat-card-sub">This month</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-card-label">AI Spend (30d)</span>
+        <span class="stat-card-value">—</span>
+        <span class="stat-card-sub">Estimated tokens</span>
+    </div>
+</div>
+
+<section>
+    <h2>Pipeline Metrics</h2>
+    <div class="placeholder-section">
+        @* TODO (Phase 5): Wire ITelemetryCollector.GetTelemetrySnapshotsAsync and render charts. *@
+        <p>Telemetry data collection is not yet wired. Implement ITelemetryCollector in Phase 5.</p>
+    </div>
+</section>
 
 @code {
     [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
@@ -31,11 +47,6 @@
     {
         var auth = await AuthState;
         if (!auth.User.Identity?.IsAuthenticated ?? true)
-        {
-            Nav.NavigateTo("/login", forceLoad: false);
             return;
-        }
-        if (!auth.User.IsInRole("TenantAdmin") && !auth.User.IsInRole("SuperAdmin"))
-            Nav.NavigateTo("/audits", forceLoad: false);
     }
 }

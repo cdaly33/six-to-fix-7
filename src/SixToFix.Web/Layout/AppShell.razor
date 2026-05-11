@@ -1,0 +1,41 @@
+<div class="app-shell @( _sidebarOpen ? "app-shell-sidebar-open" : string.Empty)">
+    @if (_sidebarOpen)
+    {
+        <button class="app-overlay" @onclick="CloseSidebar" aria-label="Close navigation"></button>
+    }
+
+    <aside class="sidebar @(_sidebarOpen ? "sidebar-open" : string.Empty)" aria-label="Primary navigation">
+        <Sidebar OnNavigate="HandleSidebarNavigate" />
+    </aside>
+
+    <div class="main-content">
+        <TopNav OnToggleSidebar="ToggleSidebar" />
+        <main class="page-content" id="main-content" role="main">
+            @ChildContent
+        </main>
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _sidebarOpen;
+
+    private Task ToggleSidebar()
+    {
+        _sidebarOpen = !_sidebarOpen;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSidebarNavigate()
+    {
+        _sidebarOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseSidebar()
+    {
+        _sidebarOpen = false;
+        return Task.CompletedTask;
+    }
+}

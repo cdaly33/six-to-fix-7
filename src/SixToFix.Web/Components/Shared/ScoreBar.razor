@@ -1,0 +1,28 @@
+@* Horizontal score bar (0-10 scale). *@
+<div class="score-bar-container">
+    <div class="score-bar-header">
+        @if (!string.IsNullOrEmpty(Label))
+        {
+            <span class="score-bar-label">@Label</span>
+        }
+        <span class="score-bar-value @GetScoreClass()">@Score.ToString("0.0") / @MaxScore.ToString("0")</span>
+    </div>
+    <progress class="score-bar-meter @GetScoreClass()"
+              value="@Score"
+              max="@MaxScore"
+              aria-label="@(string.IsNullOrWhiteSpace(Label) ? "Score" : Label)">
+    </progress>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public decimal Score { get; set; }
+    [Parameter] public decimal MaxScore { get; set; } = 10m;
+    [Parameter] public string Label { get; set; } = string.Empty;
+
+    private string GetScoreClass() => Score switch
+    {
+        <= 3m => "score-low",
+        <= 6m => "score-mid",
+        _ => "score-high"
+    };
+}

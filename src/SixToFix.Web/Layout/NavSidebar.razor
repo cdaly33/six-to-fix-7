@@ -1,22 +1,35 @@
 @* Role-filtered sidebar navigation. Roles per role-visibility-matrix.md. *@
 
-<nav class="nav-menu" aria-label="Main navigation">
-    <div class="nav-brand">
-        <span class="nav-logo" aria-hidden="true">◆</span>
-        <span class="nav-title">Six to Fix</span>
+<nav class="nav-menu @(_collapsed ? "sidebar-collapsed" : "")" aria-label="Main navigation">
+    <div class="nav-header">
+        <div class="nav-brand">
+            <span class="nav-logo" aria-hidden="true">◆</span>
+            <span class="nav-title">Six to Fix</span>
+        </div>
+        <button class="nav-toggle" @onclick="ToggleCollapsed"
+                aria-label="@(_collapsed ? "Expand sidebar" : "Collapse sidebar")"
+                title="@(_collapsed ? "Expand" : "Collapse")">
+            @(_collapsed ? "▶" : "◀")
+        </button>
     </div>
 
     <ul class="nav-list" role="list">
         <li>
-            <NavLink class="nav-link" href="/audits" Match="NavLinkMatch.Prefix">
+            <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">
+                <span class="nav-icon" aria-hidden="true">🏠</span>
+                <span class="nav-label">Dashboard</span>
+            </NavLink>
+        </li>
+        <li>
+            <NavLink class="nav-link" href="/audit-runs" Match="NavLinkMatch.Prefix">
                 <span class="nav-icon" aria-hidden="true">📋</span>
-                <span class="nav-label">Audits</span>
+                <span class="nav-label">Audit Runs</span>
             </NavLink>
         </li>
         <li>
             <AuthorizeView Roles="Reviewer,TenantAdmin,SuperAdmin">
                 <Authorized>
-                    <NavLink class="nav-link" href="/review" Match="NavLinkMatch.Prefix">
+                    <NavLink class="nav-link" href="/reviewer-queue" Match="NavLinkMatch.Prefix">
                         <span class="nav-icon" aria-hidden="true">✓</span>
                         <span class="nav-label">Review Queue</span>
                     </NavLink>
@@ -54,7 +67,7 @@
             </AuthorizeView>
         </li>
         <li>
-            <AuthorizeView Roles="TenantAdmin,SuperAdmin">
+            <AuthorizeView Roles="SuperAdmin">
                 <Authorized>
                     <NavLink class="nav-link" href="/telemetry" Match="NavLinkMatch.Prefix">
                         <span class="nav-icon" aria-hidden="true">📊</span>
@@ -63,25 +76,36 @@
                 </Authorized>
             </AuthorizeView>
         </li>
-        <li>
-            <AuthorizeView Roles="TenantAdmin,SuperAdmin">
-                <Authorized>
-                    <NavLink class="nav-link" href="/admin/tenant" Match="NavLinkMatch.Prefix">
-                        <span class="nav-icon" aria-hidden="true">⚙️</span>
-                        <span class="nav-label">Admin</span>
-                    </NavLink>
-                </Authorized>
-            </AuthorizeView>
-        </li>
-        <li>
-            <AuthorizeView Roles="SuperAdmin">
-                <Authorized>
-                    <NavLink class="nav-link" href="/admin/super" Match="NavLinkMatch.Prefix">
-                        <span class="nav-icon" aria-hidden="true">🔑</span>
-                        <span class="nav-label">Super Admin</span>
-                    </NavLink>
-                </Authorized>
-            </AuthorizeView>
-        </li>
     </ul>
+
+    <div class="nav-footer">
+        <AuthorizeView Roles="TenantAdmin,SuperAdmin">
+            <Authorized>
+                <NavLink class="nav-link" href="/admin/tenant" Match="NavLinkMatch.Prefix">
+                    <span class="nav-icon" aria-hidden="true">⚙️</span>
+                    <span class="nav-label">Tenant Admin</span>
+                </NavLink>
+            </Authorized>
+        </AuthorizeView>
+        <AuthorizeView Roles="SuperAdmin">
+            <Authorized>
+                <NavLink class="nav-link" href="/admin/super" Match="NavLinkMatch.Prefix">
+                    <span class="nav-icon" aria-hidden="true">🔑</span>
+                    <span class="nav-label">Super Admin</span>
+                </NavLink>
+            </Authorized>
+        </AuthorizeView>
+    </div>
 </nav>
+
+@code {
+    [Parameter] public EventCallback<bool> OnCollapsedChanged { get; set; }
+
+    private bool _collapsed;
+
+    private async Task ToggleCollapsed()
+    {
+        _collapsed = !_collapsed;
+        await OnCollapsedChanged.InvokeAsync(_collapsed);
+    }
+}

@@ -1,0 +1,35 @@
+@if (IsOpen)
+{
+    <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title" @onclick="HandleCancel">
+        <div class="modal-content" @onclick:stopPropagation>
+            <h2 id="confirm-modal-title">@Title</h2>
+            @if (!string.IsNullOrWhiteSpace(Message))
+            {
+                <p>@Message</p>
+            }
+            @if (Body is not null)
+            {
+                <div class="modal-body-content">@Body</div>
+            }
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" @onclick="HandleCancel">@CancelLabel</button>
+                <button type="button" class="btn @(IsDanger ? "btn-danger" : "btn-primary")" @onclick="HandleConfirm">@ConfirmLabel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string Title { get; set; } = "Confirm action";
+    [Parameter] public string Message { get; set; } = string.Empty;
+    [Parameter] public string ConfirmLabel { get; set; } = "Confirm";
+    [Parameter] public string CancelLabel { get; set; } = "Cancel";
+    [Parameter] public bool IsDanger { get; set; }
+    [Parameter] public RenderFragment? Body { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private Task HandleConfirm() => OnConfirm.InvokeAsync();
+    private Task HandleCancel() => OnCancel.InvokeAsync();
+}

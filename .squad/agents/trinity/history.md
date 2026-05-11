@@ -74,7 +74,7 @@
 - `Dashboard.razor` (new) — nav hub at `/` and `/dashboard` with role-gated cards for all four roles.
 - `AuditList.razor` — `IAuditOrchestrator.GetAuditRunsForClientAsync(Guid)`. Requires `?clientId=` query param; no tenant-wide run list exists on the service.
 - `AuditDetail.razor` — `IAuditOrchestrator.GetAuditRunAsync`, `IPublisher.PublishAuditAsync`, SignalR via `HubConnectionBuilder` to `/hubs/audit-run`, `JoinAuditRun`/`LeaveAuditRun` hub methods, `IAsyncDisposable`.
-- `CategoryReview.razor` — `IReviewerWorkflow.GetLockoutStatusAsync`, `ApproveAsync`, `RerunAsync`, `EscalateAsync`. `RejectAsync` is missing from the interface (TODO left for Neo).
+- `CategoryReview.razor` — `IReviewerWorkflow.GetLockoutStatusAsync`, `ApproveAsync`, `RejectAsync`, `RerunAsync`, `EscalateAsync`.
 - `ReviewerQueue.razor` — GUID nav helper; full queue listing requires a new `GetPendingCategoriesAsync` service method.
 - `PublishedResults.razor` (new) — `IPublisher.GetPublishedAuditAsync(string clientSlug)` and `GetPublishedVersionsAsync`. Route is `/results/{clientSlug}` (string, not Guid).
 
@@ -84,10 +84,16 @@
 
 **Key service constraints discovered:**
 - `IAuditOrchestrator` has no `GetAuditRunsForTenantAsync` — only per-client lists.
-- `IReviewerWorkflow` has no `RejectAsync` — only Approve, Edit, Rerun, Escalate, GetLockoutStatus.
 - `IPublisher.GetPublishedAuditAsync` uses `string clientSlug` not `Guid auditRunId`.
 - `ScoreCard` component is a full display card (required `Category` + `Score` params) — not an inline badge.
 - `@rendermode InteractiveServer` requires `@using static Microsoft.AspNetCore.Components.Web.RenderMode` in `_Imports.razor`.
 - `SixToFix.Domain.Entities` namespace must be explicitly imported in Web project (not transitive via GlobalUsings).
 
 **PR:** https://github.com/cdaly33/six-to-fix-7/pull/12
+
+### 2026-05-10 — Phase 4: UI shell and review patterns
+
+- The authenticated shell now flows through `AppShell`, `Sidebar`, and `TopNav`, with navigation styling centralized in `wwwroot/css` instead of component-scoped stylesheets.
+- Route aliases for the Phase 4 screen inventory are safe to add because existing `/audits/*` paths still need to keep working during rollout.
+- Review UI should stay thin: comments and buttons call `IReviewerWorkflow` directly; richer category evidence waits for a dedicated query API instead of duplicating domain logic in the page.
+- Progress visualization should prefer semantic HTML (`<progress>`) over inline width styling so Razor stays free of inline visual attributes.

@@ -1,0 +1,26 @@
+@* Generic status badge. *@
+<span class="status-badge badge @GetBadgeClass()" role="status">
+    @if (ShowDot)
+    {
+        <span class="status-dot status-@Status" aria-hidden="true"></span>
+    }
+    @(Label ?? Status)
+</span>
+
+@code {
+    [Parameter, EditorRequired] public string Status { get; set; } = string.Empty;
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public bool ShowDot { get; set; }
+
+    private string GetBadgeClass() => Status switch
+    {
+        "pending" => "badge-pending",
+        "running" => "badge-running",
+        "awaiting_review" => "badge-awaiting-review",
+        "completed" or "approved" => "badge-completed",
+        "published" => "badge-published",
+        "failed" or "rejected" => "badge-failed",
+        "escalated" or "warning" => "badge-warning",
+        _ => "badge-info"
+    };
+}

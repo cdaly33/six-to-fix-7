@@ -1,26 +1,49 @@
-﻿@page "/audits/{AuditRunId}/run"
+@page "/audits/{AuditRunId}/run"
+@page "/audit-runs/{AuditRunId}/run"
 @attribute [Authorize(Roles = "TenantAdmin,SuperAdmin")]
 @inject NavigationManager Navigation
 
 <PageTitle>Skill Chain Runner — Six to Fix</PageTitle>
 
-<h1>Skill Chain Runner</h1>
+<div class="page-header">
+    <div class="page-header-left">
+        <a href="/audit-runs/@AuditRunId" class="btn btn-ghost btn-sm">← Audit Detail</a>
+        <h1 class="page-title">Skill Chain</h1>
+    </div>
+</div>
 
-@*
-  TODO (Phase 4 / Architecture Decision): This page is likely superseded by AuditDetail.razor
-  which shows live SignalR events from the running skill chain.
-  If a separate manual trigger UI is still required:
-    - Wire IAuditOrchestrator.StartAuditRunAsync(AuditRunId) to a "Start" button.
-    - Display real-time skill run progress via the /hubs/audit-run SignalR hub.
-  Discuss with team whether this route (/audits/{id}/run) should redirect to /audits/{id} instead.
-*@
+<p class="text-secondary">
+    Live skill chain progress for audit run <code>@AuditRunId</code>.
+    For real-time events, see <a href="/audit-runs/@AuditRunId">Audit Detail</a>.
+</p>
 
-<p class="text-muted">Audit run: @AuditRunId — see <a href="/audits/@AuditRunId">Audit Detail</a> for live progress.</p>
+<section>
+    <h2>Skills</h2>
+    <div class="skill-chain-panel">
+        @foreach (var skill in _skills)
+        {
+            <div class="skill-chain-item">
+                <div class="skill-chain-index">@skill.Index</div>
+                <span class="skill-chain-name">@skill.Name</span>
+                <span class="skill-chain-status">pending</span>
+            </div>
+        }
+    </div>
+</section>
 
 @code {
     [Parameter] public string AuditRunId { get; set; } = string.Empty;
 
     [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
+
+    private readonly SkillItem[] _skills =
+    [
+        new(1, "hubspot-data-pull"),
+        new(2, "document-analysis"),
+        new(3, "maturity-scoring"),
+        new(4, "gap-identification"),
+        new(5, "recommendation-synthesis")
+    ];
 
     protected override async Task OnInitializedAsync()
     {
@@ -31,6 +54,8 @@
             return;
         }
         if (!auth.User.IsInRole("TenantAdmin") && !auth.User.IsInRole("SuperAdmin"))
-            Navigation.NavigateTo($"/audits/{AuditRunId}", forceLoad: false);
+            Navigation.NavigateTo($"/audit-runs/{AuditRunId}", forceLoad: false);
     }
+
+    private sealed record SkillItem(int Index, string Name);
 }

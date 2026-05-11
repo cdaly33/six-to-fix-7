@@ -1,9 +1,19 @@
-@* Top navigation bar. Displays tenant slug, user display name, and sign-out. *@
-@* Reads AuthenticationState via CascadingParameter — no service injection. *@
+@inject NavigationManager Nav
 
 <header class="top-nav" role="banner">
     <div class="top-nav-left">
-        <span class="top-nav-brand">Six to Fix</span>
+        <button class="top-nav-toggle btn btn-ghost btn-sm" type="button" @onclick="OnToggleSidebar" aria-label="Toggle navigation">☰</button>
+        <div class="top-nav-title-group">
+            <div class="breadcrumb">
+                <span class="breadcrumb-item">@PrimaryCrumb</span>
+                @if (!string.Equals(PrimaryCrumb, CurrentTitle, StringComparison.Ordinal))
+                {
+                    <span class="breadcrumb-sep">/</span>
+                    <span class="breadcrumb-item">@CurrentTitle</span>
+                }
+            </div>
+            <div class="top-nav-page-title">@CurrentTitle</div>
+        </div>
         <AuthorizeView>
             <Authorized Context="authState">
                 @{
@@ -19,9 +29,63 @@
     <div class="top-nav-right">
         <AuthorizeView>
             <Authorized Context="authState">
-                <span class="top-nav-user">@authState.User.Identity?.Name</span>
+                @{
+                    var userName = authState.User.Identity?.Name ?? string.Empty;
+                }
+                <span class="top-nav-avatar" aria-hidden="true" title="@userName">@GetInitials(userName)</span>
+                <span class="top-nav-user">@userName</span>
                 <a class="btn btn-ghost btn-sm" href="/logout" aria-label="Sign out">Sign out</a>
             </Authorized>
         </AuthorizeView>
     </div>
 </header>
+
+@code {
+    [Parameter] public EventCallback OnToggleSidebar { get; set; }
+
+    private string CurrentTitle => GetBreadcrumbs().LastOrDefault() ?? "Dashboard";
+    private string PrimaryCrumb => GetBreadcrumbs().FirstOrDefault() ?? "Dashboard";
+
+    private IEnumerable<string> GetBreadcrumbs()
+    {
+        var path = Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Trim('/');
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return ["Dashboard"];
+        }
+
+        return path.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Where(segment => !Guid.TryParse(segment, out _))
+            .Select(MapSegment)
+            .DefaultIfEmpty("Dashboard");
+    }
+
+    private static string MapSegment(string segment) => segment.ToLowerInvariant() switch
+    {
+        "dashboard" => "Dashboard",
+        "audit-runs" => "Audit Runs",
+        "audits" => "Audit Runs",
+        "reviewer-queue" => "Reviewer Queue",
+        "review" => "Category Review",
+        "categories" => "Categories",
+        "clients" => "Clients",
+        "documents" => "Documents",
+        "calibration" => "Calibration",
+        "telemetry" => "Telemetry",
+        "admin" => "Admin",
+        "tenant" => "Tenant Admin",
+        "super" => "Super Admin",
+        _ => string.Join(' ', segment.Split('-', StringSplitOptions.RemoveEmptyEntries).Select(UpperFirst))
+    };
+
+    private static string UpperFirst(string value) => string.IsNullOrWhiteSpace(value) ? value : char.ToUpperInvariant(value[0]) + value[1..];
+
+    private static string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{char.ToUpperInvariant(parts[0][0])}{char.ToUpperInvariant(parts[^1][0])}"
+            : char.ToUpperInvariant(parts[0][0]).ToString();
+    }
+}
