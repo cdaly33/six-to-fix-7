@@ -1,12 +1,28 @@
 @page "/telemetry"
 @attribute [Authorize(Roles = "TenantAdmin,SuperAdmin")]
-@inject NavigationManager Navigation
+@inject NavigationManager Nav
 
 <PageTitle>Telemetry Dashboard — Six to Fix</PageTitle>
 
-<h1>Telemetry Dashboard</h1>
-@* Full implementation — Phase 4 *@
-<p class="text-muted">Under construction.</p>
+<div class="page-header">
+    <h1 class="page-title">Telemetry Dashboard</h1>
+</div>
+
+<div class="card" style="margin-top: var(--space-6);">
+    <div class="card-body empty-state">
+        <p class="text-secondary">Telemetry Dashboard is coming in a future release.</p>
+        <p class="text-muted" style="font-size: var(--text-sm);">
+            @* TODO (Phase 5): Implement telemetry dashboard.
+               Requires: ITelemetryCollector.GetTelemetrySnapshotsAsync(tenantId, dateRange)
+               and ITelemetryCollector.GetTelemetryEventsAsync(auditRunId).
+               Visualize: audit run durations, skill success/failure rates, AI cost per run,
+               Council escalation frequency, reviewer action patterns, HubSpot sync outcomes.
+               Use date-range picker component and simple bar/line chart primitives. *@
+            This dashboard will provide operational insights into audit pipeline performance,
+            AI spend, and reviewer throughput for your tenant.
+        </p>
+    </div>
+</div>
 
 @code {
     [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
@@ -16,12 +32,10 @@
         var auth = await AuthState;
         if (!auth.User.Identity?.IsAuthenticated ?? true)
         {
-            Navigation.NavigateTo("/login", forceLoad: false);
+            Nav.NavigateTo("/login", forceLoad: false);
             return;
         }
         if (!auth.User.IsInRole("TenantAdmin") && !auth.User.IsInRole("SuperAdmin"))
-        {
-            Navigation.NavigateTo("/audits", forceLoad: false);
-        }
+            Nav.NavigateTo("/audits", forceLoad: false);
     }
 }

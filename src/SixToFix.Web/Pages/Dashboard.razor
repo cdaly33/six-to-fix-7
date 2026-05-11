@@ -1,0 +1,105 @@
+@page "/"
+@page "/dashboard"
+@attribute [Authorize]
+@inject NavigationManager Nav
+
+<PageTitle>Dashboard — Six to Fix</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Dashboard</h1>
+    </div>
+    <AuthorizeView Roles="TenantAdmin,SuperAdmin">
+        <Authorized>
+            <a href="/clients" class="btn btn-primary">+ New Audit Run</a>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+<div class="dashboard-grid">
+
+    @* Welcome card *@
+    <div class="card dashboard-welcome">
+        <div class="card-body">
+            <h2 style="font-size: var(--text-2xl); margin-bottom: var(--space-2);">
+                Welcome to Six to Fix
+            </h2>
+            <p class="text-secondary">
+                Six to Fix automates marketing maturity audits across six key domains,
+                delivering actionable insights with AI-powered analysis.
+            </p>
+            <AuthorizeView Roles="TenantAdmin,SuperAdmin">
+                <Authorized>
+                    <p class="text-muted" style="font-size: var(--text-sm); margin-top: var(--space-2);">
+                        To start an audit run, go to <a href="/clients">Clients</a>,
+                        select a client, then choose <strong>View Audits</strong>.
+                    </p>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </div>
+
+    @* Quick-access cards *@
+    <a href="/audits" class="card dashboard-nav-card">
+        <div class="card-body">
+            <div class="nav-card-icon" aria-hidden="true">📋</div>
+            <h3 class="nav-card-title">Audit Runs</h3>
+            <p class="text-muted nav-card-desc">View and manage audit runs for your clients.</p>
+        </div>
+    </a>
+
+    <AuthorizeView Roles="Reviewer,TenantAdmin,SuperAdmin">
+        <Authorized>
+            <a href="/review" class="card dashboard-nav-card">
+                <div class="card-body">
+                    <div class="nav-card-icon" aria-hidden="true">✅</div>
+                    <h3 class="nav-card-title">Review Queue</h3>
+                    <p class="text-muted nav-card-desc">Review and approve category results.</p>
+                </div>
+            </a>
+        </Authorized>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="TenantAdmin,SuperAdmin">
+        <Authorized>
+            <a href="/clients" class="card dashboard-nav-card">
+                <div class="card-body">
+                    <div class="nav-card-icon" aria-hidden="true">🏢</div>
+                    <h3 class="nav-card-title">Clients</h3>
+                    <p class="text-muted nav-card-desc">Manage client accounts and start new audits.</p>
+                </div>
+            </a>
+
+            <a href="/admin/tenant" class="card dashboard-nav-card">
+                <div class="card-body">
+                    <div class="nav-card-icon" aria-hidden="true">⚙️</div>
+                    <h3 class="nav-card-title">Tenant Admin</h3>
+                    <p class="text-muted nav-card-desc">Configure your tenant settings and integrations.</p>
+                </div>
+            </a>
+        </Authorized>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="SuperAdmin">
+        <Authorized>
+            <a href="/admin/super" class="card dashboard-nav-card">
+                <div class="card-body">
+                    <div class="nav-card-icon" aria-hidden="true">🛡️</div>
+                    <h3 class="nav-card-title">Super Admin</h3>
+                    <p class="text-muted nav-card-desc">Platform-wide administration and tenant management.</p>
+                </div>
+            </a>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState;
+        if (!auth.User.Identity?.IsAuthenticated ?? true)
+            Nav.NavigateTo("/login", forceLoad: false);
+    }
+}

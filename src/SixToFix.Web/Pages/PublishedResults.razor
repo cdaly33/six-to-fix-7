@@ -1,0 +1,189 @@
+@page "/results/{ClientSlug}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IPublisher Publisher
+@inject NavigationManager Nav
+@inject ILogger<PublishedResults> Logger
+
+<PageTitle>Published Results — Six to Fix</PageTitle>
+
+@if (_loading)
+{
+    <LoadingSpinner Label="Loading published results…" />
+}
+else if (_summary is null)
+{
+    <div class="error-boundary">
+        <strong>No published results found for this client.</strong>
+        <a href="/audits" class="btn btn-ghost btn-sm" style="margin-left: var(--space-4);">← Audit Runs</a>
+    </div>
+}
+else
+{
+    <div class="page-header">
+        <div class="page-header-left">
+            <a href="/audits" class="btn btn-ghost btn-sm">← Back</a>
+            <h1 class="page-title">Published Results</h1>
+            <TierBadge Tier="@_summary.Tier" ShowLabel="true" />
+        </div>
+    </div>
+
+    @* Summary card *@
+    <div class="card" style="margin-bottom: var(--space-6);">
+        <div class="card-body">
+            <dl class="meta-grid">
+                <div class="meta-item">
+                    <dt>Client</dt>
+                    <dd>@_summary.ClientSlug</dd>
+                </div>
+                <div class="meta-item">
+                    <dt>Published</dt>
+                    <dd>@_summary.PublishedAt.LocalDateTime.ToString("MMM d, yyyy h:mm tt")</dd>
+                </div>
+                <div class="meta-item">
+                    <dt>Composite Score</dt>
+                    <dd>
+                        <span class="score-badge @GetScoreBadgeClass((int)_summary.CompositeScore)">
+                            @_summary.CompositeScore.ToString("F1")
+                        </span>
+                        <span class="text-muted"> / 10</span>
+                    </dd>
+                </div>
+                <div class="meta-item">
+                    <dt>Systems Maturity</dt>
+                    <dd>@(_summary.SystemsMaturityScore.ToString("F1"))%</dd>
+                </div>
+                <div class="meta-item">
+                    <dt>AI Readiness</dt>
+                    <dd>@(_summary.AiReadinessPct.ToString("F1"))%</dd>
+                </div>
+                <div class="meta-item">
+                    <dt>Tier</dt>
+                    <dd><TierBadge Tier="@_summary.Tier" ShowLabel="true" /></dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    @* Category Scores *@
+    <div class="card" style="margin-bottom: var(--space-6);">
+        <div class="card-header">
+            <h2 style="font-size: var(--text-xl); margin: 0;">Category Scores</h2>
+        </div>
+        @if (_summary.CategoryScores.Any())
+        {
+            <div class="card-body" style="padding: 0;">
+                @foreach (var (category, score) in _summary.CategoryScores.OrderByDescending(kv => kv.Value))
+                {
+                    var scoreInt = (int)Math.Round(score);
+                    <div class="category-result-row">
+                        <div class="category-result-info">
+                            <span class="category-name">@category</span>
+                            <span class="score-badge @GetScoreBadgeClass(scoreInt)">
+                                @score.ToString("F1")
+                            </span>
+                        </div>
+                        <div class="score-gap-bar">
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill"
+                                     style="width: @((score / 10m * 100).ToString("F0"))%;"
+                                     aria-valuenow="@score" aria-valuemin="0" aria-valuemax="10">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="card-body">
+                <p class="text-muted">No category scores available.</p>
+            </div>
+        }
+    </div>
+
+    @* Version history *@
+    @if (_versions.Count > 0)
+    {
+        <div class="card">
+            <div class="card-header">
+                <h2 style="font-size: var(--text-xl); margin: 0;">Publish History</h2>
+            </div>
+            <div class="data-table-scroll-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Published</th>
+                            <th>Tier</th>
+                            <th>Composite Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ver in _versions)
+                        {
+                            <tr>
+                                <td>@ver.PublishedAt.LocalDateTime.ToString("MMM d, yyyy h:mm tt")</td>
+                                <td><TierBadge Tier="@ver.Tier" ShowLabel="true" /></td>
+                                <td>
+                                    <span class="score-badge @GetScoreBadgeClass((int)Math.Round(ver.CompositeScore))">
+                                        @ver.CompositeScore.ToString("F1")
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public string ClientSlug { get; set; } = string.Empty;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
+
+    private SixToFix.Application.Models.PublishedAuditSummary? _summary;
+    private List<SixToFix.Application.Models.PublishedAuditVersion> _versions = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState;
+        if (!auth.User.Identity?.IsAuthenticated ?? true)
+        {
+            Nav.NavigateTo("/login", forceLoad: false);
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _summary = await Publisher.GetPublishedAuditAsync(ClientSlug);
+            var vers = await Publisher.GetPublishedVersionsAsync(ClientSlug);
+            _versions = vers.OrderByDescending(v => v.PublishedAt).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load published results for {ClientSlug}", ClientSlug);
+            _summary = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string GetScoreBadgeClass(int score) => score switch
+    {
+        >= 7 => "score-high",
+        >= 4 => "score-mid",
+        _    => "score-low"
+    };
+}

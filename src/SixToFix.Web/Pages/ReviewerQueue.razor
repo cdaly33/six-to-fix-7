@@ -1,27 +1,64 @@
-@page "/review"
+﻿@page "/reviewer/queue"
 @attribute [Authorize(Roles = "Reviewer,TenantAdmin,SuperAdmin")]
-@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@inject NavigationManager Nav
 
-<PageTitle>Review Queue — Six to Fix</PageTitle>
+<PageTitle>Reviewer Queue — Six to Fix</PageTitle>
 
-<h1>Review Queue</h1>
-@* Full implementation — Phase 4 *@
-<p class="text-muted">Under construction.</p>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Reviewer Queue</h1>
+    </div>
+</div>
+
+@* TODO (Service Layer): A full reviewer queue requires a service method such as
+   IReviewerWorkflow.GetPendingCategoriesAsync(Guid reviewerId) that returns all
+   CategoryResult rows with Status == "pending" assigned to the current reviewer.
+   Until that method is added, reviewers navigate directly by entering an audit run ID below. *@
+
+<div class="reviewer-queue-layout">
+    <section>
+        <h2>Jump to Audit Run</h2>
+        <p class="text-secondary">Enter an Audit Run ID to begin reviewing its categories.</p>
+        <div class="form-group" style="max-width:420px;">
+            <label for="runId">Audit Run ID (GUID)</label>
+            <input id="runId" type="text" class="form-control" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                   @bind="_auditRunIdInput" @bind:event="oninput" />
+        </div>
+        <button class="btn btn-primary" @onclick="GoToRun" disabled="@(!_validGuid)">Open Audit Run →</button>
+        @if (_inputError is not null)
+        {
+            <div class="alert alert-error" style="margin-top:var(--space-3)">@_inputError</div>
+        }
+    </section>
+
+    <section>
+        <h2>How to Review</h2>
+        <ol class="review-guide-list">
+            <li>Open an audit run from the <a href="/audits">Audit Runs</a> list.</li>
+            <li>Select a category result — status <em>pending</em> or <em>escalated</em>.</li>
+            <li>Choose <strong>Approve</strong>, <strong>Escalate</strong>, or request a <strong>Rerun</strong>.</li>
+            <li>After all categories are approved the audit run is ready to publish.</li>
+        </ol>
+    </section>
+</div>
 
 @code {
-    [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
+    private string _auditRunIdInput = string.Empty;
+    private string? _inputError;
 
-    protected override async Task OnInitializedAsync()
+    private bool _validGuid => Guid.TryParse(_auditRunIdInput, out _);
+
+    private void GoToRun()
     {
-        var auth = await AuthState;
-        if (!auth.User.Identity?.IsAuthenticated ?? true)
+        if (Guid.TryParse(_auditRunIdInput, out var id))
         {
-            Navigation.NavigateTo("/login", forceLoad: false);
-            return;
+            _inputError = null;
+            Nav.NavigateTo($"/audits/{id}");
         }
-        if (!auth.User.IsInRole("Reviewer") && !auth.User.IsInRole("TenantAdmin") && !auth.User.IsInRole("SuperAdmin"))
+        else
         {
-            Navigation.NavigateTo("/audits", forceLoad: false);
+            _inputError = "Please enter a valid GUID (e.g. 3fa85f64-5717-4562-b3fc-2c963f66afa6).";
         }
     }
 }

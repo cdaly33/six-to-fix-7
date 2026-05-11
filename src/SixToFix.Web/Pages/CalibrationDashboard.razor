@@ -1,12 +1,21 @@
-@page "/calibration"
+﻿@page "/calibration"
 @attribute [Authorize(Roles = "TenantAdmin,SuperAdmin")]
 @inject NavigationManager Navigation
 
 <PageTitle>Calibration Dashboard — Six to Fix</PageTitle>
 
 <h1>Calibration Dashboard</h1>
-@* Full implementation — Phase 4 *@
-<p class="text-muted">Under construction.</p>
+
+@*
+  TODO (Phase 4): Implement calibration dashboard.
+  Requires ICalibrationTracker (not yet defined) with methods such as:
+    - GetCalibrationSummaryAsync(Guid tenantId) → CalibrationSummary
+    - GetCalibrationDeltas(Guid auditRunId) → IReadOnlyList<CalibrationDeltaModel>
+  Models CalibrationSummary and CalibrationDeltaModel exist in SixToFix.Application.Models.
+  Register ICalibrationTracker in DI before wiring this page.
+*@
+
+<p class="text-muted">Calibration tools coming in Phase 4.</p>
 
 @code {
     [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
@@ -20,8 +29,6 @@
             return;
         }
         if (!auth.User.IsInRole("TenantAdmin") && !auth.User.IsInRole("SuperAdmin"))
-        {
             Navigation.NavigateTo("/audits", forceLoad: false);
-        }
     }
 }
