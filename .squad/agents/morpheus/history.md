@@ -48,3 +48,20 @@
 ### 2026-05-10 — Phase 0 Sealed
 
 **All 12 Chris decisions consolidated into canonical decisions.md (21,203 bytes).** 15 inbox files merged and deleted. Orchestration logs written per agent (oracle, trinity, tank). Session log: `.squad/log/2026-05-10T21_28_46Z-phase0-resolution.md`. All team history.md files appended with Phase 0 seal notification. Phase 1 gate: **CLEAR.**
+
+### 2026-05-10 — Phase 3 Cross-Agent Gap Review Completed
+
+**Reviewed PRs #11 (Neo) and #12 (Oracle + Trinity). Branches had zero file overlap — clean merge guaranteed.**
+
+All agent self-reported gaps were already resolved. Morpheus cross-referenced the implementation against `docs/architecture/hubspot-field-mapping.md` (locked spec) and found 5 real functional gaps:
+
+1. **HubSpotClient only pushed 2 of 11 required fields** — fixed by adding `AuditPublishScores` record and expanding `UpdateAuditResultAsync` to push all 11 fields.
+2. **Publisher.GetSkillScoreAsync read `ConfidenceScore` instead of `ActivityScore`** — fixed; `ActivityScore` correctly maps to `systems_maturity_score` (0–20) for SystemsMaturity and `ai_readiness` (0–100) for AiReadiness.
+3. **Publisher passed `clientSlug` as HubSpot company ID** — fixed; now uses `client.HubSpotCompanyId` with slug fallback.
+4. **SkillRunner did not capture `ai_readiness` from `derive-tier`** — fixed with third ActivityScore fallback.
+5. **SkillRunner `confidence_scores` sub-object (rubric) was never captured** — fixed with `ReadAverageFromObject` helper averaging per-area confidence scores.
+
+**Deferred to Phase 4:** YAML runtime loading (see `morpheus-yaml-loading.md`); per-category SkillRun architecture for PolicyEngine alignment.
+
+Both PRs merged to main at 0 build errors. Merge order: PR #11 → PR #12 (ai-skills branch pre-merged api-endpoints before squash).
+
