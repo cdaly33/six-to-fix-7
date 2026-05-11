@@ -17,6 +17,9 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+- **2026-05-10 — Phase 5:** The repo now treats `Category=Integration` and `Category=E2E` as the authoritative xUnit traits for workflow filtering, so PR-safe test runs should always exclude Docker-backed integration coverage and Playwright scaffolding with `Category!=Integration&Category!=E2E`.
+- **2026-05-10 — Phase 5:** `AuditDetail.razor` uses an injected `IAuditRunHubClientFactory` seam for SignalR connections, which keeps the Blazor page testable without opening a real WebSocket and should remain the preferred pattern for future real-time UI tests.
+
 ---
 
 ## Phase 0 — Planning Artifacts (2026-05-10)

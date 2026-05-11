@@ -1,0 +1,81 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Restore
+        run: dotnet restore SixToFix.slnx
+
+      - name: Build
+        run: dotnet build SixToFix.slnx --no-restore -c Release
+
+      - name: Unit, component, API, and infrastructure validation tests
+        run: dotnet test SixToFix.slnx --no-build -c Release --filter "Category!=Integration&Category!=E2E" --logger "github" --collect:"XPlat Code Coverage"
+
+      - name: Integration tests
+        run: dotnet test tests/SixToFix.Infrastructure.Tests/SixToFix.Infrastructure.Tests.csproj --no-build -c Release --filter "Category=Integration" --logger "github"
+
+      - name: Coverage gate (80% domain logic)
+        shell: bash
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator "-reports:**/coverage.cobertura.xml" "-targetdir:coverage" "-reporttypes:MarkdownSummaryGithub;JsonSummary" "-assemblyfilters:+SixToFix.Domain"
+          cat coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+          python - <<'PY'
+          import json, pathlib, sys
+          summary = json.loads(pathlib.Path('coverage/Summary.json').read_text())
+          assemblies = summary.get('assemblies', [])
+          domain = next((item for item in assemblies if item.get('name') == 'SixToFix.Domain'), None)
+          if domain is None:
+              print('::error::SixToFix.Domain coverage data was not generated')
+              sys.exit(1)
+          coverage = float(domain.get('linecoverage', domain.get('lineCoverage', 0)))
+          print(f'Domain line coverage: {coverage:.2f}%')
+          if coverage < 80:
+              print(f'::error::Domain coverage {coverage:.2f}% is below 80% gate')
+              sys.exit(1)
+          PY
+
+  e2e:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Restore
+        run: dotnet restore SixToFix.slnx
+
+      - name: Build E2E project
+        run: dotnet build tests/SixToFix.E2E.Tests/SixToFix.E2E.Tests.csproj --no-restore -c Release
+
+      - name: Install Playwright browsers
+        run: pwsh tests/SixToFix.E2E.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps
+
+      - name: Run Playwright E2E tests
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
+          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: dotnet test tests/SixToFix.E2E.Tests/SixToFix.E2E.Tests.csproj --no-build -c Release --filter "Category=E2E" --logger "github"

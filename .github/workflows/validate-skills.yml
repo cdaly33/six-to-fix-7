@@ -1,0 +1,30 @@
+name: Validate Skills
+
+on:
+  push:
+    paths:
+      - 'docs/skills/**'
+  pull_request:
+    paths:
+      - 'docs/skills/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: sudo apt-get update && sudo apt-get install -y yq
+
+      - name: Validate skill YAML schemas
+        shell: bash
+        run: |
+          for skill_dir in docs/skills/*/; do
+            if [ -f "${skill_dir}skill.yaml" ]; then
+              echo "Validating ${skill_dir}skill.yaml..."
+              yq eval '.name, .version, .system_prompt, .input_schema, .output_schema' "${skill_dir}skill.yaml" > /dev/null
+              echo "✅ ${skill_dir} valid"
+            fi
+          done
+          echo "All skill YAMLs valid" >> "$GITHUB_STEP_SUMMARY"

@@ -3,12 +3,15 @@
 <span class="status-dot status-@Status" aria-hidden="true"></span>
 @if (ShowLabel)
 {
-    <span class="status-label text-muted">@Status</span>
+    <span class="status-label text-muted">@(Label ?? Status)</span>
 }
 
 @code {
     /// <summary>Status (pending | running | completed | failed).</summary>
     [Parameter, EditorRequired] public string Status { get; set; } = "pending";
+
+    /// <summary>Optional override for the visible label.</summary>
+    [Parameter] public string? Label { get; set; }
 
     /// <summary>Whether to show the text label next to the dot.</summary>
     [Parameter] public bool ShowLabel { get; set; } = true;

@@ -1,72 +1,94 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
-using Xunit;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SixToFix.Infrastructure.Data;
-using Testcontainers.PostgreSql;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace SixToFix.Api.Tests;
 
-/// <summary>
-/// WebApplicationFactory for API contract tests.
-/// Uses Testcontainers PostgreSQL (real DB, never SQLite) — per test-layer-matrix.md §2.2.
-/// Mocks external services (ISkillRunner, IHubSpotClient, IBlobService) so no real Azure calls
-/// are made during tests.
-///
-/// Usage: Inherit from this class or use as IClassFixture&lt;CustomWebApplicationFactory&gt;.
-/// </summary>
-public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
+public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
-        .WithDatabase("sixtofix_apitest")
-        .WithUsername("sf_admin")
-        .WithPassword("test_admin_pw")
-        .WithPortBinding(5432, true)
-        .Build();
+    private const string JwtIssuer = "https://tests.strategicglue.local";
+    private const string JwtAudience = "six-to-fix-tests";
+    private const string JwtSigningKey = "super-secret-integration-key-1234567890";
 
-    /// <summary>
-    /// Connection string with pgBouncer-compatible settings.
-    /// Per environment-contract.md §5: No Reset On Close=true required for transaction pooling.
-    /// </summary>
-    public string ConnectionString =>
-        _postgres.GetConnectionString() + ";No Reset On Close=true";
+    public Mock<IAuthService> AuthService { get; } = new();
+    public Mock<IAuditOrchestrator> AuditOrchestrator { get; } = new();
+    public Mock<IReviewerWorkflow> ReviewerWorkflow { get; } = new();
+    public Mock<IPublisher> Publisher { get; } = new();
+    public Mock<ICalibrationTracker> CalibrationTracker { get; } = new();
+    public Mock<IHubSpotClient> HubSpotClient { get; } = new();
+    public Channel<HubSpotEvent> WebhookEvents { get; } = Channel.CreateUnbounded<HubSpotEvent>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.ConfigureServices(services =>
+        builder.UseEnvironment("Testing");
+        builder.ConfigureAppConfiguration((_, config) =>
         {
-            // Replace DbContext registration with test database connection
-            var dbDescriptor = services.SingleOrDefault(d =>
-                d.ServiceType == typeof(DbContextOptions<SixToFixDbContext>));
-            if (dbDescriptor != null)
-                services.Remove(dbDescriptor);
-
-            services.AddDbContext<SixToFixDbContext>((sp, options) =>
-                options.UseNpgsql(ConnectionString));
-
-            // External service mocks are added here as Phase 2 services are scaffolded.
-            // Per test-layer-matrix.md §2.1: ISkillRunner, IHubSpotClient, IBlobService
-            // are ALWAYS mocked at this layer — never call real Azure services.
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:DefaultConnection"] = "Host=localhost;Database=sixtofix-tests;Username=test;Password=test",
+                ["Jwt:Issuer"] = JwtIssuer,
+                ["Jwt:Audience"] = JwtAudience,
+                ["Jwt:SigningKey"] = JwtSigningKey,
+                ["Search:Endpoint"] = "https://search-strategicglue-dev.search.windows.net",
+                ["Storage:BlobEndpoint"] = "https://storage-strategicglue-dev.blob.core.windows.net/",
+                ["HubSpot:PrivateAppToken"] = "test-token"
+            });
         });
 
-        builder.UseEnvironment("Testing");
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IHostedService>();
+            services.RemoveAll<IAuthService>();
+            services.RemoveAll<IAuditOrchestrator>();
+            services.RemoveAll<IReviewerWorkflow>();
+            services.RemoveAll<IPublisher>();
+            services.RemoveAll<ICalibrationTracker>();
+            services.RemoveAll<IHubSpotClient>();
+            services.RemoveAll<Channel<HubSpotEvent>>();
+
+            services.AddSingleton(AuthService.Object);
+            services.AddSingleton(AuditOrchestrator.Object);
+            services.AddSingleton(ReviewerWorkflow.Object);
+            services.AddSingleton(Publisher.Object);
+            services.AddSingleton(CalibrationTracker.Object);
+            services.AddSingleton(HubSpotClient.Object);
+            services.AddSingleton(WebhookEvents);
+        });
     }
 
-    public async Task InitializeAsync()
+    public HttpClient CreateAuthenticatedClient(params string[] roles)
     {
-        await _postgres.StartAsync();
-
-        // Run EF Core migrations against the test database
-        using var scope = Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<SixToFixDbContext>();
-        await db.Database.MigrateAsync();
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(roles));
+        return client;
     }
 
-    public new async Task DisposeAsync()
+    private static string CreateToken(IEnumerable<string> roles)
     {
-        await base.DisposeAsync();
-        await _postgres.DisposeAsync();
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+            new("tenant_id", Guid.NewGuid().ToString())
+        };
+
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSigningKey)),
+            SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: JwtIssuer,
+            audience: JwtAudience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
