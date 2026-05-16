@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "14646800392650397613"
+      "templateHash": "2201357002208317019"
     }
   },
   "parameters": {
@@ -32,6 +32,9 @@
       "defaultValue": "sfadmin"
     },
     "postgresAdminPassword": {
+      "type": "securestring"
+    },
+    "sfAppPassword": {
       "type": "securestring"
     },
     "openAiAccountName": {
@@ -611,11 +614,8 @@
           },
           "secrets": {
             "value": {
-              "ConnectionStrings--DefaultConnection": "[format('Host={0};Port=6432;Database={1};Username={2};Password={3};Ssl Mode=Require;Trust Server Certificate=false', reference(resourceId('Microsoft.Resources/deployments', format('postgres-{0}', parameters('environment'))), '2025-04-01').outputs.fqdn.value, variables('databaseName'), parameters('postgresAdminLogin'), parameters('postgresAdminPassword'))]",
-              "ConnectionStrings--AdminConnection": "[format('Host={0};Port=5432;Database={1};Username={2};Password={3};Ssl Mode=Require;Trust Server Certificate=false', reference(resourceId('Microsoft.Resources/deployments', format('postgres-{0}', parameters('environment'))), '2025-04-01').outputs.fqdn.value, variables('databaseName'), parameters('postgresAdminLogin'), parameters('postgresAdminPassword'))]",
-              "Jwt--Key": "replace-with-a-long-random-jwt-signing-key",
-              "HubSpot--ApiKey": "replace-with-hubspot-private-app-token",
-              "AzureOpenAI--ApiKey": "managed-identity-preferred-placeholder"
+              "ConnectionStrings--DefaultConnection": "[format('Host={0};Port=6432;Database={1};Username=sf_app;Password={2};No Reset On Close=true;Ssl Mode=Require', reference(resourceId('Microsoft.Resources/deployments', format('postgres-{0}', parameters('environment'))), '2025-04-01').outputs.fqdn.value, variables('databaseName'), parameters('sfAppPassword'))]",
+              "ConnectionStrings--AdminConnection": "[format('Host={0};Port=5432;Database={1};Username={2};Password={3};Ssl Mode=Require;Trust Server Certificate=false', reference(resourceId('Microsoft.Resources/deployments', format('postgres-{0}', parameters('environment'))), '2025-04-01').outputs.fqdn.value, variables('databaseName'), parameters('postgresAdminLogin'), parameters('postgresAdminPassword'))]"
             }
           }
         },
@@ -752,7 +752,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "16924750940614684316"
+              "templateHash": "2156956327194244491"
             }
           },
           "parameters": {
@@ -839,8 +839,8 @@
                 "Storage__BlobEndpoint": "[parameters('blobEndpoint')]",
                 "ConnectionStrings__DefaultConnection": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=ConnectionStrings--DefaultConnection)', parameters('keyVaultName'))]",
                 "ConnectionStrings__AdminConnection": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=ConnectionStrings--AdminConnection)', parameters('keyVaultName'))]",
-                "Jwt__SigningKey": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=Jwt--Key)', parameters('keyVaultName'))]",
-                "HubSpot__PrivateAppToken": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=HubSpot--ApiKey)', parameters('keyVaultName'))]",
+                "Jwt__SigningKey": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=Jwt--SigningKey)', parameters('keyVaultName'))]",
+                "HubSpot__PrivateAppToken": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=HubSpot--PrivateAppToken)', parameters('keyVaultName'))]",
                 "AzureOpenAI__ApiKey": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=AzureOpenAI--ApiKey)', parameters('keyVaultName'))]",
                 "WEBSITE_RUN_FROM_PACKAGE": "1"
               },

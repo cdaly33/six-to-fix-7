@@ -161,48 +161,70 @@ Host=<your-server>.postgres.database.azure.com;Port=6432;Database=sixtofix;Usern
 ```
 Note: `sf_app` is a lower-privilege app user — different from `sf_admin` used in Step 1.
 
-**5. Set all secrets in Key Vault** (run each line separately, replace placeholders):
+**5. Set all secrets in Key Vault** (run each block separately, replacing placeholders):
+
+> ⚠️ **These prompts keep credentials out of your PowerShell command history.** PowerShell's PSReadLine records every command you type to disk. Using `Read-Host -AsSecureString` means the history entry contains only the prompt text — never the actual secret value.
 
 ```powershell
-# PostgreSQL runtime connection string (port 6432 = pgBouncer)
+# PostgreSQL runtime connection string (port 6432 = pgBouncer, sf_app least-privilege user)
+$secret = Read-Host -Prompt "Enter value for ConnectionStrings--DefaultConnection" -AsSecureString
+$plain  = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret))
 az keyvault secret set --vault-name kv-sixtofix-dev `
   --name "ConnectionStrings--DefaultConnection" `
-  --value "Host=<server>.postgres.database.azure.com;Port=6432;Database=sixtofix;Username=sf_app;Password=<password>;No Reset On Close=true;Ssl Mode=Require"
+  --value $plain
+$plain = $null   # clear from memory
+```
 
+```powershell
 # JWT signing key (use the value you generated in step 3)
+$secret = Read-Host -Prompt "Enter value for Jwt--SigningKey" -AsSecureString
+$plain  = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret))
 az keyvault secret set --vault-name kv-sixtofix-dev `
   --name "Jwt--SigningKey" `
-  --value "<paste-the-base64-string-you-generated>"
+  --value $plain
+$plain = $null
+```
 
-# Azure OpenAI endpoint URL
+```powershell
+# HubSpot private app token
+$secret = Read-Host -Prompt "Enter value for HubSpot--PrivateAppToken" -AsSecureString
+$plain  = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret))
+az keyvault secret set --vault-name kv-sixtofix-dev `
+  --name "HubSpot--PrivateAppToken" `
+  --value $plain
+$plain = $null
+```
+
+```powershell
+# HubSpot webhook secret
+$secret = Read-Host -Prompt "Enter value for HubSpot--WebhookSecret" -AsSecureString
+$plain  = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret))
+az keyvault secret set --vault-name kv-sixtofix-dev `
+  --name "HubSpot--WebhookSecret" `
+  --value $plain
+$plain = $null
+```
+
+```powershell
+# Azure OpenAI endpoint URL (not a credential — inline is fine)
 az keyvault secret set --vault-name kv-sixtofix-dev `
   --name "AzureOpenAI--Endpoint" `
   --value "https://<your-openai-resource>.openai.azure.com/"
 
-# Azure OpenAI deployment name (the model deployment name, e.g. "gpt-4o")
+# Azure OpenAI deployment name (not a credential — inline is fine)
 az keyvault secret set --vault-name kv-sixtofix-dev `
   --name "AzureOpenAI--DeploymentName" `
   --value "gpt-4o"
 
-# Azure AI Search endpoint
+# Azure AI Search endpoint (not a credential — inline is fine)
 az keyvault secret set --vault-name kv-sixtofix-dev `
   --name "Search--Endpoint" `
   --value "https://<your-search-resource>.search.windows.net"
 
-# Blob Storage endpoint
+# Blob Storage endpoint (not a credential — inline is fine)
 az keyvault secret set --vault-name kv-sixtofix-dev `
   --name "Storage--BlobEndpoint" `
   --value "https://<your-storage-account>.blob.core.windows.net"
-
-# HubSpot private app token
-az keyvault secret set --vault-name kv-sixtofix-dev `
-  --name "HubSpot--PrivateAppToken" `
-  --value "<your-hubspot-private-app-token>"
-
-# HubSpot webhook secret
-az keyvault secret set --vault-name kv-sixtofix-dev `
-  --name "HubSpot--WebhookSecret" `
-  --value "<your-hubspot-webhook-secret>"
 ```
 
 **6. Verify all 8 secrets are present:**
