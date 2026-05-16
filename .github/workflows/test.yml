@@ -41,12 +41,14 @@ jobs:
           python - <<'PY'
           import json, pathlib, sys
           summary = json.loads(pathlib.Path('coverage/Summary.json').read_text())
-          assemblies = summary.get('assemblies', [])
+          # Support both old format (top-level assemblies) and new format (coverage.assemblies)
+          assemblies = summary.get('assemblies', summary.get('coverage', {}).get('assemblies', []))
           domain = next((item for item in assemblies if item.get('name') == 'SixToFix.Domain'), None)
           if domain is None:
               print('::error::SixToFix.Domain coverage data was not generated')
               sys.exit(1)
-          coverage = float(domain.get('linecoverage', domain.get('lineCoverage', 0)))
+          # Support both old key names and new 'coverage' key
+          coverage = float(domain.get('linecoverage', domain.get('lineCoverage', domain.get('coverage', 0))))
           print(f'Domain line coverage: {coverage:.2f}%')
           if coverage < 80:
               print(f'::error::Domain coverage {coverage:.2f}% is below 80% gate')
