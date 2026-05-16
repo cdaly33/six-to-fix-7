@@ -38,21 +38,26 @@ If the build fails, stop and check `git status` before continuing.
 
 ## Local Dev with Aspire (Optional but Recommended)
 
-.NET Aspire is a local orchestration tool that spins up your entire dev environment — PostgreSQL container, the web app, and the Aspire dashboard — with a single command. No manual connection strings needed.
+.NET Aspire is a local orchestration tool that runs your web app and the Aspire dashboard — with a single command. **No Docker required.** It connects to your locally-installed PostgreSQL instance.
 
 **This is on the `feature/aspire-integration` branch. Merge it first:**
 ```powershell
-gh pr create --title "feat: add .NET Aspire for local dev orchestration" \
-  --head feature/aspire-integration --base main \
-  --body "Adds AppHost and ServiceDefaults. See docs for details."
-# Or just merge directly:
-gh pr merge feature/aspire-integration --squash --delete-branch
+# PR #21 should already be open — just merge it:
+gh pr merge 21 --squash --delete-branch
 git checkout main && git pull
 ```
 
 > ⚠️ **Prerequisites for `dotnet run --project src\SixToFix.AppHost`:**
-> - Docker Desktop must be installed and running before launch (Aspire uses Docker for the PostgreSQL container).
-> - Run the checked-in AppHost launch profile exactly as shown below. `Properties\launchSettings.json` provides the Aspire dashboard endpoint environment variables; without it you'll get the `ASPNETCORE_URLS` / `ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL` startup error.
+> 1. **PostgreSQL must be installed locally** (no Docker needed). Install from https://www.postgresql.org/download/windows/ — default port 5432, create a `sixtofix` database and a user.
+> 2. **Set your connection string.** The easiest way is to edit `src\SixToFix.AppHost\Properties\launchSettings.json` — replace `CHANGE_ME` with your actual Postgres password:
+>    ```json
+>    "ConnectionStrings__sixtofix": "Host=localhost;Port=5432;Database=sixtofix;Username=postgres;Password=YOUR_PASSWORD"
+>    ```
+>    Alternatively, use user secrets (never commit real passwords):
+>    ```powershell
+>    cd src\SixToFix.AppHost
+>    dotnet user-secrets set "ConnectionStrings:sixtofix" "Host=localhost;Port=5432;Database=sixtofix;Username=postgres;Password=YOUR_PASSWORD"
+>    ```
 
 **How to run it:**
 ```powershell
@@ -61,13 +66,13 @@ dotnet run --project src\SixToFix.AppHost
 ```
 
 **What you'll see:**
-- Aspire dashboard at a localhost HTTPS URL (printed in the console, typically `https://localhost:15888` or similar)
-- The web app running against a real PostgreSQL database container
+- Aspire dashboard at `https://localhost:17134` (printed in the console)
+- The web app running and connected to your local PostgreSQL database
 - All services visible in the dashboard with logs, traces, and metrics
 
 **Notes:**
-- In local dev, Aspire manages the PostgreSQL container automatically — no manual connection string needed
-- The database starts fresh each run (add a named volume in AppHost if you want persistence — see Aspire docs)
+- No Docker required — the app reads a plain connection string pointing at your local Postgres install
+- `launchSettings.json` ships with a placeholder password (`CHANGE_ME`) — override it in that file or via user secrets before running
 - Aspire is for **LOCAL DEV ONLY**. Production still deploys to Azure App Service + Azure PostgreSQL via GitHub Actions — nothing changes there
 
 
