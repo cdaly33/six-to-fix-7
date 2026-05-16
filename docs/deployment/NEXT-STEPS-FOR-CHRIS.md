@@ -50,12 +50,14 @@ gh pr merge feature/aspire-integration --squash --delete-branch
 git checkout main && git pull
 ```
 
-**Prerequisite:** Docker Desktop must be running (Aspire uses it for the PostgreSQL container).
+> ⚠️ **Prerequisites for `dotnet run --project src\SixToFix.AppHost`:**
+> - Docker Desktop must be installed and running before launch (Aspire uses Docker for the PostgreSQL container).
+> - Run the checked-in AppHost launch profile exactly as shown below. `Properties\launchSettings.json` provides the Aspire dashboard endpoint environment variables; without it you'll get the `ASPNETCORE_URLS` / `ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL` startup error.
 
 **How to run it:**
 ```powershell
 cd C:\GitHub\six-to-fix-7
-dotnet run --project src/SixToFix.AppHost
+dotnet run --project src\SixToFix.AppHost
 ```
 
 **What you'll see:**

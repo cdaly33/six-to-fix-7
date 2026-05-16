@@ -159,3 +159,9 @@
 - Run locally with: `dotnet run --project src/SixToFix.AppHost`
 
 - **2026-05-16 — Aspire Integration (Branch: feature/aspire-integration):** Added .NET Aspire orchestration for local dev environment. Two new projects: (1) `SixToFix.AppHost` — orchestrates PostgreSQL container + SixToFix.Web in local dev using NuGet-based Aspire.AppHost.Sdk v13.3.3 (workload-based is deprecated in .NET 10). (2) `SixToFix.ServiceDefaults` — shared service config with OpenTelemetry, health checks, service discovery. ServiceDefaults integrated into SixToFix.Web via `builder.AddServiceDefaults()` and `app.MapDefaultEndpoints()`. GrpcNetClient instrumentation omitted (no stable NuGet release, project has no gRPC). Production deployment (Azure App Service + Azure PostgreSQL) unchanged — Aspire local-dev only. Local run: `dotnet run --project src/SixToFix.AppHost`. Updated NEXT-STEPS-FOR-CHRIS.md with local dev setup. Decision archived: 2026-05-16 "Aspire added for local dev orchestration" in decisions.md. Note: Tank's secret handling fixes (2026-05-15/2026-05-16) may impact NEXT-STEPS-FOR-CHRIS.md reference in this update — verify coordination for Read-Host vs inline --value commands.
+
+### 2026-05-16 — AppHost startup prerequisites
+
+- The `ASPNETCORE_URLS` / OTLP dashboard startup failure was caused by a missing checked-in `src/SixToFix.AppHost\Properties\launchSettings.json`; the AppHost launch profile supplies those dashboard endpoint environment variables.
+- `dotnet workload install aspire` is not the fix on .NET 10 with Aspire 13.x; the CLI now reports the workload is deprecated and unnecessary.
+- Docker Desktop is still a hard prerequisite for local AppHost runs because PostgreSQL is started as a container; if Docker is missing or not running, AppHost will fail later for container startup instead.
