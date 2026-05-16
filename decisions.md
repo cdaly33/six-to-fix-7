@@ -939,3 +939,99 @@ Currently works (accidentally) because Program.cs adds the KV config provider la
 **Why:** User request — captured for team memory. Existing git workflow decisions already establish dev/phase-{N}-{slug} or eature/ branch naming convention.
 
 
+
+---
+
+### 2026-05-16: Aspire added for local dev orchestration
+
+**By:** Neo  
+**What:** Added SixToFix.AppHost and SixToFix.ServiceDefaults. Aspire manages PostgreSQL container in local dev. Production deployment (Azure App Service + Azure PostgreSQL) unchanged. ServiceDefaults adds OpenTelemetry, health checks, and service discovery to SixToFix.Web.  
+**Why:** User request — simplify local dev setup and add observability foundation.
+
+---
+
+### 2026-05-15 / 2026-05-16: Tank — Secret Handling Fixes
+
+**Author:** Tank  
+**Date:** 2026-05-15  
+**Branch:** dev/simplify-stack-signalr-search  
+**Addresses:** morpheus-secret-handling-review.md (all three real problems)
+
+#### Fix 1 (🔴 Critical) — Runtime KV secret now uses `sf_app` credentials
+
+**File:** `infra/main.bicep`
+
+**Problem:** `bootstrapSecrets` was populating `ConnectionStrings--DefaultConnection` (the runtime pgBouncer connection string) with the `sfadmin` DDL admin username and password. The live app would run with DDL-capable credentials.
+
+**Solution:**
+1. Added `@secure() param sfAppPassword string` (no default — injected by CI pipeline at deploy time, never stored in param files).
+2. Changed `DefaultConnection` bootstrap to:
+   `
+   Host=${postgres.outputs.fqdn};Port=6432;Database=sixtofix;Username=sf_app;Password=${sfAppPassword};No Reset On Close=true;Ssl Mode=Require
+   `
+3. Removed placeholder secrets (`Jwt--Key`, `HubSpot--ApiKey`, `AzureOpenAI--ApiKey`) from `bootstrapSecrets`. Empty is better than a placeholder that looks valid but isn't. These must be set manually per NEXT-STEPS-FOR-CHRIS.md Step 2.
+
+**Validation:** `az bicep build --file infra/main.bicep` — exit 0, no errors.
+
+#### Fix 2 (🟡 Warning) — Secret name mismatch aligned to what code reads
+
+**Files:** `infra/modules/appservice.bicep`, `infra/main.bicep` (bootstrapSecrets already fixed in Fix 1)
+
+**Problem:** App Service KV references pointed at wrong secret names:
+- `Jwt__SigningKey` → `@Microsoft.KeyVault(...SecretName=Jwt--Key)` — but `Program.cs` line 42 reads `Jwt:SigningKey`, so the canonical KV secret name must be `Jwt--SigningKey`.
+- `HubSpot__PrivateAppToken` → `@Microsoft.KeyVault(...SecretName=HubSpot--ApiKey)` — but `AiServiceExtensions.cs` line 55 reads `HubSpot:PrivateAppToken`, so canonical KV secret name must be `HubSpot--PrivateAppToken`.
+
+**Solution (appservice.bicep):**
+`icep
+// Before:
+Jwt__SigningKey: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=Jwt--Key)'
+HubSpot__PrivateAppToken: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=HubSpot--ApiKey)'
+
+// After:
+Jwt__SigningKey: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=Jwt--SigningKey)'
+HubSpot__PrivateAppToken: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=HubSpot--PrivateAppToken)'
+`
+
+`NEXT-STEPS-FOR-CHRIS.md` already used the correct names (`Jwt--SigningKey`, `HubSpot--PrivateAppToken`) — no change needed there. The guide was the canonical source; Bicep was wrong.
+
+#### Fix 3 (docs) — `Read-Host` pattern replaces inline `--value` for credentials
+
+**File:** `docs/deployment/NEXT-STEPS-FOR-CHRIS.md` — Step 2, item 5
+
+**Problem:** `az keyvault secret set --value "...Password=..."` writes the full credential to `%APPDATA%\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt`.
+
+**Solution:** Replaced inline `--value` with `Read-Host -AsSecureString` pattern for all four credential-bearing secrets:
+- `ConnectionStrings--DefaultConnection` (contains `sf_app` password)
+- `Jwt--SigningKey`
+- `HubSpot--PrivateAppToken`
+- `HubSpot--WebhookSecret`
+
+Non-sensitive URL values (`AzureOpenAI--Endpoint`, `AzureOpenAI--DeploymentName`, `Search--Endpoint`, `Storage--BlobEndpoint`) retain inline `--value` — they are not credentials.
+
+Added note: *"These prompts keep credentials out of your PowerShell command history."*
+
+#### CI Pipeline Impact
+
+The new `sfAppPassword` param in `main.bicep` must be supplied when `deploy-infra.yml` runs. The workflow must pass it as a parameter, e.g.:
+
+`yaml
+- name: Deploy infra
+  run: |
+    az deployment group create \
+      --template-file infra/main.bicep \
+      --parameters infra/params/dev.bicepparam \
+                   postgresAdminPassword=${{ secrets.POSTGRES_ADMIN_PASSWORD }} \
+                   sfAppPassword=${{ secrets.SF_APP_PASSWORD }}
+`
+
+Add `SF_APP_PASSWORD` to GitHub Secrets alongside `POSTGRES_ADMIN_PASSWORD`. Chris must also create the `sf_app` PostgreSQL role with this password before the first deploy.
+
+#### Status
+
+| Fix | Severity | Done |
+|-----|----------|------|
+| Runtime KV secret uses `sf_app` (not `sfadmin`) | 🔴 Critical | ✅ |
+| Secret name mismatch aligned (`Jwt--SigningKey`, `HubSpot--PrivateAppToken`) | 🟡 Warning | ✅ |
+| `Read-Host` pattern in NEXT-STEPS-FOR-CHRIS.md Step 2 | docs | ✅ |
+| Bicep validates clean | — | ✅ |
+
