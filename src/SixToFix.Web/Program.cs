@@ -10,6 +10,7 @@ using SixToFix.Web.Navigation;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddServiceDefaults();
 
 // Key Vault configuration (only when KV URI is configured — skipped in local dev)
 var kvUri = builder.Configuration["KeyVault:Uri"];
@@ -88,6 +89,8 @@ app.MapApiEndpoints();
 app.MapRazorComponents<SixToFix.Web.App>()
     .AddInteractiveServerRenderMode();
 
+
+app.MapDefaultEndpoints();
 
 app.Run();
 

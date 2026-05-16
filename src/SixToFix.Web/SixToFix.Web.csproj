@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SixToFix.Api\SixToFix.Api.csproj" />
     <ProjectReference Include="..\SixToFix.Infrastructure\SixToFix.Infrastructure.csproj" />
+    <ProjectReference Include="..\SixToFix.ServiceDefaults\SixToFix.ServiceDefaults.csproj" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
