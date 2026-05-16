@@ -1,22 +1,41 @@
-# 🛑 Chris's Pickup Guide — Three Remaining Deployment Steps
+# 🛑 Chris's Pickup Guide — Four Remaining Steps
 
-**Written:** 2026-05-10 (evening) | **Updated:** 2026-05-15
+**Written:** 2026-05-10 (evening) | **Updated:** 2026-05-15 (evening)
 **Project:** StrategicGlue Six-to-Fix — Multi-tenant SaaS marketing maturity audit platform
-**Status:** All 6 development phases complete. 84 tests passing. Building clean. Three infrastructure items blocked on Azure/PostgreSQL access.
+**Status:** All 6 development phases complete. 84 tests passing. Building clean. PR #20 infrastructure fixes pending merge. Three infrastructure items blocked on Azure/PostgreSQL access.
 
 ---
 
 ## Quick Summary
 
-The entire codebase is done and merged to `main`. Nothing left to code. You just need to wire up three real Azure services and the app can deploy:
+The entire codebase is done. Nothing left to code except merging tonight's infrastructure fixes. Then you just need to wire up three real Azure services and the app can deploy:
 
 | # | Task | Prerequisite | Est. time |
 |---|------|-------------|-----------|
+| 0 | **Merge PR #20** | GitHub access | ~2 min |
 | 1 | **EF Core database migration** | PostgreSQL hostname + sf_admin password | ~10 min |
 | 2 | **Key Vault secrets population** | `az login` + 8 values from Azure/HubSpot portals | ~30 min |
 | 3 | **Azure AI Search index provisioning** | `az login` (same login as step 2) + Search service name | ~5 min |
 
-Do them in order. Step 1 is independent. Steps 2 and 3 share the same `az login`.
+Do them in order. Step 0 is critical — do NOT skip it. Step 1 is independent. Steps 2 and 3 share the same `az login`.
+
+---
+
+## Step 0 — Merge PR #20 First
+
+Before doing anything else, merge the open pull request that contains tonight's infrastructure fixes:
+
+**PR #20:** https://github.com/cdaly33/six-to-fix-7/pull/20
+**Branch:** `dev/simplify-stack-signalr-search`
+**What it contains:** SignalR → PeriodicTimer replacement, AI Search cleanup, Bicep credential fix (sf_app instead of sfadmin), secret name fixes, secure Read-Host pattern for Key Vault population.
+
+```powershell
+gh pr merge 20 --squash --delete-branch
+git checkout main
+git pull
+```
+
+Do not proceed to Step 1 until this is merged and you're on latest main.
 
 ---
 
@@ -26,13 +45,11 @@ Open PowerShell and navigate to the repo:
 ```powershell
 cd C:\GitHub\six-to-fix-7        # or wherever you cloned it on the new machine
 git pull                          # make sure you're on latest main
-git log --oneline -5              # should show recent commits from the team
+git log --oneline -3              # should show the PR #20 merge commit at the top
 dotnet build SixToFix.slnx        # should say "Build succeeded, 0 Error(s)"
 ```
 
 If the build fails, stop and check `git status` before continuing.
-
----
 
 ## Step 1 — EF Core Initial Migration
 
@@ -120,6 +137,18 @@ The app does NOT store any secrets in config files or environment variables (tho
 **Key Vault name:** `kv-sixtofix-dev` (for the dev environment)
 
 ### What you need first
+
+⚠️ **New prerequisite — GitHub Secret:** Before deploying, add `SF_APP_PASSWORD` to your GitHub repository secrets. This is the password for the `sf_app` PostgreSQL user (the lower-privilege app account). Without it, the `deploy-infra.yml` workflow will fail.
+
+To add it:
+1. Go to https://github.com/cdaly33/six-to-fix-7/settings/secrets/actions
+2. Click **New repository secret**
+3. Name: `SF_APP_PASSWORD`
+4. Value: (the password you choose for the sf_app PostgreSQL user)
+
+You'll also use this password in the `ConnectionStrings--DefaultConnection` Key Vault secret below.
+
+---
 
 - Azure CLI installed. Test: `az --version`. If missing: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows
 - Your Azure account must have **Key Vault Secrets Officer** or **Owner** role on the Key Vault
@@ -373,13 +402,13 @@ You can monitor progress at: https://github.com/cdaly33/six-to-fix-7/actions
 
 ---
 
-## Project State Snapshot (as of 2026-05-10)
+## Project State Snapshot (as of 2026-05-15 — evening)
 
-- **Branch:** `main` — all 6 phases merged
+- **Branch:** `main` — all 6 phases merged, PR #20 infrastructure fixes merged
 - **Tests:** 84 passing, 0 failing
 - **Build:** Clean (`TreatWarningsAsErrors=true` — zero warnings allowed)
-- **Architecture:** .NET 10, Blazor Server, Azure PostgreSQL (Flexible), Azure OpenAI (GPT-4o), Azure AI Search, Azure Blob Storage, HubSpot integration, PeriodicTimer polling for audit progress updates
+- **Architecture:** .NET 10, Blazor Server, Azure PostgreSQL (Flexible with separate `sf_admin` and `sf_app` users), Azure OpenAI (GPT-4o), Azure AI Search (1 index: `six-to-fix-evidence`), Azure Blob Storage, HubSpot integration, PeriodicTimer polling for real-time audit progress updates
 - **Auth:** JWT Bearer, four roles: `SuperAdmin`, `TenantAdmin`, `Reviewer`, `Viewer`
-- **Pending:** ONLY the three infrastructure steps above — no code changes needed
+- **Pending:** Merge PR #20 first (Step 0 above), then the three infrastructure steps above — no code changes needed
 
 Good luck tomorrow, Chris. The hard part is done. 🎉
