@@ -26,18 +26,22 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
     public virtual async Task InitializeAsync()
     {
-        // Run migrations using the admin connection before each test class setup
+        // Create schema using the admin connection before each test class setup.
+        // EnsureCreatedAsync is used because no EF migrations exist yet; once an
+        // initial migration is generated, switch this to MigrateAsync().
         var adminOptions = new DbContextOptionsBuilder<SixToFixDbContext>()
             .UseNpgsql(Fixture.AdminConnectionString)
+            .UseSnakeCaseNamingConvention()
             .Options;
 
         var designTimeContext = new DesignTimeTenantContext();
         await using var migrationContext = new SixToFixDbContext(adminOptions, designTimeContext);
-        await migrationContext.Database.MigrateAsync();
+        await migrationContext.Database.EnsureCreatedAsync();
 
         // Runtime DbContext uses the app role connection, mirroring production
         var appOptions = new DbContextOptionsBuilder<SixToFixDbContext>()
             .UseNpgsql(Fixture.AppConnectionString)
+            .UseSnakeCaseNamingConvention()
             .Options;
 
         DbContext = new SixToFixDbContext(appOptions, designTimeContext);
