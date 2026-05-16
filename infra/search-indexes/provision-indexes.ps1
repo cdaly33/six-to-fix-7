@@ -1,15 +1,17 @@
 <#
 .SYNOPSIS
-    Provisions all three Azure AI Search indexes for Six-to-Fix.
+    Provisions the Azure AI Search index for Six-to-Fix.
 
 .DESCRIPTION
-    Creates the following indexes if they do not already exist:
-      - six-to-fix-evidence          (evidence retrieval — pre-audit)
-      - six-to-fix-skill-outputs     (skill output audit trail)
-      - six-to-fix-calibration       (reviewer calibration deltas)
+    Creates the following index if it does not already exist:
+      - six-to-fix-evidence          (evidence retrieval — pre-audit; semantic + vector search)
 
-    Indexes are created via the Azure AI Search REST API using az rest.
-    Existing indexes are left unchanged (idempotent — safe to re-run).
+    Removed indexes (data lives in PostgreSQL — no AI Search copy needed):
+      - six-to-fix-skill-outputs     (removed; data in skill_runs table)
+      - six-to-fix-calibration       (removed; data in calibration_deltas table)
+
+    Index is created via the Azure AI Search REST API using az rest.
+    Existing index is left unchanged (idempotent — safe to re-run).
 
 .PARAMETER SearchServiceName
     The name of your Azure AI Search resource (just the name, not the full URL).
@@ -129,54 +131,12 @@ $evidenceIndex = @{
 }
 
 # ----------------------------------------------------------------
-# Index 2: six-to-fix-skill-outputs
+# Provision the evidence index
 # ----------------------------------------------------------------
-$skillOutputsIndex = @{
-    name   = "six-to-fix-skill-outputs"
-    fields = @(
-        @{ name = "id";             type = "Edm.String";         key = $true;  filterable = $true }
-        @{ name = "tenantId";       type = "Edm.String";         filterable = $true }
-        @{ name = "auditRunId";     type = "Edm.String";         filterable = $true }
-        @{ name = "skillRunId";     type = "Edm.String";         filterable = $true }
-        @{ name = "skillName";      type = "Edm.String";         filterable = $true;  facetable = $true }
-        @{ name = "evidenceType";   type = "Edm.String";         filterable = $true;  facetable = $true }
-        @{ name = "content";        type = "Edm.String";         searchable = $true;  analyzer = "en.microsoft" }
-        @{ name = "rawJsonPath";    type = "Edm.String" }
-        @{ name = "tier";           type = "Edm.String";         filterable = $true;  facetable = $true }
-        @{ name = "compositeScore"; type = "Edm.Int32";          filterable = $true;  sortable = $true }
-        @{ name = "completedAt";    type = "Edm.DateTimeOffset"; filterable = $true;  sortable = $true }
-        @{ name = "clientId";       type = "Edm.String";         filterable = $true }
-    )
-}
-
-# ----------------------------------------------------------------
-# Index 3: six-to-fix-calibration
-# ----------------------------------------------------------------
-$calibrationIndex = @{
-    name   = "six-to-fix-calibration"
-    fields = @(
-        @{ name = "id";                 type = "Edm.String";         key = $true;  filterable = $true }
-        @{ name = "tenantId";           type = "Edm.String";         filterable = $true }
-        @{ name = "auditRunId";         type = "Edm.String";         filterable = $true }
-        @{ name = "area";               type = "Edm.String";         filterable = $true;  facetable = $true }
-        @{ name = "originalScore";      type = "Edm.Double";         filterable = $true;  sortable = $true }
-        @{ name = "adjustedScore";      type = "Edm.Double";         filterable = $true;  sortable = $true }
-        @{ name = "scoreDelta";         type = "Edm.Double";         filterable = $true;  sortable = $true }
-        @{ name = "overrideReasonCode"; type = "Edm.String";         filterable = $true;  facetable = $true }
-        @{ name = "notes";              type = "Edm.String";         searchable = $true;  analyzer = "en.microsoft" }
-        @{ name = "recordedAt";         type = "Edm.DateTimeOffset"; filterable = $true;  sortable = $true }
-    )
-}
-
-# ----------------------------------------------------------------
-# Provision all three indexes
-# ----------------------------------------------------------------
-Invoke-CreateIndex -IndexName "six-to-fix-evidence"      -Schema $evidenceIndex
-Invoke-CreateIndex -IndexName "six-to-fix-skill-outputs"  -Schema $skillOutputsIndex
-Invoke-CreateIndex -IndexName "six-to-fix-calibration"    -Schema $calibrationIndex
+Invoke-CreateIndex -IndexName "six-to-fix-evidence" -Schema $evidenceIndex
 
 Write-Host ""
-Write-Host "All indexes provisioned successfully." -ForegroundColor Green
+Write-Host "Index provisioned successfully." -ForegroundColor Green
 Write-Host ""
 Write-Host "Next: ensure the App Service managed identity has these roles on '$SearchServiceName':"
 Write-Host "  - Search Index Data Contributor  (for indexing documents)"

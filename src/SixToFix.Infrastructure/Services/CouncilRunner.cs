@@ -19,20 +19,17 @@ public sealed class CouncilRunner : ICouncilRunner
 
     private readonly IAIClient _aiClient;
     private readonly SixToFixDbContext _dbContext;
-    private readonly IRealtimeNotifier _notifier;
     private readonly ResiliencePipelineProvider<string> _pipelineProvider;
     private readonly ILogger<CouncilRunner> _logger;
 
     public CouncilRunner(
         IAIClient aiClient,
         SixToFixDbContext dbContext,
-        IRealtimeNotifier notifier,
         ResiliencePipelineProvider<string> pipelineProvider,
         ILogger<CouncilRunner> logger)
     {
         _aiClient = aiClient;
         _dbContext = dbContext;
-        _notifier = notifier;
         _pipelineProvider = pipelineProvider;
         _logger = logger;
     }
@@ -64,7 +61,6 @@ public sealed class CouncilRunner : ICouncilRunner
             ?? throw new CouncilExecutionException($"No skill run was found for category '{categoryResult.Category}'.");
 
         var startedAt = DateTimeOffset.UtcNow;
-        await NotifyAsync(auditRunId, "council_started", new { auditRunId, categories = new[] { categoryResult.Category }, triggeredBy = "policy_engine" }, ct);
 
         var flagsPayload = triggeringFlags.Select(flag => new { rule = flag.Rule, severity = flag.Severity, detail = flag.Detail });
         var categoryPayload = new
@@ -132,13 +128,6 @@ public sealed class CouncilRunner : ICouncilRunner
 
         _dbContext.CouncilSessions.Add(session);
         await _dbContext.SaveChangesAsync(ct);
-
-        var durationMs = (long)(completedAt - startedAt).TotalMilliseconds;
-        await NotifyAsync(
-            auditRunId,
-            "council_completed",
-            new { auditRunId, decisionType, adjustedCategories = adjustedScores.Keys, durationMs },
-            ct);
 
         return new CouncilDecisionModel(
             auditRunId,
@@ -214,18 +203,6 @@ public sealed class CouncilRunner : ICouncilRunner
 
         using var _ = JsonDocument.Parse(result.Content);
         return result.Content;
-    }
-
-    private async Task NotifyAsync(Guid auditRunId, string method, object payload, CancellationToken ct)
-    {
-        try
-        {
-            await _notifier.SendToGroupAsync(auditRunId.ToString(), method, payload, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Realtime notification {Method} failed for audit run {AuditRunId}", method, auditRunId);
-        }
     }
 
     private static decimal? ReadDecimal(string json, string propertyName)

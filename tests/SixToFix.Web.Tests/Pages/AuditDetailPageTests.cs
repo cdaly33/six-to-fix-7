@@ -5,7 +5,7 @@ namespace SixToFix.Web.Tests.Pages;
 public sealed class AuditDetailPageTests
 {
     [Fact]
-    public async Task AuditDetail_ConnectsToHubAndRendersIncomingEvents()
+    public void AuditDetail_ShowsLiveIndicatorWhenRunIsActive()
     {
         using var ctx = new TestContext();
         var auth = ctx.AddTestAuthorization();
@@ -18,23 +18,18 @@ public sealed class AuditDetailPageTests
             .Setup(service => service.GetAuditRunAsync(auditRunId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildAuditRun(auditRunId, "running"));
 
-        var hubClient = new FakeAuditRunHubClient();
-        RegisterServices(ctx, orchestrator.Object, hubClient);
+        RegisterServices(ctx, orchestrator.Object);
 
         var cut = ctx.RenderComponent<AuditDetail>(parameters => parameters.Add(p => p.AuditRunId, auditRunId));
-        await hubClient.TriggerAsync("skill-completed", "Brand analysis finished");
 
         cut.WaitForAssertion(() =>
         {
-            hubClient.Started.Should().BeTrue();
-            hubClient.JoinedAuditRunId.Should().Be(auditRunId.ToString("N"));
-            cut.Markup.Should().Contain("skill-completed");
-            cut.Markup.Should().Contain("Brand analysis finished");
+            cut.Markup.Should().Contain("running");
         });
     }
 
     [Fact]
-    public async Task AuditDetail_ReloadsAuditRunAfterTerminalSignalREvent()
+    public void AuditDetail_ShowsPublishButtonForCompletedRunWithAdminRole()
     {
         using var ctx = new TestContext();
         var auth = ctx.AddTestAuthorization();
@@ -45,19 +40,15 @@ public sealed class AuditDetailPageTests
         var auditRunId = Guid.NewGuid();
         var orchestrator = new Mock<IAuditOrchestrator>();
         orchestrator
-            .SetupSequence(service => service.GetAuditRunAsync(auditRunId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(BuildAuditRun(auditRunId, "running"))
+            .Setup(service => service.GetAuditRunAsync(auditRunId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildAuditRun(auditRunId, "completed"));
 
-        var hubClient = new FakeAuditRunHubClient();
-        RegisterServices(ctx, orchestrator.Object, hubClient);
+        RegisterServices(ctx, orchestrator.Object);
 
         var cut = ctx.RenderComponent<AuditDetail>(parameters => parameters.Add(p => p.AuditRunId, auditRunId));
-        await hubClient.TriggerAsync("run-completed", "Done");
 
         cut.WaitForAssertion(() =>
         {
-            orchestrator.Verify(service => service.GetAuditRunAsync(auditRunId, It.IsAny<CancellationToken>()), Times.Exactly(2));
             cut.Markup.Should().Contain("Publish Results");
         });
     }
@@ -76,19 +67,18 @@ public sealed class AuditDetailPageTests
             .Setup(service => service.GetAuditRunAsync(auditRunId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildAuditRun(auditRunId, "completed"));
 
-        RegisterServices(ctx, orchestrator.Object, new FakeAuditRunHubClient());
+        RegisterServices(ctx, orchestrator.Object);
 
         var cut = ctx.RenderComponent<AuditDetail>(parameters => parameters.Add(p => p.AuditRunId, auditRunId));
 
         cut.Markup.Should().NotContain("Publish Results");
     }
 
-    private static void RegisterServices(TestContext ctx, IAuditOrchestrator orchestrator, IAuditRunHubClientFactory hubClientFactory)
+    private static void RegisterServices(TestContext ctx, IAuditOrchestrator orchestrator)
     {
         ctx.Services.AddSingleton(orchestrator);
         ctx.Services.AddSingleton(Mock.Of<IReviewerWorkflow>());
         ctx.Services.AddSingleton(Mock.Of<IPublisher>());
-        ctx.Services.AddSingleton(hubClientFactory);
         ctx.Services.AddSingleton<ILogger<AuditDetail>>(_ => NullLogger<AuditDetail>.Instance);
     }
 

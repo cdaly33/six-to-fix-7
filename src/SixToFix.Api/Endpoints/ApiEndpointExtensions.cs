@@ -156,6 +156,17 @@ public static class ApiEndpointExtensions
         .RequireAuthorization()
         .WithName("GetAuditRun");
 
+        app.MapGet("/api/audit-runs/{id:guid}/status", async (
+            Guid id,
+            IAuditOrchestrator orchestrator,
+            CancellationToken ct) =>
+        {
+            var status = await orchestrator.GetAuditRunStatusAsync(id, ct);
+            return status is null ? Results.NotFound() : Results.Ok(status);
+        })
+        .RequireAuthorization()
+        .WithName("GetAuditRunStatus");
+
         app.MapGet("/api/audit-runs", async (
             Guid clientId,
             IAuditOrchestrator orchestrator,

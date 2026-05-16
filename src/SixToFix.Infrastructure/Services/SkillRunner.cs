@@ -87,7 +87,6 @@ public sealed class SkillRunner : ISkillRunner
 
     private readonly IAIClient _aiClient;
     private readonly SixToFixDbContext _dbContext;
-    private readonly IRealtimeNotifier _notifier;
     private readonly ResiliencePipelineProvider<string> _pipelineProvider;
     private readonly ILogger<SkillRunner> _logger;
     private readonly ISkillLoader _skillLoader;
@@ -95,14 +94,12 @@ public sealed class SkillRunner : ISkillRunner
     public SkillRunner(
         IAIClient aiClient,
         SixToFixDbContext dbContext,
-        IRealtimeNotifier notifier,
         ResiliencePipelineProvider<string> pipelineProvider,
         ILogger<SkillRunner> logger,
         ISkillLoader skillLoader)
     {
         _aiClient = aiClient;
         _dbContext = dbContext;
-        _notifier = notifier;
         _pipelineProvider = pipelineProvider;
         _logger = logger;
         _skillLoader = skillLoader;
@@ -165,7 +162,6 @@ public sealed class SkillRunner : ISkillRunner
 
         _dbContext.SkillRuns.Add(skillRun);
         await _dbContext.SaveChangesAsync(ct);
-        await NotifyAsync(auditRunId, "skill_started", new { auditRunId, skillName = definition.Name, skillRunId = skillRun.Id }, ct);
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         try
@@ -206,12 +202,6 @@ public sealed class SkillRunner : ISkillRunner
                 ?? ReadInt(outputJson.RootElement, "ai_readiness");
             await _dbContext.SaveChangesAsync(ct);
 
-            await NotifyAsync(
-                auditRunId,
-                "skill_completed",
-                new { auditRunId, skillName = definition.Name, skillRunId = skillRun.Id, latencyMs = stopwatch.ElapsedMilliseconds },
-                ct);
-
             return new SkillRunResult(skillRun, outputJson, true, aiResult.TokensUsed, (int)stopwatch.ElapsedMilliseconds);
         }
         catch (SkillSchemaValidationException ex)
@@ -221,7 +211,6 @@ public sealed class SkillRunner : ISkillRunner
             skillRun.CompletedAt = DateTimeOffset.UtcNow;
             skillRun.FailureReason = ex.ValidationError;
             await _dbContext.SaveChangesAsync(CancellationToken.None);
-            await NotifyAsync(auditRunId, "skill_failed", new { auditRunId, skillName = definition.Name, skillRunId = skillRun.Id, reason = "schema_validation" }, CancellationToken.None);
             _logger.LogError(ex, "Skill schema validation failed for audit run {AuditRunId} and skill {SkillName}", auditRunId, definition.Name);
             throw;
         }
@@ -232,7 +221,6 @@ public sealed class SkillRunner : ISkillRunner
             skillRun.CompletedAt = DateTimeOffset.UtcNow;
             skillRun.FailureReason = "timeout";
             await _dbContext.SaveChangesAsync(CancellationToken.None);
-            await NotifyAsync(auditRunId, "skill_failed", new { auditRunId, skillName = definition.Name, skillRunId = skillRun.Id, reason = "timeout" }, CancellationToken.None);
             _logger.LogError(ex, "Skill timed out for audit run {AuditRunId} and skill {SkillName}", auditRunId, definition.Name);
             throw new SkillExecutionTimeoutException(definition.Name);
         }
@@ -243,7 +231,6 @@ public sealed class SkillRunner : ISkillRunner
             skillRun.CompletedAt = DateTimeOffset.UtcNow;
             skillRun.FailureReason = "circuit_open";
             await _dbContext.SaveChangesAsync(CancellationToken.None);
-            await NotifyAsync(auditRunId, "skill_failed", new { auditRunId, skillName = definition.Name, skillRunId = skillRun.Id, reason = "circuit_open" }, CancellationToken.None);
             _logger.LogError(ex, "Skill rejected by circuit breaker for audit run {AuditRunId} and skill {SkillName}", auditRunId, definition.Name);
             throw new SkillCircuitOpenException(definition.Name);
         }
@@ -254,14 +241,12 @@ public sealed class SkillRunner : ISkillRunner
             skillRun.CompletedAt = DateTimeOffset.UtcNow;
             skillRun.FailureReason = ex.Message;
             await _dbContext.SaveChangesAsync(CancellationToken.None);
-            await NotifyAsync(auditRunId, "skill_failed", new { auditRunId, skillName = definition.Name, skillRunId = skillRun.Id, reason = "execution_failed" }, CancellationToken.None);
             _logger.LogError(ex, "Skill execution failed for audit run {AuditRunId} and skill {SkillName}", auditRunId, definition.Name);
             throw;
         }
     }
 
-    public async Task MarkDownstreamSkillsStaleAsync(Guid auditRunId, string skillName, CancellationToken ct = default)
-    {
+    public async Task MarkDownstreamSkillsStaleAsync(Guid auditRunId, string skillName, CancellationToken ct = default)    {
         var definition = await GetSkillDefinitionAsync(skillName, ct);
         await MarkDownstreamSkillsStaleAsync(auditRunId, definition.SkillIndex, ct);
     }
@@ -281,18 +266,6 @@ public sealed class SkillRunner : ISkillRunner
         if (staleRuns.Count > 0)
         {
             await _dbContext.SaveChangesAsync(ct);
-        }
-    }
-
-    private async Task NotifyAsync(Guid auditRunId, string method, object payload, CancellationToken ct)
-    {
-        try
-        {
-            await _notifier.SendToGroupAsync(auditRunId.ToString(), method, payload, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Realtime notification {Method} failed for audit run {AuditRunId}", method, auditRunId);
         }
     }
 

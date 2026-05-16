@@ -19,6 +19,7 @@
 
 - **2026-05-10 — Phase 5:** The repo now treats `Category=Integration` and `Category=E2E` as the authoritative xUnit traits for workflow filtering, so PR-safe test runs should always exclude Docker-backed integration coverage and Playwright scaffolding with `Category!=Integration&Category!=E2E`.
 - **2026-05-10 — Phase 5:** `AuditDetail.razor` uses an injected `IAuditRunHubClientFactory` seam for SignalR connections, which keeps the Blazor page testable without opening a real WebSocket and should remain the preferred pattern for future real-time UI tests.
+- **2026-05-15 — Search Index Cleanup:** Removed `six-to-fix-skill-outputs` and `six-to-fix-calibration` indexes. Only `six-to-fix-evidence` remains. Updated: `infra/modules/search.bicep` (SKU comment), `infra/search-indexes/provision-indexes.ps1`, `AzureSearchClient.cs` (RequiredIndexes + BuildRequiredIndexes), `AzureSearchClientTests.cs`, and `docs/architecture/search-index-schema.md`. Identity role assignment is service-scoped (not index-scoped), so no change needed to `identity.bicep`. Bicep validated clean with `az bicep build`. Prod SKU stays Standard — evidence index uses semantic search + 2 replicas for HA, both of which require Standard tier.
 
 ---
 

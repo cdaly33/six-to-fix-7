@@ -11,6 +11,5 @@
     <ProjectReference Include="..\SixToFix.Infrastructure\SixToFix.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.*" />
   </ItemGroup>
 </Project>

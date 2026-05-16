@@ -1,14 +1,11 @@
 using System.Text.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SixToFix.Application.Exceptions;
-using SixToFix.Application.Hubs;
 using SixToFix.Application.Models;
 using SixToFix.Application.Multitenancy;
 using SixToFix.Application.Services;
-using SixToFix.Infrastructure.Hubs;
 using SixToFix.Infrastructure.Services;
 using SixToFix.Infrastructure.Tests.Fixtures;
 using Xunit;
@@ -28,7 +25,6 @@ public sealed class AuditOrchestratorTests : IntegrationTestBase
     private readonly IPolicyEngine _policyEngine;
     private readonly ICouncilRunner _councilRunner;
     private readonly ITelemetryCollector _telemetryCollector;
-    private readonly IHubContext<AuditRunHub, IAuditRunHubClient> _hubContext;
 
     private readonly Guid _tenantId = Guid.NewGuid();
 
@@ -38,14 +34,6 @@ public sealed class AuditOrchestratorTests : IntegrationTestBase
         _policyEngine = Substitute.For<IPolicyEngine>();
         _councilRunner = Substitute.For<ICouncilRunner>();
         _telemetryCollector = Substitute.For<ITelemetryCollector>();
-
-        // Mock the SignalR hub context — ReceiveEvent is fire-and-forget
-        _hubContext = Substitute.For<IHubContext<AuditRunHub, IAuditRunHubClient>>();
-        var hubClients = Substitute.For<IHubClients<IAuditRunHubClient>>();
-        var hubClient = Substitute.For<IAuditRunHubClient>();
-        _hubContext.Clients.Returns(hubClients);
-        hubClients.Group(Arg.Any<string>()).Returns(hubClient);
-        hubClient.ReceiveEvent(Arg.Any<string>(), Arg.Any<object>()).Returns(Task.CompletedTask);
 
         var tenant = Substitute.For<ITenantContext>();
         tenant.TenantId.Returns(_tenantId);
@@ -77,7 +65,6 @@ public sealed class AuditOrchestratorTests : IntegrationTestBase
             _policyEngine,
             _councilRunner,
             _telemetryCollector,
-            _hubContext,
             NullLogger<AuditOrchestrator>.Instance,
             DbContext,
             tenant);
@@ -219,20 +206,6 @@ public sealed class AuditOrchestratorTests : IntegrationTestBase
             Arg.Any<string>(),
             Arg.Any<JsonDocument>(),
             Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task StartAuditRunAsync_PendingRun_SendsRunStartedAndCompletedHubEvents()
-    {
-        var (_, auditId) = await SeedClientWithAuditAsync();
-        var auditRunId = await SeedPendingAuditRunAsync(auditId);
-
-        await _sut.StartAuditRunAsync(auditRunId);
-
-        var groupKey = auditRunId.ToString("N");
-        var hubClient = _hubContext.Clients.Group(groupKey);
-        await hubClient.Received().ReceiveEvent("run-started", Arg.Any<object>());
-        await hubClient.Received().ReceiveEvent("run-completed", Arg.Any<object>());
     }
 
     [Fact]
