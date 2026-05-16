@@ -97,3 +97,26 @@
 - Route aliases for the Phase 4 screen inventory are safe to add because existing `/audits/*` paths still need to keep working during rollout.
 - Review UI should stay thin: comments and buttons call `IReviewerWorkflow` directly; richer category evidence waits for a dedicated query API instead of duplicating domain logic in the page.
 - Progress visualization should prefer semantic HTML (`<progress>`) over inline width styling so Razor stays free of inline visual attributes.
+
+### 2026-05-15 — SignalR → PeriodicTimer polling swap in AuditDetail
+
+**What changed:**
+- `AuditDetail.razor` — removed `IAuditRunHubClientFactory` injection and all `HubConnection` wiring (`ConnectHubAsync`, `IAuditRunHubClient _hub`, `_hubConnected`, `_events`, `IAsyncDisposable`). Replaced with a `PeriodicTimer` polling loop (`StartPollingAsync`) that calls `IAuditOrchestrator.GetAuditRunAsync` every 3 seconds while the run is `pending` or `running`, stops on `completed`/`awaiting_review`/`failed`. Implements `IDisposable` (not `IAsyncDisposable`) — cancels and disposes timer on component disposal.
+- Deleted `SixToFix.Web/Realtime/AuditRunHubClientFactory.cs` and `IAuditRunHubClient.cs` (the Web-project client-side hub wrappers).
+- Removed `builder.Services.AddScoped<IAuditRunHubClientFactory, AuditRunHubClientFactory>()` from `Program.cs`.
+- Removed `@using Microsoft.AspNetCore.SignalR.Client` from `_Imports.razor` and the NuGet package reference from `.csproj`.
+- `SkillChainRunner.razor` — confirmed stub only, no hub wiring, no change needed.
+- `SkillProgressBar.razor` — confirmed parameter-driven, unaffected.
+
+**Server-side hub infrastructure kept dormant (per ADR-004 dormancy decision):**
+- `AuditRunHub.cs`, `AuditRunHubNotifier.cs`, `IRealtimeNotifier.cs` — all kept.
+- Hub mapped in `Program.cs` at `/hubs/audit-run` — kept (no client will connect, harmless).
+
+**Pre-existing bugs also fixed:**
+- `SkillRunner.cs` was missing `IRealtimeNotifier _notifier` injection (field and constructor param); added.
+- `AuditOrchestrator.cs` constructor had already dropped `IHubContext` but `AuditOrchestratorTests.cs` still passed it as an 8th arg; removed the hub setup from the test and updated the hub-event test to assert DB state instead.
+
+**Test rewrites:**
+- `FakeAuditRunHubClient.cs` — deleted (no longer needed).
+- `AuditDetailPageTests.cs` — replaced hub-trigger tests with polling-appropriate tests (initial render state, publish button visibility by role).
+- `AuditOrchestratorTests.cs` — removed `_hubContext` mock setup, updated one test to verify DB state transition instead of hub event receipt.

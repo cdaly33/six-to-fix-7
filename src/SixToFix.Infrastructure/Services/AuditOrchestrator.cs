@@ -1,11 +1,8 @@
 using System.Text.Json;
-using Microsoft.AspNetCore.SignalR;
 using SixToFix.Application.Exceptions;
-using SixToFix.Application.Hubs;
 using SixToFix.Application.Models;
 using SixToFix.Application.Services;
 using SixToFix.Infrastructure.Data;
-using SixToFix.Infrastructure.Hubs;
 
 namespace SixToFix.Infrastructure.Services;
 
@@ -24,7 +21,6 @@ public sealed class AuditOrchestrator : IAuditOrchestrator
     private readonly IPolicyEngine _policyEngine;
     private readonly ICouncilRunner _councilRunner;
     private readonly ITelemetryCollector _telemetryCollector;
-    private readonly IHubContext<AuditRunHub, IAuditRunHubClient> _hubContext;
     private readonly ILogger<AuditOrchestrator> _logger;
     private readonly SixToFixDbContext _db;
     private readonly ITenantContext _tenant;
@@ -34,7 +30,6 @@ public sealed class AuditOrchestrator : IAuditOrchestrator
         IPolicyEngine policyEngine,
         ICouncilRunner councilRunner,
         ITelemetryCollector telemetryCollector,
-        IHubContext<AuditRunHub, IAuditRunHubClient> hubContext,
         ILogger<AuditOrchestrator> logger,
         SixToFixDbContext db,
         ITenantContext tenant)
@@ -43,7 +38,6 @@ public sealed class AuditOrchestrator : IAuditOrchestrator
         _policyEngine = policyEngine;
         _councilRunner = councilRunner;
         _telemetryCollector = telemetryCollector;
-        _hubContext = hubContext;
         _logger = logger;
         _db = db;
         _tenant = tenant;
@@ -99,15 +93,10 @@ public sealed class AuditOrchestrator : IAuditOrchestrator
         await _db.SaveChangesAsync(ct);
         await _telemetryCollector.InitializeTelemetryAsync(auditRunId, ct);
 
-        var groupKey = auditRunId.ToString("N");
-        await SendHubEventAsync(groupKey, "run-started", new { auditRunId }, ct);
-
         try
         {
             foreach (var skillName in SkillChain)
             {
-                await SendHubEventAsync(groupKey, "skill-started", new { auditRunId, skillName }, ct);
-
                 SkillRunResult skillResult;
                 using var inputPayload = JsonDocument.Parse("{}");
                 try
@@ -121,7 +110,6 @@ public sealed class AuditOrchestrator : IAuditOrchestrator
                 }
 
                 await _telemetryCollector.IncrementSkillRunCountAsync(auditRunId, skillResult.TokensUsed, skillResult.LatencyMs, ct);
-                await SendHubEventAsync(groupKey, "skill-completed", new { auditRunId, skillName }, ct);
             }
 
             var categoryResults = await _db.CategoryResults
@@ -147,7 +135,6 @@ public sealed class AuditOrchestrator : IAuditOrchestrator
             await _db.SaveChangesAsync(ct);
             await _telemetryCollector.FinalizeTelemetryAsync(auditRunId, ct);
 
-            await SendHubEventAsync(groupKey, "run-completed", new { auditRunId }, ct);
             _logger.LogInformation("AuditRun {AuditRunId} completed and awaiting review", auditRunId);
         }
         catch (Exception ex) when (ex is not (AuditRunNotFoundException or InvalidAuditRunStateException))
@@ -194,7 +181,6 @@ public sealed class AuditOrchestrator : IAuditOrchestrator
         await _db.SaveChangesAsync(ct);
 
         await _telemetryCollector.FinalizeTelemetryAsync(auditRunId, ct);
-        await SendHubEventAsync(auditRunId.ToString("N"), "run-failed", new { auditRunId, failureReason }, ct);
 
         _logger.LogError("AuditRun {AuditRunId} marked as failed: {FailureReason}", auditRunId, failureReason);
     }
@@ -236,10 +222,33 @@ public sealed class AuditOrchestrator : IAuditOrchestrator
         return new PolicyEvaluationContext(median, (decimal)Math.Sqrt(variance), auditRunId);
     }
 
-    private async Task SendHubEventAsync(string groupKey, string eventType, object payload, CancellationToken ct)
+    public async Task<AuditRunStatusResponse?> GetAuditRunStatusAsync(Guid auditRunId, CancellationToken ct = default)
     {
-        ct.ThrowIfCancellationRequested();
-        await _hubContext.Clients.Group(groupKey).ReceiveEvent(eventType, payload);
+        var auditRun = await _db.AuditRuns
+            .FirstOrDefaultAsync(r => r.Id == auditRunId, ct);
+
+        if (auditRun is null)
+            return null;
+
+        var skillRuns = await _db.SkillRuns
+            .Where(s => s.AuditRunId == auditRunId)
+            .Select(s => new { s.Status, s.SkillName })
+            .ToListAsync(ct);
+
+        var completedSkillCount = skillRuns.Count(s => s.Status == "completed" || s.Status == "failed");
+        var currentSkillName = skillRuns
+            .Where(s => s.Status == "running")
+            .Select(s => s.SkillName)
+            .FirstOrDefault();
+
+        return new AuditRunStatusResponse(
+            auditRun.Status,
+            completedSkillCount,
+            skillRuns.Count,
+            currentSkillName,
+            auditRun.ErrorMessage,
+            auditRun.StartedAt,
+            auditRun.CompletedAt);
     }
 
     private static bool IsSkillFatalException(Exception ex)

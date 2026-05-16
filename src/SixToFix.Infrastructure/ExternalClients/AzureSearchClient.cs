@@ -37,9 +37,7 @@ public sealed class AzureSearchClient : ISearchClient
 
     internal static IReadOnlyList<string> RequiredIndexes { get; } =
         new ReadOnlyCollection<string>([
-            "six-to-fix-evidence",
-            "six-to-fix-skill-outputs",
-            "six-to-fix-calibration"
+            "six-to-fix-evidence"
         ]);
 
     public async Task IndexDocumentAsync(
@@ -151,34 +149,6 @@ public sealed class AzureSearchClient : ISearchClient
             new SearchableField("documentTitle"),
             new SimpleField("chunkIndex", SearchFieldDataType.Int32) { IsFilterable = true, IsSortable = true },
             new SimpleField("uploadedAt", SearchFieldDataType.DateTimeOffset) { IsFilterable = true, IsSortable = true }
-        ]);
-
-        yield return new SearchIndex("six-to-fix-skill-outputs", [
-            new SimpleField("id", SearchFieldDataType.String) { IsKey = true, IsFilterable = true },
-            new SimpleField("tenantId", SearchFieldDataType.String) { IsFilterable = true },
-            new SimpleField("auditRunId", SearchFieldDataType.String) { IsFilterable = true },
-            new SimpleField("skillRunId", SearchFieldDataType.String) { IsFilterable = true },
-            new SimpleField("skillName", SearchFieldDataType.String) { IsFilterable = true, IsFacetable = true },
-            new SimpleField("evidenceType", SearchFieldDataType.String) { IsFilterable = true, IsFacetable = true },
-            new SearchableField("content"),
-            new SimpleField("rawJsonPath", SearchFieldDataType.String),
-            new SimpleField("tier", SearchFieldDataType.String) { IsFilterable = true, IsFacetable = true },
-            new SimpleField("compositeScore", SearchFieldDataType.Int32) { IsFilterable = true, IsSortable = true },
-            new SimpleField("completedAt", SearchFieldDataType.DateTimeOffset) { IsFilterable = true, IsSortable = true },
-            new SimpleField("clientId", SearchFieldDataType.String) { IsFilterable = true }
-        ]);
-
-        yield return new SearchIndex("six-to-fix-calibration", [
-            new SimpleField("id", SearchFieldDataType.String) { IsKey = true, IsFilterable = true },
-            new SimpleField("tenantId", SearchFieldDataType.String) { IsFilterable = true },
-            new SimpleField("auditRunId", SearchFieldDataType.String) { IsFilterable = true },
-            new SimpleField("area", SearchFieldDataType.String) { IsFilterable = true, IsFacetable = true },
-            new SimpleField("originalScore", SearchFieldDataType.Double) { IsFilterable = true, IsSortable = true },
-            new SimpleField("adjustedScore", SearchFieldDataType.Double) { IsFilterable = true, IsSortable = true },
-            new SimpleField("scoreDelta", SearchFieldDataType.Double) { IsFilterable = true, IsSortable = true },
-            new SimpleField("overrideReasonCode", SearchFieldDataType.String) { IsFilterable = true, IsFacetable = true },
-            new SearchableField("notes"),
-            new SimpleField("recordedAt", SearchFieldDataType.DateTimeOffset) { IsFilterable = true, IsSortable = true }
         ]);
     }
 }

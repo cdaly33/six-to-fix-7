@@ -12,6 +12,8 @@ param tenantId string
 param postgresAdminLogin string = 'sfadmin'
 @secure()
 param postgresAdminPassword string
+@secure()
+param sfAppPassword string
 param openAiAccountName string = ''
 
 var databaseName = 'sixtofix'
@@ -57,11 +59,12 @@ module search 'modules/search.bicep' = {
 }
 
 var bootstrapSecrets = {
-  'ConnectionStrings--DefaultConnection': 'Host=${postgres.outputs.fqdn};Port=6432;Database=${databaseName};Username=${postgresAdminLogin};Password=${postgresAdminPassword};Ssl Mode=Require;Trust Server Certificate=false'
+  // Runtime app user (least-privilege) — sf_app must be created in PostgreSQL before the app starts.
+  'ConnectionStrings--DefaultConnection': 'Host=${postgres.outputs.fqdn};Port=6432;Database=${databaseName};Username=sf_app;Password=${sfAppPassword};No Reset On Close=true;Ssl Mode=Require'
+  // DDL admin — used only for migrations, never by the runtime app.
   'ConnectionStrings--AdminConnection': 'Host=${postgres.outputs.fqdn};Port=5432;Database=${databaseName};Username=${postgresAdminLogin};Password=${postgresAdminPassword};Ssl Mode=Require;Trust Server Certificate=false'
-  'Jwt--Key': 'replace-with-a-long-random-jwt-signing-key'
-  'HubSpot--ApiKey': 'replace-with-hubspot-private-app-token'
-  'AzureOpenAI--ApiKey': 'managed-identity-preferred-placeholder'
+  // Jwt--SigningKey, HubSpot--PrivateAppToken, HubSpot--WebhookSecret, AzureOpenAI--ApiKey
+  // must be set manually after deploy — see docs/deployment/NEXT-STEPS-FOR-CHRIS.md Step 2.
 }
 
 module keyvault 'modules/keyvault.bicep' = {

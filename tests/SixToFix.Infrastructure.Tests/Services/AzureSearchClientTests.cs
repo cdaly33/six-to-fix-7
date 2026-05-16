@@ -30,9 +30,7 @@ public sealed class AzureSearchClientTests
 
         var indexes = property!.GetValue(null) as IReadOnlyList<string>;
         indexes.Should().BeEquivalentTo([
-            "six-to-fix-evidence",
-            "six-to-fix-skill-outputs",
-            "six-to-fix-calibration"
+            "six-to-fix-evidence"
         ]);
     }
 
