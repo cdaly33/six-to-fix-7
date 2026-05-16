@@ -1,6 +1,6 @@
 # 🛑 Chris's Pickup Guide — Three Remaining Deployment Steps
 
-**Written:** 2026-05-10 (evening)
+**Written:** 2026-05-10 (evening) | **Updated:** 2026-05-15
 **Project:** StrategicGlue Six-to-Fix — Multi-tenant SaaS marketing maturity audit platform
 **Status:** All 6 development phases complete. 84 tests passing. Building clean. Three infrastructure items blocked on Azure/PostgreSQL access.
 
@@ -243,12 +243,10 @@ az role assignment create `
 
 ### What this is
 
-The app uses 3 Azure AI Search indexes for different purposes:
-- `six-to-fix-evidence` — stores chunked client document content for evidence retrieval before audits
-- `six-to-fix-skill-outputs` — indexes skill run outputs and council decisions for the audit trail
-- `six-to-fix-calibration` — indexes reviewer score overrides for calibration analysis
+The app uses 1 Azure AI Search index:
+- `six-to-fix-evidence` — stores chunked client document content for evidence retrieval before audits (uses semantic and vector search)
 
-These indexes must exist in Azure before the app can run. The team already wrote the provisioning script — you just run it.
+Other data (skill outputs, council decisions, calibration) lives in PostgreSQL and does not require separate indexes. This index must exist in Azure before the app can run. The team already wrote the provisioning script — you just run it.
 
 **Script location:** `infra\search-indexes\provision-indexes.ps1`
 
@@ -280,11 +278,12 @@ Example:
 The script will print what it's doing:
 ```
 Search service : six-to-fix-search-dev
-Checking index 'six-to-fix-evidence'... creating... done.
-Checking index 'six-to-fix-skill-outputs'... creating... done.
-Checking index 'six-to-fix-calibration'... creating... done.
+Endpoint       : https://six-to-fix-search-dev.search.windows.net
+API version    : 2024-07-01
 
-All indexes provisioned successfully.
+Checking index 'six-to-fix-evidence'... creating... done.
+
+Index provisioned successfully.
 ```
 
 If you see "already exists, skipping" — that's fine, the index was already there.
@@ -357,7 +356,7 @@ You can monitor progress at: https://github.com/cdaly33/six-to-fix-7/actions
 - **Branch:** `main` — all 6 phases merged
 - **Tests:** 84 passing, 0 failing
 - **Build:** Clean (`TreatWarningsAsErrors=true` — zero warnings allowed)
-- **Architecture:** .NET 10, Blazor Server, Azure PostgreSQL (Flexible), Azure OpenAI (GPT-4o), Azure AI Search, Azure Blob Storage, HubSpot integration, SignalR for real-time audit progress
+- **Architecture:** .NET 10, Blazor Server, Azure PostgreSQL (Flexible), Azure OpenAI (GPT-4o), Azure AI Search, Azure Blob Storage, HubSpot integration, PeriodicTimer polling for audit progress updates
 - **Auth:** JWT Bearer, four roles: `SuperAdmin`, `TenantAdmin`, `Reviewer`, `Viewer`
 - **Pending:** ONLY the three infrastructure steps above — no code changes needed
 
