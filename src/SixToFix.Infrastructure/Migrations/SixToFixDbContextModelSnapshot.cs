@@ -1019,8 +1019,8 @@ namespace SixToFix.Infrastructure.Migrations
 
                     b.Property<string>("Category")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
                         .HasColumnName("category");
 
                     b.Property<DateTimeOffset>("CreatedAt")

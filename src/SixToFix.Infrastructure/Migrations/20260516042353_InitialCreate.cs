@@ -488,7 +488,7 @@ namespace SixToFix.Infrastructure.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     tenant_id = table.Column<Guid>(type: "uuid", nullable: false),
                     audit_run_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    category = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    category = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     reviewer_user_id = table.Column<Guid>(type: "uuid", nullable: false),
                     rejection_count = table.Column<int>(type: "integer", nullable: false),
                     window_started_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),

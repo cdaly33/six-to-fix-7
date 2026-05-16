@@ -12,7 +12,7 @@ using SixToFix.Infrastructure.Data;
 namespace SixToFix.Infrastructure.Migrations
 {
     [DbContext(typeof(SixToFixDbContext))]
-    [Migration("20260516041614_InitialCreate")]
+    [Migration("20260516042353_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1022,8 +1022,8 @@ namespace SixToFix.Infrastructure.Migrations
 
                     b.Property<string>("Category")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
                         .HasColumnName("category");
 
                     b.Property<DateTimeOffset>("CreatedAt")

@@ -9,7 +9,7 @@ public sealed class ReviewerLockoutConfiguration : IEntityTypeConfiguration<Revi
     {
         builder.ToTable("reviewer_lockouts");
         builder.HasKey(r => r.Id);
-        builder.Property(r => r.Category).HasMaxLength(30).IsRequired();
+        builder.Property(r => r.Category).HasMaxLength(50).IsRequired();
         builder.HasIndex(r => r.TenantId);
         builder.HasIndex(r => r.AuditRunId);
         builder.HasIndex(r => new { r.TenantId, r.AuditRunId, r.Category, r.ReviewerUserId }).IsUnique();
