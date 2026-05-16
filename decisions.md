@@ -822,3 +822,120 @@ At 2–5 users on a single App Service instance, Redis would only be needed for:
 
 
 
+
+## Phase 1 — Stack Simplification & Security Fixes (2026-05-15)
+
+### 2026-05-15: SignalR Removal — Replaced with PeriodicTimer Polling
+
+**Status:** Implemented  
+**Author:** Neo (Backend) & Trinity (Blazor Dev)  
+**Requested by:** cdaly33
+
+**What:** The dedicated SignalR hub (AuditRunHub at /hubs/audit-run) was replaced with a PeriodicTimer polling model in Blazor Server. Blazor Server already maintains a persistent WebSocket per user via its circuit; a second dedicated SignalR connection was redundant and had two security bugs: missing JWT on the client side and missing tenant ownership check in JoinAuditRun.
+
+**Polling implementation:** PeriodicTimer polling every 3 seconds calls IAuditOrchestrator.GetAuditRunAsync directly (Scoped service, no HTTP round-trip). At current scale (2–5 concurrent users), polling is functionally indistinguishable from real-time push. New endpoint: GET /api/audit-runs/{id}/status (requires Bearer JWT, tenant-scoped via global query filter).
+
+**Files removed (Web project):**
+- SixToFix.Web/Realtime/AuditRunHubClientFactory.cs
+- SixToFix.Web/Realtime/IAuditRunHubClient.cs
+- Microsoft.AspNetCore.SignalR.Client NuGet package
+- SignalR client wiring from AuditDetail.razor, Program.cs, _Imports.razor
+
+**Files kept (server-side infrastructure — dormant, reactivatable):**
+- SixToFix.Infrastructure/Hubs/AuditRunHub.cs
+- SixToFix.Infrastructure/Hubs/AuditRunHubNotifier.cs
+- SixToFix.Application/Services/IRealtimeNotifier.cs
+
+**Why:** Eliminates security defects and redundant transport. Simplifies codebase. Polling satisfies current UX at low scale; if scale grows to 50+ concurrent users, revisit with server-sent events or reactive push.
+
+---
+
+### 2026-05-15: Azure AI Search — Removed Unused Indexes
+
+**Status:** Implemented  
+**Author:** Tank (DevOps & QA)  
+**Date:** 2026-05-15
+
+**What:** Removed six-to-fix-skill-outputs and six-to-fix-calibration from all Azure AI Search infrastructure. Only six-to-fix-evidence remains. Both removed indexes were never implemented — no code paths wrote documents to them. Their data lives in PostgreSQL: six-to-fix-skill-outputs → skill_runs table; six-to-fix-calibration → calibration_deltas table.
+
+**Files changed:**
+- infra/modules/search.bicep — removed index definitions
+- infra/search-indexes/provision-indexes.ps1 — removed skill-outputs and calibration index definitions
+- src/SixToFix.Infrastructure/ExternalClients/AzureSearchClient.cs — removed indexes from RequiredIndexes and BuildRequiredIndexes()
+- 	ests/SixToFix.Infrastructure.Tests/Services/AzureSearchClientTests.cs — updated test to expect only six-to-fix-evidence
+- docs/architecture/search-index-schema.md — updated to reflect single index
+
+**Why:** Eliminates dead infrastructure and creates option to downgrade Azure AI Search SKU. No RBAC changes needed — Search Index Data Contributor role assignment is scoped to the search service resource, not individual indexes.
+
+**SKU downgrade note:** Prod currently uses standard SKU with 2 replicas. Downgrade to asic is NOT yet safe (basic allows only 1 replica; prod uses 2 for HA). Future decision if team is willing to accept 1 replica.
+
+---
+
+### 2026-05-15: Deployment Documentation Updated — Stale References Fixed
+
+**Status:** Complete  
+**Author:** Tank (DevOps)  
+**Branch:** dev/simplify-stack-signalr-search  
+**Commit:** 4f32fef
+
+**What:** docs/deployment/NEXT-STEPS-FOR-CHRIS.md updated to reflect recent stack simplification:
+
+1. **AI Search Indexes (Step 3):** Updated from 3 indexes to 1. Removed references to six-to-fix-skill-outputs and six-to-fix-calibration; updated script output example.  
+2. **SignalR Reference:** Changed "SignalR for real-time audit progress" to "PeriodicTimer polling for audit progress updates".  
+3. **Document Date:** Updated to "Written: 2026-05-10 (evening) | Updated: 2026-05-15".
+
+**Why:** Documentation now accurate and current. Chris can proceed with deployment without confusion about index count or SignalR presence.
+
+---
+
+### 2026-05-15: Security Review — Secret Handling in Deployment Guide
+
+**Status:** Findings Ready for Remediation  
+**Author:** Morpheus (Security Lead)  
+**Requested by:** cdaly33  
+**Severity:** 3 High/Medium issues, 1 Minor gap
+
+**Bottom line:** The overall architecture is correct — secrets belong in Key Vault, the app loads them via AddAzureKeyVault + managed identity at runtime, and design-time migrations use a session-scoped env var that never reaches disk or source control. **Three real problems** need fixes before Chris runs the deployment steps.
+
+**Finding 1 — PSReadLine history leak (HIGH):** NEXT-STEPS-FOR-CHRIS.md Step 5 tells Chris to run z keyvault secret set --value "<secret>". PowerShell 5.1+ persists command history to disk at %APPDATA%\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt. The --value argument including full connection string with password is written to that file.  
+**Fix:** Replace z keyvault secret set --value commands with Read-Host -AsSecureString pattern that prompts without echoing. History entry contains no secret value.
+
+**Finding 2 — Bicep writes admin credentials to runtime secret (HIGH):** infra/main.bicep lines 59–61 bootstrap DefaultConnection (runtime connection string) using ${postgresAdminLogin} and ${postgresAdminPassword}. The runtime app should use least-privilege sf_app role, not admin sfadmin credentials.  
+**Fix:** Remove DefaultConnection from ootstrapSecrets in main.bicep or clearly mark as placeholder. Have Chris manually set with sf_app credentials after the sf_app role is created. Do NOT auto-populate runtime connection string with admin credentials.
+
+**Finding 3 — Secret name mismatch (MEDIUM):** Name inconsistencies across NEXT-STEPS-FOR-CHRIS.md, ppservice.bicep, and main.bicep:  
+- NEXT-STEPS says to set Jwt--SigningKey, but Bicep bootstrap writes Jwt--Key (placeholder)  
+- NEXT-STEPS says to set HubSpot--PrivateAppToken, but Bicep bootstrap writes HubSpot--ApiKey (placeholder)  
+- ppservice.bicep KV references read Jwt--Key and HubSpot--ApiKey, not the names Chris is told to set
+
+Currently works (accidentally) because Program.cs adds the KV config provider last, overriding earlier sources. But fragile and confusing.  
+**Fix:** Pick ONE canonical name for each secret and use consistently. Recommended canonical names:  
+  - Jwt--SigningKey (maps to Jwt:SigningKey that Program.cs reads)  
+  - HubSpot--PrivateAppToken (maps to HubSpot:PrivateAppToken)  
+  - AzureOpenAI--ApiKey (maps to AzureOpenAI:ApiKey)  
+- Update ppservice.bicep KV references to use these names.
+
+**Finding 4 — Design-time env var in PSReadLine history (MEDIUM):** The assignment $env:DESIGN_TIME_CONNECTION_STRING = "Host=...;Password=..." is recorded in PSReadLine history.  
+**Fix:** Use the Read-Host -AsSecureString pattern for the design-time variable too. Also update docs/deployment/migrations.md to address Bash history exposure (inline assignment would land in Bash history).
+
+**Finding 5 — Runtime config chain ✅ CORRECT:** Tracing the code path confirms: Bicep provisions Key Vault → identity.bicep grants managed identity KV Secrets User role → appservice.bicep sets KV references → Program.cs AddAzureKeyVault → config reads live KV values. Nothing sensitive in ppsettings.json or source control. Dormant dev credentials in ppsettings.Development.json are committed but acceptable — never used outside local dev machines.
+
+**Finding 6 — GitHub Actions ✅ CORRECT:** Uses OIDC federation, no stored service principal secrets. Workflows reference only non-secret identifiers.
+
+**Finding 7 — Missing KV references (LOW):** AzureOpenAI--Endpoint and AzureOpenAI--DeploymentName lack explicit App Service settings in ppservice.bicep, though the KV config provider picks them up implicitly. Optional: add explicit settings to make dependency visible.
+
+**Recommended actions (priority order):**
+1. Update docs/deployment/NEXT-STEPS-FOR-CHRIS.md to use Read-Host -AsSecureString for all secret values.
+2. Fix Bicep runtime credential issue: remove DefaultConnection from ootstrapSecrets or add separate sfAppPassword parameter.
+3. Align secret names across docs and Bicep: use canonical set Jwt--SigningKey, HubSpot--PrivateAppToken, AzureOpenAI--ApiKey.
+4. Update docs/deployment/migrations.md to address history exposure.
+
+---
+
+### 2026-05-15T22:12:06-05:00: User Directive — Git Workflow
+
+**By:** cdaly33 (via Copilot CLI)  
+**What:** All development work done by Squad agents or Copilot must be done on branches and merged back to main via PR. No direct commits to main.  
+**Why:** User request — captured for team memory. Existing git workflow decisions already establish dev/phase-{N}-{slug} or eature/ branch naming convention.
+
+

@@ -16,22 +16,21 @@ namespace SixToFix.Infrastructure.Tests.Services;
 [Trait("Category", "Integration")]
 public sealed class TelemetryCollectorTests : IntegrationTestBase
 {
-    private readonly TelemetryCollector _sut;
+    private TelemetryCollector _sut = null!;
     private readonly Guid _tenantId = Guid.NewGuid();
     private readonly Guid _auditRunId = Guid.NewGuid();
 
-    public TelemetryCollectorTests(PostgresContainerFixture fixture) : base(fixture)
-    {
-        var tenant = Substitute.For<ITenantContext>();
-        tenant.TenantId.Returns(_tenantId);
-        tenant.IsResolved.Returns(false);
-
-        _sut = new TelemetryCollector(DbContext, tenant, NullLogger<TelemetryCollector>.Instance);
-    }
+    public TelemetryCollectorTests(PostgresContainerFixture fixture) : base(fixture) { }
 
     public override async Task InitializeAsync()
     {
         await base.InitializeAsync();
+
+        var tenant = Substitute.For<ITenantContext>();
+        tenant.TenantId.Returns(_tenantId);
+        tenant.IsResolved.Returns(false);
+        _sut = new TelemetryCollector(DbContext, tenant, NullLogger<TelemetryCollector>.Instance);
+
         await SeedPrerequisitesAsync();
     }
 

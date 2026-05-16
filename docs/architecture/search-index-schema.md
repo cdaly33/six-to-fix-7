@@ -8,12 +8,13 @@
 
 ## Overview
 
-Six-to-Fix uses Azure AI Search to support two distinct workloads:
+Six-to-Fix uses Azure AI Search for one active workload:
 
 1. **Evidence Retrieval (pre-audit):** Retrieve evidence chunks from client documents to populate Skill 1's `evidence.*` input arrays. This is a semantic retrieval step performed by `AuditOrchestrator` before the skill chain starts.
-2. **Skill Output Indexing (post-skill):** Index skill outputs, council decisions, and calibration notes for downstream search, dashboarding, and audit trail access.
 
-Both workloads are tenant-scoped. All search calls include `tenantId` as a mandatory filter. This is enforced by `AzureSearchClient.SearchAsync`, which always applies `Filter = $"tenantId eq '{tenantId}'"`.
+Skill output audit trail data and calibration delta data live in PostgreSQL (`skill_runs` and `calibration_deltas` tables respectively) — no AI Search copy is needed.
+
+All search calls are tenant-scoped. All search calls include `tenantId` as a mandatory filter. This is enforced by `AzureSearchClient.SearchAsync`, which always applies `Filter = $"tenantId eq '{tenantId}'"`.
 
 ---
 
@@ -149,187 +150,9 @@ var result = await _searchClient.SearchAsync(
 
 ---
 
-## Index 2: `six-to-fix-skill-outputs`
-
-**Purpose:** Index all skill run outputs, council decisions, and calibration notes for audit trail search, dashboarding, and future model calibration analysis.
-
-### Index Schema
-
-```json
-{
-  "name": "six-to-fix-skill-outputs",
-  "fields": [
-    {
-      "name": "id",
-      "type": "Edm.String",
-      "key": true,
-      "filterable": true,
-      "description": "Unique document ID. Format: {tenantId}-{auditRunId}-{skillName}-{skillRunId}"
-    },
-    {
-      "name": "tenantId",
-      "type": "Edm.String",
-      "filterable": true,
-      "description": "Tenant identifier. Mandatory filter on all search queries."
-    },
-    {
-      "name": "auditRunId",
-      "type": "Edm.String",
-      "filterable": true,
-      "description": "The audit run that produced this output."
-    },
-    {
-      "name": "skillRunId",
-      "type": "Edm.String",
-      "filterable": true,
-      "description": "The specific skill_runs record for this output."
-    },
-    {
-      "name": "skillName",
-      "type": "Edm.String",
-      "filterable": true,
-      "facetable": true,
-      "description": "One of: 6tofix-scorecard-rubric, systems-maturity-scoring, gap-analysis-template, value-driver-rating, derive-tier"
-    },
-    {
-      "name": "evidenceType",
-      "type": "Edm.String",
-      "filterable": true,
-      "facetable": true,
-      "description": "Classification of the indexed content. One of: skill_output, council_decision, calibration_note, reviewer_action"
-    },
-    {
-      "name": "content",
-      "type": "Edm.String",
-      "searchable": true,
-      "analyzer": "en.microsoft",
-      "description": "Summarized or narrative content extracted from the skill output or decision. NOT the raw JSON — a human-readable summary for search."
-    },
-    {
-      "name": "rawJsonPath",
-      "type": "Edm.String",
-      "description": "Blob Storage path to the full raw JSON output. Format: skill-outputs/{tenantId}/{auditRunId}/{skillRunId}.json"
-    },
-    {
-      "name": "tier",
-      "type": "Edm.String",
-      "filterable": true,
-      "facetable": true,
-      "description": "Tier classification at time of indexing. One of: tier_1, tier_2, tier_3. Null for non-derive-tier skills."
-    },
-    {
-      "name": "compositeScore",
-      "type": "Edm.Int32",
-      "filterable": true,
-      "sortable": true,
-      "description": "Composite score (0–60) from Skill 1. Populated on all records for an audit run for filtering."
-    },
-    {
-      "name": "completedAt",
-      "type": "Edm.DateTimeOffset",
-      "filterable": true,
-      "sortable": true,
-      "description": "When the skill run or decision was completed."
-    },
-    {
-      "name": "clientId",
-      "type": "Edm.String",
-      "filterable": true,
-      "description": "Client identifier for cross-audit queries."
-    }
-  ]
-}
-```
-
----
-
-## Index 3: `six-to-fix-calibration`
-
-**Purpose:** Index calibration deltas (reviewer score overrides) for model improvement analysis and the Calibration Dashboard.
-
-### Index Schema
-
-```json
-{
-  "name": "six-to-fix-calibration",
-  "fields": [
-    {
-      "name": "id",
-      "type": "Edm.String",
-      "key": true,
-      "filterable": true,
-      "description": "Calibration delta ID (maps to calibration_deltas.id in DB)."
-    },
-    {
-      "name": "tenantId",
-      "type": "Edm.String",
-      "filterable": true,
-      "description": "Tenant identifier."
-    },
-    {
-      "name": "auditRunId",
-      "type": "Edm.String",
-      "filterable": true,
-      "description": "The audit run where the override occurred."
-    },
-    {
-      "name": "area",
-      "type": "Edm.String",
-      "filterable": true,
-      "facetable": true,
-      "description": "Marketing area that was overridden. One of the six standard areas."
-    },
-    {
-      "name": "originalScore",
-      "type": "Edm.Double",
-      "filterable": true,
-      "sortable": true,
-      "description": "AI-generated score before reviewer override."
-    },
-    {
-      "name": "adjustedScore",
-      "type": "Edm.Double",
-      "filterable": true,
-      "sortable": true,
-      "description": "Reviewer-assigned score after override."
-    },
-    {
-      "name": "scoreDelta",
-      "type": "Edm.Double",
-      "filterable": true,
-      "sortable": true,
-      "description": "adjustedScore - originalScore. Negative = AI overscored; Positive = AI underscored."
-    },
-    {
-      "name": "overrideReasonCode",
-      "type": "Edm.String",
-      "filterable": true,
-      "facetable": true,
-      "description": "Structured reason code for the override. Source: reviewer_actions.override_reason_code."
-    },
-    {
-      "name": "notes",
-      "type": "Edm.String",
-      "searchable": true,
-      "analyzer": "en.microsoft",
-      "description": "Reviewer notes explaining the override. Searchable for calibration pattern analysis."
-    },
-    {
-      "name": "recordedAt",
-      "type": "Edm.DateTimeOffset",
-      "filterable": true,
-      "sortable": true,
-      "description": "When the calibration delta was recorded."
-    }
-  ]
-}
-```
-
----
-
 ## Tenant Scoping — Implementation Contract
 
-All three indexes enforce tenant scoping via filter. The `AzureSearchClient.SearchAsync` implementation automatically adds `Filter = $"tenantId eq '{tenantId}'"`. Callers must never bypass this method with raw `SearchClient` calls.
+All indexes enforce tenant scoping via filter. The `AzureSearchClient.SearchAsync` implementation automatically adds `Filter = $"tenantId eq '{tenantId}'"`. Callers must never bypass this method with raw `SearchClient` calls.
 
 **Filter composition:** If callers need additional filters (e.g., `clientId`, `area`, `evidenceType`), they must be combined with the tenant filter. Current `AzureSearchClient` does not support caller-supplied additional filters — this is a known gap. Resolution: add an optional `additionalFilters` parameter to `ISearchClient.SearchAsync` in a future iteration.
 

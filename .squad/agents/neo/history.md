@@ -128,3 +128,20 @@
 - HubSpot channel: Channel<HubSpotEvent> singleton registered in BusinessServiceExtensions; Oracle's HubSpotWorker consumes
 - SignalR group key: auditRunId.ToString("N") (no dashes)
 - ISkillRunner, IPolicyEngine, ICouncilRunner: created stubs — Oracle will replace with real implementations
+
+### 2026-05-15 — SignalR Removal + Polling Status Endpoint
+
+**SignalR Push Removed**
+- Removed `IHubContext<AuditRunHub, IAuditRunHubClient>` injection from `AuditOrchestrator` and all hub push calls (`run-started`, `skill-started`, `skill-completed`, `run-completed`, `run-failed`).
+- Removed `IRealtimeNotifier` injection from `SkillRunner` and `CouncilRunner` — all `NotifyAsync` calls removed.
+- `AuditRunHub.cs`, `AuditRunHubNotifier.cs`, `IRealtimeNotifier.cs`, `AuditRunHubClientFactory.cs` left dormant (not deleted — mechanical swap-back if needed).
+- Removed `builder.Services.AddSignalR()` and `app.MapHub<AuditRunHub>("/hubs/audit-run")` from `Program.cs`.
+- Removed `services.AddScoped<IRealtimeNotifier, AuditRunHubNotifier>()` from `InfrastructureServiceExtensions`.
+
+**Polling Status Endpoint Added**
+- `GET /api/audit-runs/{id}/status` added to `ApiEndpointExtensions.cs`, backed by `IAuditOrchestrator.GetAuditRunStatusAsync`.
+- Tenant isolation enforced via EF Core global query filter (returns null → 404, not 403, to avoid leaking existence).
+- `AuditRunStatusResponse` record in `SixToFix.Application/Models/`.
+- `completedSkillCount` = COUNT of SkillRuns with Status `completed` OR `failed`.
+- `currentSkillName` = first SkillRun with Status `running`, or null.
+- `failureReason` maps to `AuditRun.ErrorMessage`.

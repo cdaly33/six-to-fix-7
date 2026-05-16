@@ -2,14 +2,13 @@
 @page "/audit-runs/{AuditRunId:guid}"
 @attribute [Authorize]
 @rendermode InteractiveServer
-@implements IAsyncDisposable
+@implements IDisposable
 @inject IAuditOrchestrator AuditOrchestrator
 @inject IReviewerWorkflow ReviewerWorkflow
 @inject IPublisher Publisher
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthState
 @inject ILogger<AuditDetail> Logger
-@inject SixToFix.Web.Realtime.IAuditRunHubClientFactory AuditRunHubClientFactory
 
 <PageTitle>Audit Detail — Six to Fix</PageTitle>
 
@@ -29,7 +28,7 @@ else if (_run is not null)
             <h1 class="page-title">Audit Run</h1>
         </div>
         <div class="page-header-actions">
-            @if (_hubConnected)
+            @if (_polling)
             {
                 <StatusDot Status="connected" Label="Live" />
             }
@@ -88,21 +87,6 @@ else if (_run is not null)
         </div>
     }
 
-    @if (_events.Count > 0)
-    {
-        <h2>Live Events</h2>
-        <ul class="live-event-list">
-            @foreach (var ev in _events)
-            {
-                <li class="live-event-item">
-                    <span class="event-type-badge">@ev.EventType</span>
-                    <span class="event-summary">@ev.Summary</span>
-                    <span class="event-time">@ev.At.ToString("h:mm:ss tt")</span>
-                </li>
-            }
-        </ul>
-    }
-
     @if (_run.ErrorMessage is not null)
     {
         <div class="alert alert-error"><strong>Run failed:</strong> @_run.ErrorMessage</div>
@@ -117,9 +101,9 @@ else if (_run is not null)
     private string? _error;
     private bool _publishing;
     private PublishResult? _publishResult;
-    private bool _hubConnected;
-    private SixToFix.Web.Realtime.IAuditRunHubClient? _hub;
-    private readonly List<LiveEvent> _events = [];
+    private bool _polling;
+    private PeriodicTimer? _pollTimer;
+    private readonly CancellationTokenSource _cts = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -138,33 +122,36 @@ else if (_run is not null)
             _loading = false;
         }
 
-        if (_run is not null && (_run.Status == "running" || _run.Status == "pending"))
-            await ConnectHubAsync();
+        if (_run is not null && _run.Status is "running" or "pending")
+            _ = StartPollingAsync();
     }
 
-    private async Task ConnectHubAsync()
+    private async Task StartPollingAsync()
     {
+        _pollTimer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+        _polling = true;
         try
         {
-            _hub = AuditRunHubClientFactory.Create();
-            _hub.OnReceiveEvent(async (eventType, payload) =>
+            while (await _pollTimer.WaitForNextTickAsync(_cts.Token))
             {
-                _events.Insert(0, new LiveEvent(eventType, payload?.ToString() ?? string.Empty, DateTimeOffset.Now));
-                if (eventType is "run-completed" or "run-failed")
+                try
                 {
                     _run = await AuditOrchestrator.GetAuditRunAsync(AuditRunId);
                 }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Poll failed for audit run {AuditRunId}", AuditRunId);
+                }
 
                 await InvokeAsync(StateHasChanged);
-            });
 
-            await _hub.StartAsync();
-            await _hub.JoinAuditRunAsync(AuditRunId.ToString("N"));
-            _hubConnected = true;
+                if (_run?.Status is "completed" or "awaiting_review" or "failed") break;
+            }
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { }
+        finally
         {
-            Logger.LogWarning(ex, "Could not connect to audit hub for run {AuditRunId}", AuditRunId);
+            _polling = false;
         }
     }
 
@@ -189,14 +176,10 @@ else if (_run is not null)
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        if (_hub is not null)
-        {
-            try { await _hub.LeaveAuditRunAsync(AuditRunId.ToString("N")); } catch { }
-            await _hub.DisposeAsync();
-        }
+        _cts.Cancel();
+        _pollTimer?.Dispose();
+        _cts.Dispose();
     }
-
-    private sealed record LiveEvent(string EventType, string Summary, DateTimeOffset At);
 }

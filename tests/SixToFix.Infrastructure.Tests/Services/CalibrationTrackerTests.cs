@@ -18,14 +18,18 @@ namespace SixToFix.Infrastructure.Tests.Services;
 [Trait("Category", "Integration")]
 public sealed class CalibrationTrackerTests : IntegrationTestBase
 {
-    private readonly CalibrationTracker _sut;
+    private CalibrationTracker _sut = null!;
     private readonly Guid _tenantId = Guid.NewGuid();
     private readonly Guid _auditRunId = Guid.NewGuid();
     private readonly Guid _reviewerId = Guid.NewGuid();
     private readonly Guid _categoryId = Guid.NewGuid();
 
-    public CalibrationTrackerTests(PostgresContainerFixture fixture) : base(fixture)
+    public CalibrationTrackerTests(PostgresContainerFixture fixture) : base(fixture) { }
+
+    public override async Task InitializeAsync()
     {
+        await base.InitializeAsync();
+
         var tenant = Substitute.For<ITenantContext>();
         tenant.TenantId.Returns(_tenantId);
         tenant.IsResolved.Returns(false); // bypass global query filters
@@ -36,11 +40,7 @@ public sealed class CalibrationTrackerTests : IntegrationTestBase
             Substitute.For<IDbConnectionFactory>(),
             tenant,
             NullLogger<CalibrationTracker>.Instance);
-    }
 
-    public override async Task InitializeAsync()
-    {
-        await base.InitializeAsync();
         await SeedPrerequisitesAsync(_tenantId, _auditRunId);
     }
 
