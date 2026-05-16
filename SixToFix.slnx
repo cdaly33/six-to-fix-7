@@ -1,9 +1,11 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/SixToFix.Api/SixToFix.Api.csproj" />
+    <Project Path="src/SixToFix.AppHost/SixToFix.AppHost.csproj" />
     <Project Path="src/SixToFix.Application/SixToFix.Application.csproj" />
     <Project Path="src/SixToFix.Domain/SixToFix.Domain.csproj" />
     <Project Path="src/SixToFix.Infrastructure/SixToFix.Infrastructure.csproj" />
+    <Project Path="src/SixToFix.ServiceDefaults/SixToFix.ServiceDefaults.csproj" />
     <Project Path="src/SixToFix.Web/SixToFix.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">

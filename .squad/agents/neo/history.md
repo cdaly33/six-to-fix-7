@@ -145,3 +145,15 @@
 - `completedSkillCount` = COUNT of SkillRuns with Status `completed` OR `failed`.
 - `currentSkillName` = first SkillRun with Status `running`, or null.
 - `failureReason` maps to `AuditRun.ErrorMessage`.
+
+### 2026-05-16 — Aspire Integration
+
+**Added .NET Aspire for local dev orchestration (branch: `feature/aspire-integration`)**
+- AppHost project: `src/SixToFix.AppHost/` — orchestrates PostgreSQL container + SixToFix.Web in local dev
+- ServiceDefaults project: `src/SixToFix.ServiceDefaults/` — OpenTelemetry, health checks, service discovery
+- ServiceDefaults wired into `SixToFix.Web` via `builder.AddServiceDefaults()` (after CreateBuilder) and `app.MapDefaultEndpoints()` (before app.Run())
+- PostgreSQL container orchestrated in dev via AppHost `AddPostgres("postgres").AddDatabase("sixtofix")`
+- AppHost uses `Aspire.AppHost.Sdk` v13.3.3 as a NuGet-based project SDK (workload-based Aspire is deprecated in .NET 10)
+- GrpcNetClient instrumentation omitted from ServiceDefaults — no stable NuGet release and project has no gRPC
+- Production deployment (Azure App Service + Azure PostgreSQL) is unchanged
+- Run locally with: `dotnet run --project src/SixToFix.AppHost`

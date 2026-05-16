@@ -1,41 +1,24 @@
-# 🛑 Chris's Pickup Guide — Four Remaining Steps
+# 🛑 Chris's Pickup Guide — Three Remaining Steps
 
-**Written:** 2026-05-10 (evening) | **Updated:** 2026-05-15 (evening)
+**Written:** 2026-05-10 (evening) | **Updated:** 2026-05-16 (morning)
 **Project:** StrategicGlue Six-to-Fix — Multi-tenant SaaS marketing maturity audit platform
-**Status:** All 6 development phases complete. 84 tests passing. Building clean. PR #20 infrastructure fixes pending merge. Three infrastructure items blocked on Azure/PostgreSQL access.
+**Status:** All 6 development phases complete. 84 tests passing. Building clean. PR #20 already merged to main ✅. Aspire local dev integration on `feature/aspire-integration` branch (pending merge). Three infrastructure items blocked on Azure/PostgreSQL access.
 
 ---
 
 ## Quick Summary
 
-The entire codebase is done. Nothing left to code except merging tonight's infrastructure fixes. Then you just need to wire up three real Azure services and the app can deploy:
+The entire codebase is done. PR #20 is already merged — you're on the latest main. You just need to wire up three real Azure services and the app can deploy. Optionally, merge the Aspire branch first for easier local dev:
 
 | # | Task | Prerequisite | Est. time |
 |---|------|-------------|-----------|
-| 0 | **Merge PR #20** | GitHub access | ~2 min |
+| — | _(done)_ ~~Merge PR #20~~ | ✅ Already on main | — |
+| — | **Merge `feature/aspire-integration`** (optional) | GitHub access | ~2 min |
 | 1 | **EF Core database migration** | PostgreSQL hostname + sf_admin password | ~10 min |
 | 2 | **Key Vault secrets population** | `az login` + 8 values from Azure/HubSpot portals | ~30 min |
 | 3 | **Azure AI Search index provisioning** | `az login` (same login as step 2) + Search service name | ~5 min |
 
-Do them in order. Step 0 is critical — do NOT skip it. Step 1 is independent. Steps 2 and 3 share the same `az login`.
-
----
-
-## Step 0 — Merge PR #20 First
-
-Before doing anything else, merge the open pull request that contains tonight's infrastructure fixes:
-
-**PR #20:** https://github.com/cdaly33/six-to-fix-7/pull/20
-**Branch:** `dev/simplify-stack-signalr-search`
-**What it contains:** SignalR → PeriodicTimer replacement, AI Search cleanup, Bicep credential fix (sf_app instead of sfadmin), secret name fixes, secure Read-Host pattern for Key Vault population.
-
-```powershell
-gh pr merge 20 --squash --delete-branch
-git checkout main
-git pull
-```
-
-Do not proceed to Step 1 until this is merged and you're on latest main.
+Steps 1–3 are independent of the Aspire merge. Steps 2 and 3 share the same `az login`.
 
 ---
 
@@ -45,13 +28,47 @@ Open PowerShell and navigate to the repo:
 ```powershell
 cd C:\GitHub\six-to-fix-7        # or wherever you cloned it on the new machine
 git pull                          # make sure you're on latest main
-git log --oneline -3              # should show the PR #20 merge commit at the top
+git log --oneline -3              # top commit should be the PR #20 squash merge
 dotnet build SixToFix.slnx        # should say "Build succeeded, 0 Error(s)"
 ```
 
 If the build fails, stop and check `git status` before continuing.
 
-## Step 1 — EF Core Initial Migration
+---
+
+## Local Dev with Aspire (Optional but Recommended)
+
+.NET Aspire is a local orchestration tool that spins up your entire dev environment — PostgreSQL container, the web app, and the Aspire dashboard — with a single command. No manual connection strings needed.
+
+**This is on the `feature/aspire-integration` branch. Merge it first:**
+```powershell
+gh pr create --title "feat: add .NET Aspire for local dev orchestration" \
+  --head feature/aspire-integration --base main \
+  --body "Adds AppHost and ServiceDefaults. See docs for details."
+# Or just merge directly:
+gh pr merge feature/aspire-integration --squash --delete-branch
+git checkout main && git pull
+```
+
+**Prerequisite:** Docker Desktop must be running (Aspire uses it for the PostgreSQL container).
+
+**How to run it:**
+```powershell
+cd C:\GitHub\six-to-fix-7
+dotnet run --project src/SixToFix.AppHost
+```
+
+**What you'll see:**
+- Aspire dashboard at a localhost HTTPS URL (printed in the console, typically `https://localhost:15888` or similar)
+- The web app running against a real PostgreSQL database container
+- All services visible in the dashboard with logs, traces, and metrics
+
+**Notes:**
+- In local dev, Aspire manages the PostgreSQL container automatically — no manual connection string needed
+- The database starts fresh each run (add a named volume in AppHost if you want persistence — see Aspire docs)
+- Aspire is for **LOCAL DEV ONLY**. Production still deploys to Azure App Service + Azure PostgreSQL via GitHub Actions — nothing changes there
+
+
 
 ### What this is
 
@@ -402,13 +419,14 @@ You can monitor progress at: https://github.com/cdaly33/six-to-fix-7/actions
 
 ---
 
-## Project State Snapshot (as of 2026-05-15 — evening)
+## Project State Snapshot (as of 2026-05-16 — morning)
 
-- **Branch:** `main` — all 6 phases merged, PR #20 infrastructure fixes merged
+- **Branch:** `main` — all 6 phases merged, PR #20 infrastructure fixes merged ✅
+- **Aspire branch:** `feature/aspire-integration` — pending merge (optional, adds local dev orchestration)
 - **Tests:** 84 passing, 0 failing
 - **Build:** Clean (`TreatWarningsAsErrors=true` — zero warnings allowed)
 - **Architecture:** .NET 10, Blazor Server, Azure PostgreSQL (Flexible with separate `sf_admin` and `sf_app` users), Azure OpenAI (GPT-4o), Azure AI Search (1 index: `six-to-fix-evidence`), Azure Blob Storage, HubSpot integration, PeriodicTimer polling for real-time audit progress updates
 - **Auth:** JWT Bearer, four roles: `SuperAdmin`, `TenantAdmin`, `Reviewer`, `Viewer`
-- **Pending:** Merge PR #20 first (Step 0 above), then the three infrastructure steps above — no code changes needed
+- **Pending:** Three infrastructure steps above (EF migration, Key Vault, AI Search) — no code changes needed
 
-Good luck tomorrow, Chris. The hard part is done. 🎉
+Good luck, Chris. The hard part is done. 🎉
