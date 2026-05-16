@@ -233,11 +233,28 @@ public sealed class ReviewerWorkflowLockoutTests : IntegrationTestBase
         Guid? reviewerIdOverride = null,
         Guid? auditRunIdOverride = null)
     {
+        var auditRunId = auditRunIdOverride ?? _auditRunId;
+
+        // If using a different audit run ID, we must seed that AuditRun first (FK constraint)
+        if (auditRunIdOverride.HasValue)
+        {
+            DbContext.AuditRuns.Add(new AuditRun
+            {
+                Id = auditRunIdOverride.Value,
+                TenantId = _tenantId,
+                AuditId = (await DbContext.AuditRuns.FindAsync(_auditRunId))!.AuditId,
+                Status = "awaiting_review",
+                StartedAt = DateTimeOffset.UtcNow,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+            await DbContext.SaveChangesAsync();
+        }
+
         var lockout = new ReviewerLockout
         {
             Id = Guid.NewGuid(),
             TenantId = _tenantId,
-            AuditRunId = auditRunIdOverride ?? _auditRunId,
+            AuditRunId = auditRunId,
             Category = _categoryId.ToString(),
             ReviewerUserId = reviewerIdOverride ?? _reviewerId,
             RejectionCount = rejectionCount,
