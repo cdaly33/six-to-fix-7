@@ -27,10 +27,10 @@ jobs:
         run: dotnet build SixToFix.slnx --no-restore -c Release
 
       - name: Unit, component, API, and infrastructure validation tests
-        run: dotnet test SixToFix.slnx --no-build -c Release --filter "Category!=Integration&Category!=E2E" --logger "github" --collect:"XPlat Code Coverage"
+        run: dotnet test SixToFix.slnx --no-build -c Release --filter "Category!=Integration&Category!=E2E" --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
 
       - name: Integration tests
-        run: dotnet test tests/SixToFix.Infrastructure.Tests/SixToFix.Infrastructure.Tests.csproj --no-build -c Release --filter "Category=Integration" --logger "github"
+        run: dotnet test tests/SixToFix.Infrastructure.Tests/SixToFix.Infrastructure.Tests.csproj --no-build -c Release --filter "Category=Integration" --logger "trx;LogFileName=integration-results.trx"
 
       - name: Coverage gate (80% domain logic)
         shell: bash
@@ -78,4 +78,4 @@ jobs:
           PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
           E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-        run: dotnet test tests/SixToFix.E2E.Tests/SixToFix.E2E.Tests.csproj --no-build -c Release --filter "Category=E2E" --logger "github"
+        run: dotnet test tests/SixToFix.E2E.Tests/SixToFix.E2E.Tests.csproj --no-build -c Release --filter "Category=E2E" --logger "trx;LogFileName=e2e-results.trx"
