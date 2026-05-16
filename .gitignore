@@ -28,6 +28,9 @@ tests/**/obj/
 .idea/
 *.sln.iml
 
+# Language server cache
+*.lscache
+
 # Secrets / local config overrides
 appsettings.*.local.json
 secrets.json
