@@ -21,14 +21,18 @@ public sealed class ReviewerWorkflowLockoutTests : IntegrationTestBase
     private const int LockoutWindowHours = 24;
     private const int LockoutThreshold = 3;
 
-    private readonly ReviewerWorkflow _sut;
+    private ReviewerWorkflow _sut = null!;
     private readonly Guid _tenantId = Guid.NewGuid();
     private readonly Guid _auditRunId = Guid.NewGuid();
     private readonly Guid _categoryId = Guid.NewGuid();
     private readonly Guid _reviewerId = Guid.NewGuid();
 
-    public ReviewerWorkflowLockoutTests(PostgresContainerFixture fixture) : base(fixture)
+    public ReviewerWorkflowLockoutTests(PostgresContainerFixture fixture) : base(fixture) { }
+
+    public override async Task InitializeAsync()
     {
+        await base.InitializeAsync();
+
         var tenant = Substitute.For<ITenantContext>();
         tenant.TenantId.Returns(_tenantId);
         tenant.IsResolved.Returns(false);
@@ -40,11 +44,7 @@ public sealed class ReviewerWorkflowLockoutTests : IntegrationTestBase
             Substitute.For<ISkillRunner>(),
             tenant,
             NullLogger<ReviewerWorkflow>.Instance);
-    }
 
-    public override async Task InitializeAsync()
-    {
-        await base.InitializeAsync();
         await SeedPrerequisitesAsync();
     }
 

@@ -24,7 +24,7 @@ public sealed class PublisherPreconditionTests : IntegrationTestBase
 
     private readonly ITenantContext _tenant;
     private readonly Channel<HubSpotEvent> _hubSpotChannel;
-    private readonly Publisher _sut;
+    private Publisher _sut = null!;
 
     public PublisherPreconditionTests(PostgresContainerFixture fixture) : base(fixture)
     {
@@ -33,6 +33,11 @@ public sealed class PublisherPreconditionTests : IntegrationTestBase
         _tenant.IsResolved.Returns(false); // bypass global query filters
 
         _hubSpotChannel = Channel.CreateUnbounded<HubSpotEvent>();
+    }
+
+    public override async Task InitializeAsync()
+    {
+        await base.InitializeAsync();
         _sut = new Publisher(DbContext, _hubSpotChannel, _tenant, NullLogger<Publisher>.Instance);
     }
 

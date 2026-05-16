@@ -20,11 +20,12 @@ namespace SixToFix.Infrastructure.Tests.Services;
 [Trait("Category", "Integration")]
 public sealed class AuditOrchestratorTests : IntegrationTestBase
 {
-    private readonly AuditOrchestrator _sut;
+    private AuditOrchestrator _sut = null!;
     private readonly ISkillRunner _skillRunner;
     private readonly IPolicyEngine _policyEngine;
     private readonly ICouncilRunner _councilRunner;
     private readonly ITelemetryCollector _telemetryCollector;
+    private readonly ITenantContext _tenant;
 
     private readonly Guid _tenantId = Guid.NewGuid();
 
@@ -35,9 +36,9 @@ public sealed class AuditOrchestratorTests : IntegrationTestBase
         _councilRunner = Substitute.For<ICouncilRunner>();
         _telemetryCollector = Substitute.For<ITelemetryCollector>();
 
-        var tenant = Substitute.For<ITenantContext>();
-        tenant.TenantId.Returns(_tenantId);
-        tenant.IsResolved.Returns(false);
+        _tenant = Substitute.For<ITenantContext>();
+        _tenant.TenantId.Returns(_tenantId);
+        _tenant.IsResolved.Returns(false);
 
         // Default: skills return a no-op result
         var fakeSkillRun = new SkillRun
@@ -59,6 +60,11 @@ public sealed class AuditOrchestratorTests : IntegrationTestBase
             .EvaluateCategory(Arg.Any<CategoryResultPayload>(), Arg.Any<PolicyEvaluationContext>())
             .Returns(Array.Empty<PolicyFlagModel>());
         _policyEngine.RequiresCouncilEscalation(Arg.Any<IReadOnlyList<PolicyFlagModel>>()).Returns(false);
+    }
+
+    public override async Task InitializeAsync()
+    {
+        await base.InitializeAsync();
 
         _sut = new AuditOrchestrator(
             _skillRunner,
@@ -67,12 +73,8 @@ public sealed class AuditOrchestratorTests : IntegrationTestBase
             _telemetryCollector,
             NullLogger<AuditOrchestrator>.Instance,
             DbContext,
-            tenant);
-    }
+            _tenant);
 
-    public override async Task InitializeAsync()
-    {
-        await base.InitializeAsync();
         // Seed the test Tenant once per test instance so all helpers can reference _tenantId
         DbContext.Tenants.Add(new Tenant
         {
