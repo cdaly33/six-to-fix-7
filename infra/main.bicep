@@ -6,7 +6,7 @@ targetScope = 'resourceGroup'
 ])
 param environment string
 
-param location string = resourceGroup().location
+param location string = 'centralus'
 param appName string = 'six-to-fix'
 param tenantId string
 param postgresAdminLogin string = 'sfadmin'
