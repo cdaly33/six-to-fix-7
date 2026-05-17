@@ -9,3 +9,7 @@ param tenantId = '0cb15a3f-7b9f-4e7d-8c3f-baac8907a1ed'
 //   $env:SF_APP_PASSWORD = '<password>'
 param postgresAdminPassword = readEnvironmentVariable('POSTGRES_ADMIN_PASSWORD')
 param sfAppPassword = readEnvironmentVariable('SF_APP_PASSWORD')
+
+// eastus2 is restricted for PostgreSQL and AI Search; deploy resources to centralus instead.
+// The resource group (rg-sixtofix-prod) remains in eastus2 — Azure resources can differ from RG location.
+param location = 'centralus'

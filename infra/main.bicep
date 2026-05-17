@@ -153,7 +153,7 @@ resource dependencyFailuresAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = 
           metricNamespace: 'microsoft.insights/components'
           metricName: 'dependencies/failed'
           operator: 'GreaterThan'
-          timeAggregation: 'Total'
+          timeAggregation: 'Count'
           threshold: 5
           criterionType: 'StaticThresholdCriterion'
         }
