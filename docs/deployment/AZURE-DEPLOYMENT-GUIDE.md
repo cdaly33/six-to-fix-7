@@ -622,22 +622,25 @@ From the repo root:
 ```powershell
 cd C:\GitHub\six-to-fix-7
 
+# Set secrets as environment variables — never put them in files
+$env:POSTGRES_ADMIN_PASSWORD = "STRONG_PASSWORD_HERE"
+$env:SF_APP_PASSWORD         = "ANOTHER_STRONG_PASSWORD_HERE"
+
 az deployment group create `
   --resource-group rg-sixtofix-prod `
   --template-file infra/main.bicep `
-  --parameters infra/params/prod.bicepparam `
-  --parameters postgresAdminPassword="STRONG_PASSWORD_HERE" `
-  --parameters sfAppPassword="ANOTHER_STRONG_PASSWORD_HERE" `
-  --parameters openAiAccountName=""
+  --parameters infra/params/prod.bicepparam
 ```
+
+> **Why environment variables?**  `.bicepparam` files require ALL parameters declared inside them — you can't supplement them with `--parameters` on the command line the way JSON params files allow. Using `readEnvironmentVariable()` in the params file keeps secrets out of source control and off your command-line history.
 
 What each secure parameter means:
 
-- `postgresAdminPassword`
+- `POSTGRES_ADMIN_PASSWORD` → `postgresAdminPassword`
   - This becomes the password for the PostgreSQL admin login `sfadmin`.
   - Use a strong password: 20+ characters, upper/lowercase, numbers, symbols.
   - Save it somewhere secure because you need it later for migrations.
-- `sfAppPassword`
+- `SF_APP_PASSWORD` → `sfAppPassword`
   - This is the runtime password for the lower-privilege PostgreSQL user `sf_app`.
   - It must be different from the admin password.
   - Save it too, because you need it again when validating the runtime connection.
