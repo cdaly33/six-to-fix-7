@@ -9,6 +9,8 @@ This guide shows two supported manual deployment paths for Six-to-Fix in Azure:
 
 This guide intentionally does **not** use GitHub Actions for Azure deployment. Infrastructure should be deployed manually through the Azure Portal or with `az deployment group create`, and the app should be deployed manually to Azure App Service via ZIP deploy.
 
+> **GitHub Actions Deployment (Optional)**: If you prefer automated deployments from GitHub Actions, see **[OIDC-SETUP.md](./OIDC-SETUP.md)** to configure Azure OIDC (Workload Identity Federation). This allows the workflow to deploy without storing long-lived secrets in the repository.
+
 The examples below use the **prod** environment and these expected names:
 
 - Resource group: `rg-sixtofix-prod`

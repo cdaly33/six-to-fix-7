@@ -44,35 +44,35 @@ jobs:
           name: web-app
           path: ./publish
 
-  deploy-dev:
-    needs: build
-    runs-on: ubuntu-latest
-    environment: dev
-    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'dev'
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: web-app
-          path: ./publish
+  # deploy-dev:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   environment: dev
+  #   if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'dev'
+  #   steps:
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: web-app
+  #         path: ./publish
 
-      - name: Azure login (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  #     - name: Azure login (OIDC)
+  #       uses: azure/login@v2
+  #       with:
+  #         client-id: ${{ secrets.AZURE_CLIENT_ID }}
+  #         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+  #         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy to App Service (dev)
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ secrets.AZURE_WEBAPP_NAME_DEV }}
-          package: ./publish
+  #     - name: Deploy to App Service (dev)
+  #       uses: azure/webapps-deploy@v3
+  #       with:
+  #         app-name: ${{ secrets.AZURE_WEBAPP_NAME_DEV }}
+  #         package: ./publish
 
-      - name: Deployment summary
-        run: |
-          echo '## 🚀 App Deployment — Dev' >> "$GITHUB_STEP_SUMMARY"
-          echo '**Commit:** ${{ github.sha }}' >> "$GITHUB_STEP_SUMMARY"
-          echo '**Status:** ✅ Deployed' >> "$GITHUB_STEP_SUMMARY"
+  #     - name: Deployment summary
+  #       run: |
+  #         echo '## 🚀 App Deployment — Dev' >> "$GITHUB_STEP_SUMMARY"
+  #         echo '**Commit:** ${{ github.sha }}' >> "$GITHUB_STEP_SUMMARY"
+  #         echo '**Status:** ✅ Deployed' >> "$GITHUB_STEP_SUMMARY"
 
   deploy-prod:
     needs: build
