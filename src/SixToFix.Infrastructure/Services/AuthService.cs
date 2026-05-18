@@ -60,6 +60,6 @@ public sealed class AuthService : IAuthService
 
         _logger.LogInformation("Token issued for user {UserId} in tenant {TenantId}", user.Id, user.TenantId);
 
-        return new LoginResult(token, user.Email!, user.Id, user.TenantId, [.. roles]);
+        return new LoginResult(token, user.Email!, user.Id, user.TenantId, user.TenantSlug, [.. roles]);
     }
 }

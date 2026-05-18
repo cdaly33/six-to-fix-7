@@ -1,5 +1,8 @@
 using System.Security.Claims;
 using System.Threading.Channels;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using SixToFix.Api.Models;
@@ -12,6 +15,14 @@ namespace SixToFix.Api.Endpoints;
 
 public static class ApiEndpointExtensions
 {
+    // /api/* endpoints authenticate exclusively against the JWT bearer scheme.
+    // The cookie scheme exists only for the Blazor Server browser channel.
+    private static AuthorizeAttribute BearerPolicy(string? policy = null) => new()
+    {
+        AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme,
+        Policy = policy,
+    };
+
     public static IEndpointRouteBuilder MapApiEndpoints(this IEndpointRouteBuilder app)
     {
         // Health check
@@ -35,6 +46,7 @@ public static class ApiEndpointExtensions
     {
         app.MapPost("/api/auth/login", async (
             LoginRequest request,
+            HttpContext httpContext,
             IAuthService authService,
             ILogger<LoginRequest> logger,
             CancellationToken ct) =>
@@ -48,6 +60,11 @@ public static class ApiEndpointExtensions
                 logger.LogWarning("Failed login attempt for email hash {EmailHash}", request.Email.GetHashCode());
                 return Results.Problem("Invalid credentials.", statusCode: 401);
             }
+
+            // Browser channel: issue auth cookie so subsequent Blazor Server SSR
+            // navigations are authenticated (the JS-stored JWT cannot ride SSR requests).
+            var principal = BuildPrincipal(result);
+            await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
             return Results.Ok(new LoginResponse(result.AccessToken, result.Email, result.UserId, result.TenantId, result.Roles));
         })
@@ -69,8 +86,36 @@ public static class ApiEndpointExtensions
 
             return Results.Ok(new LoginResponse(result.AccessToken, result.Email, result.UserId, result.TenantId, result.Roles));
         })
-        .RequireAuthorization()
+        .RequireAuthorization(BearerPolicy())
         .WithName("RefreshToken");
+
+        // Browser logout: clears the cookie and bounces back to /login.
+        // Linked from TopNav.razor's "Sign out" anchor (GET /logout).
+        app.MapGet("/logout", async (HttpContext httpContext) =>
+        {
+            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return Results.Redirect("/login");
+        })
+        .AllowAnonymous()
+        .WithName("Logout");
+    }
+
+    private static ClaimsPrincipal BuildPrincipal(LoginResult result)
+    {
+        // Preserve the same claim shape as JwtTokenService so TenantContextMiddleware
+        // and role policies behave identically regardless of which scheme authenticated.
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, result.UserId.ToString()),
+            new(ClaimTypes.Name, result.Email),
+            new(ClaimTypes.Email, result.Email),
+            new("tenant_id", result.TenantId.ToString()),
+            new("tenant_slug", result.TenantSlug),
+        };
+        foreach (var role in result.Roles)
+            claims.Add(new Claim(ClaimTypes.Role, role));
+
+        return new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
     }
 
     // ── Audit Runs ────────────────────────────────────────────────────────────
@@ -107,7 +152,7 @@ public static class ApiEndpointExtensions
                 return Results.Problem($"An active audit run already exists for client '{ex.ClientId}'.", statusCode: 409);
             }
         })
-        .RequireAuthorization("TenantAdmin")
+        .RequireAuthorization(BearerPolicy("TenantAdmin"))
         .WithName("CreateAuditRun");
 
         app.MapPost("/api/audit-runs/{id:guid}/start", async (
@@ -133,7 +178,7 @@ public static class ApiEndpointExtensions
                 return Results.Problem(ex.Message, statusCode: 422);
             }
         })
-        .RequireAuthorization("TenantAdmin")
+        .RequireAuthorization(BearerPolicy("TenantAdmin"))
         .WithName("StartAuditRun");
 
         app.MapGet("/api/audit-runs/{id:guid}", async (
@@ -153,7 +198,7 @@ public static class ApiEndpointExtensions
                 return Results.Problem($"AuditRun '{ex.AuditRunId}' not found.", statusCode: 404);
             }
         })
-        .RequireAuthorization()
+        .RequireAuthorization(BearerPolicy())
         .WithName("GetAuditRun");
 
         app.MapGet("/api/audit-runs/{id:guid}/status", async (
@@ -164,7 +209,7 @@ public static class ApiEndpointExtensions
             var status = await orchestrator.GetAuditRunStatusAsync(id, ct);
             return status is null ? Results.NotFound() : Results.Ok(status);
         })
-        .RequireAuthorization()
+        .RequireAuthorization(BearerPolicy())
         .WithName("GetAuditRunStatus");
 
         app.MapGet("/api/audit-runs", async (
@@ -184,7 +229,7 @@ public static class ApiEndpointExtensions
                 return Results.Problem($"Client '{ex.ClientId}' not found.", statusCode: 404);
             }
         })
-        .RequireAuthorization()
+        .RequireAuthorization(BearerPolicy())
         .WithName("GetAuditRunsForClient");
     }
 
@@ -220,7 +265,7 @@ public static class ApiEndpointExtensions
                 return Results.Problem(ex.Message, statusCode: 422);
             }
         })
-        .RequireAuthorization("Reviewer")
+        .RequireAuthorization(BearerPolicy("Reviewer"))
         .WithName("ApproveCategory");
 
         app.MapPost("/api/audit-runs/{auditRunId:guid}/categories/{categoryId:guid}/reject", async (
@@ -261,7 +306,7 @@ public static class ApiEndpointExtensions
                 return Results.Problem(ex.Message, statusCode: 422);
             }
         })
-        .RequireAuthorization("Reviewer")
+        .RequireAuthorization(BearerPolicy("Reviewer"))
         .WithName("RejectCategory");
     }
 
@@ -308,7 +353,7 @@ public static class ApiEndpointExtensions
                 return Results.Problem("This audit has already been published.", statusCode: 409);
             }
         })
-        .RequireAuthorization("TenantAdmin")
+        .RequireAuthorization(BearerPolicy("TenantAdmin"))
         .WithName("PublishAuditRun");
 
         app.MapGet("/api/published/{auditRunId:guid}", async (
@@ -328,7 +373,7 @@ public static class ApiEndpointExtensions
                 return Results.Problem($"AuditRun '{ex.AuditRunId}' not found or not yet published.", statusCode: 404);
             }
         })
-        .RequireAuthorization()
+        .RequireAuthorization(BearerPolicy())
         .WithName("GetPublishedAudit");
     }
 
@@ -353,7 +398,7 @@ public static class ApiEndpointExtensions
                 return Results.Problem($"Client '{ex.ClientId}' not found.", statusCode: 404);
             }
         })
-        .RequireAuthorization()
+        .RequireAuthorization(BearerPolicy())
         .WithName("GetCalibrationHistory");
     }
 

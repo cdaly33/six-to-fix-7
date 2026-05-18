@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using SixToFix.Api.Endpoints;
 using SixToFix.Application.Extensions;
@@ -27,9 +29,55 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddScoped<ITenantContext, HttpContextTenantContext>();
 builder.Services.AddScoped<HttpContextTenantContext>();  // so middleware can cast
 
-// Authentication — JWT Bearer
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+// Authentication — dual scheme:
+//   Cookie  → default for the browser channel (Blazor Server pages, login flow).
+//   Bearer  → /api/* endpoints (machine clients, SPA fetch, server-to-server).
+// Rationale: Blazor Server pages render on the server during HTTP navigations,
+// so credentials must travel as a cookie (browser-attached automatically).
+// JS-attached Authorization headers don't exist for SSR navs. See
+// .squad/decisions/inbox/morpheus-dual-auth-scheme.md.
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    })
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+    {
+        options.Cookie.Name = "sixtofix.auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
+        options.SlidingExpiration = true;
+        options.LoginPath = "/login";
+        options.LogoutPath = "/logout";
+        options.AccessDeniedPath = "/access-denied";
+        options.ReturnUrlParameter = "returnUrl";
+
+        // API callers must see a clean 401/403, never a 302 to /login.
+        options.Events.OnRedirectToLogin = ctx =>
+        {
+            if (ctx.Request.Path.StartsWithSegments("/api"))
+            {
+                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            }
+            ctx.Response.Redirect(ctx.RedirectUri);
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToAccessDenied = ctx =>
+        {
+            if (ctx.Request.Path.StartsWithSegments("/api"))
+            {
+                ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            }
+            ctx.Response.Redirect(ctx.RedirectUri);
+            return Task.CompletedTask;
+        };
+    })
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -42,39 +90,28 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey not configured")))
         };
-
-        // Browser navigations (Blazor pages) must redirect to /login on challenge,
-        // not return a raw 401 + WWW-Authenticate: Bearer. API clients keep the 401.
-        options.Events = new JwtBearerEvents
-        {
-            OnChallenge = ctx =>
-            {
-                if (ctx.Response.HasStarted) return Task.CompletedTask;
-
-                var req = ctx.Request;
-                var isApi = req.Path.StartsWithSegments("/api");
-                var accept = req.Headers.Accept.ToString();
-                var isHtmlNav = !isApi
-                    && (accept.Contains("text/html", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(req.Headers["Sec-Fetch-Mode"], "navigate", StringComparison.OrdinalIgnoreCase));
-
-                if (isHtmlNav)
-                {
-                    ctx.HandleResponse();
-                    var returnUrl = Uri.EscapeDataString(req.Path + req.QueryString);
-                    ctx.Response.Redirect($"/login?returnUrl={returnUrl}");
-                }
-                return Task.CompletedTask;
-            }
-        };
     });
 
-// Authorization policies
+// Authorization policies.
+// Policies accept BOTH schemes so the same named policy works whether the
+// caller is a Blazor SSR page (cookie) or an /api/* client (bearer).
+// API endpoints under /api/* are additionally pinned to JwtBearer via the
+// BearerPolicy helper in ApiEndpointExtensions.
+static AuthorizationPolicyBuilder DualScheme(AuthorizationPolicyBuilder p) =>
+    p.AddAuthenticationSchemes(
+        CookieAuthenticationDefaults.AuthenticationScheme,
+        JwtBearerDefaults.AuthenticationScheme);
+
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy("SuperAdmin", p => p.RequireRole("SuperAdmin"))
-    .AddPolicy("TenantAdmin", p => p.RequireRole("SuperAdmin", "TenantAdmin"))
-    .AddPolicy("Reviewer", p => p.RequireRole("SuperAdmin", "TenantAdmin", "Reviewer"))
-    .AddPolicy("Viewer", p => p.RequireRole("SuperAdmin", "TenantAdmin", "Reviewer", "Viewer"));
+    .SetDefaultPolicy(new AuthorizationPolicyBuilder(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .Build())
+    .AddPolicy("SuperAdmin", p => DualScheme(p).RequireAuthenticatedUser().RequireRole("SuperAdmin"))
+    .AddPolicy("TenantAdmin", p => DualScheme(p).RequireAuthenticatedUser().RequireRole("SuperAdmin", "TenantAdmin"))
+    .AddPolicy("Reviewer", p => DualScheme(p).RequireAuthenticatedUser().RequireRole("SuperAdmin", "TenantAdmin", "Reviewer"))
+    .AddPolicy("Viewer", p => DualScheme(p).RequireAuthenticatedUser().RequireRole("SuperAdmin", "TenantAdmin", "Reviewer", "Viewer"));
 
 // Blazor Server
 builder.Services.AddRazorComponents()

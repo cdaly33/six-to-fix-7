@@ -18,4 +18,5 @@ public sealed record LoginResult(
     string Email,
     Guid UserId,
     Guid TenantId,
+    string TenantSlug,
     IReadOnlyList<string> Roles);

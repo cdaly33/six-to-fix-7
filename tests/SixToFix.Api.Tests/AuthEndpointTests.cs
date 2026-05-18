@@ -11,7 +11,7 @@ public sealed class AuthEndpointTests
 
         factory.AuthService
             .Setup(service => service.LoginAsync("reviewer@strategicglue.com", "Password123!", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new LoginResult("jwt-token", "reviewer@strategicglue.com", userId, tenantId, ["Reviewer"]));
+            .ReturnsAsync(new LoginResult("jwt-token", "reviewer@strategicglue.com", userId, tenantId, "strategic-glue", ["Reviewer"]));
 
         var response = await factory.CreateClient().PostAsJsonAsync("/api/auth/login", new LoginRequest("reviewer@strategicglue.com", "Password123!"));
 
