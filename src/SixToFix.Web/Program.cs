@@ -42,6 +42,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey not configured")))
         };
+
+        // Browser navigations (Blazor pages) must redirect to /login on challenge,
+        // not return a raw 401 + WWW-Authenticate: Bearer. API clients keep the 401.
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = ctx =>
+            {
+                if (ctx.Response.HasStarted) return Task.CompletedTask;
+
+                var req = ctx.Request;
+                var isApi = req.Path.StartsWithSegments("/api");
+                var accept = req.Headers.Accept.ToString();
+                var isHtmlNav = !isApi
+                    && (accept.Contains("text/html", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(req.Headers["Sec-Fetch-Mode"], "navigate", StringComparison.OrdinalIgnoreCase));
+
+                if (isHtmlNav)
+                {
+                    ctx.HandleResponse();
+                    var returnUrl = Uri.EscapeDataString(req.Path + req.QueryString);
+                    ctx.Response.Redirect($"/login?returnUrl={returnUrl}");
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 // Authorization policies
