@@ -1,0 +1,26 @@
+@page "/logout"
+@rendermode InteractiveServer
+@layout AuthLayout
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>Signing Out — Six to Fix</PageTitle>
+
+<div class="login-container">
+    <div class="card login-card">
+        <div class="card-body">
+            <p class="text-secondary">Signing out…</p>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        // Clear the localStorage JWT; the server-side /account/logout endpoint
+        // will clear the auth cookie and redirect to /login.
+        await JS.InvokeVoidAsync("SixToFix.clearToken");
+        Nav.NavigateTo("/account/logout", forceLoad: true);
+    }
+}

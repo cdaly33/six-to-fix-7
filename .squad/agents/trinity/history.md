@@ -133,3 +133,23 @@ Tank's prod 401 fix (PR #28) identified a critical gap: `Login.razor` stores JWT
 - `FakeAuditRunHubClient.cs` — deleted (no longer needed).
 - `AuditDetailPageTests.cs` — replaced hub-trigger tests with polling-appropriate tests (initial render state, publish button visibility by role).
 - `AuditOrchestratorTests.cs` — removed `_hubContext` mock setup, updated one test to verify DB state transition instead of hub event receipt.
+
+### 2026-06-06 — Phase 5: Cookie-based auth wiring (browser-side login flow)
+**Core problem solved:** Blazor Server components run server-side over SignalR. A C# HttpClient POST from Login.razor is a server-to-server call — the browser never receives Set-Cookie. Fixed by using JS.InvokeAsync<string>("SixToFix.login", ...) so the browser's etch() receives the cookie directly.
+
+**Key learnings:**
+- orceLoad: true is required for post-login/logout navigation. Without it, Blazor does client-side nav and the new auth cookie is never sent on the next request.
+- @rendermode InteractiveServer must be explicit on Login.razor and Logout.razor — JS interop in event handlers requires an active SignalR circuit, which SSR-only rendering doesn't establish.
+- [SupplyParameterFromQuery] works on routable Blazor 8+ components for capturing ?returnUrl=....
+- Server-side /logout was renamed to /account/logout to avoid route conflict with Logout.razor Blazor page at @page "/logout".
+
+**Files changed:**
+- src/SixToFix.Web/wwwroot/js/auth.js — created (browser fetch, localStorage helpers)
+- src/SixToFix.Web/App.razor — added auth.js script tag
+- src/SixToFix.Web/Navigation/ILoginNavigator.cs — added NavigateTo(string?), orceLoad: true
+- src/SixToFix.Web/Pages/Login.razor — JS interop approach, @rendermode InteractiveServer, returnUrl
+- src/SixToFix.Web/Pages/Logout.razor — new page: clears localStorage, navigates to /account/logout
+- src/SixToFix.Web/Components/RedirectToLogin.razor — appends returnUrl to redirect
+- src/SixToFix.Api/Endpoints/ApiEndpointExtensions.cs — renamed /logout → /account/logout
+- src/SixToFix.Web/Program.cs — updated LogoutPath to /account/logout
+- 	ests/SixToFix.Web.Tests/Pages/LoginPageTests.cs — replaced IHttpClientFactory mocks with JSInterop stubs

@@ -51,7 +51,7 @@ builder.Services.AddAuthentication(options =>
         options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
         options.SlidingExpiration = true;
         options.LoginPath = "/login";
-        options.LogoutPath = "/logout";
+        options.LogoutPath = "/account/logout";
         options.AccessDeniedPath = "/access-denied";
         options.ReturnUrlParameter = "returnUrl";
 

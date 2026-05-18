@@ -90,8 +90,9 @@ public static class ApiEndpointExtensions
         .WithName("RefreshToken");
 
         // Browser logout: clears the cookie and bounces back to /login.
-        // Linked from TopNav.razor's "Sign out" anchor (GET /logout).
-        app.MapGet("/logout", async (HttpContext httpContext) =>
+        // Reached via Logout.razor (the Blazor /logout page), which first clears
+        // localStorage, then force-navigates here.
+        app.MapGet("/account/logout", async (HttpContext httpContext) =>
         {
             await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Results.Redirect("/login");

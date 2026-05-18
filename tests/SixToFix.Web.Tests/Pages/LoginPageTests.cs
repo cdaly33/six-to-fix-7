@@ -1,7 +1,3 @@
-using System.Net.Http;
-using System.Net.Http.Json;
-using Microsoft.JSInterop;
-
 namespace SixToFix.Web.Tests.Pages;
 
 public sealed class LoginPageTests
@@ -11,7 +7,7 @@ public sealed class LoginPageTests
     {
         using var ctx = new TestContext();
         ctx.AddTestAuthorization();
-        ctx.Services.AddSingleton(CreateHttpClientFactory(_ => new HttpResponseMessage(HttpStatusCode.OK)));
+        ctx.JSInterop.Setup<string>("SixToFix.login", _ => true);
         ctx.Services.AddSingleton(Mock.Of<ILoginNavigator>());
 
         var cut = ctx.RenderComponent<Login>();
@@ -30,7 +26,7 @@ public sealed class LoginPageTests
     {
         using var ctx = new TestContext();
         ctx.AddTestAuthorization();
-        ctx.Services.AddSingleton(CreateHttpClientFactory(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized)));
+        ctx.JSInterop.Setup<string>("SixToFix.login", _ => true).SetResult("unauthorized");
         ctx.Services.AddSingleton(Mock.Of<ILoginNavigator>());
 
         var cut = ctx.RenderComponent<Login>();
@@ -47,11 +43,7 @@ public sealed class LoginPageTests
     {
         using var ctx = new TestContext();
         ctx.AddTestAuthorization();
-        ctx.Services.AddSingleton(CreateHttpClientFactory(_ => new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(new { accessToken = "jwt-token" })
-        }));
-        var storageInvocation = ctx.JSInterop.SetupVoid("localStorage.setItem");
+        ctx.JSInterop.Setup<string>("SixToFix.login", _ => true).SetResult("ok");
         var navigator = new Mock<ILoginNavigator>();
         ctx.Services.AddSingleton(navigator.Object);
 
@@ -60,26 +52,7 @@ public sealed class LoginPageTests
         cut.Find("#email").Change("reviewer@strategicglue.com");
         cut.Find("#password").Change("Password123!");
         cut.Find("form").Submit();
-        storageInvocation.SetVoidResult();
 
-        cut.WaitForAssertion(() => navigator.Verify(service => service.NavigateToDashboard(), Times.Once));
-    }
-
-    private static IHttpClientFactory CreateHttpClientFactory(Func<HttpRequestMessage, HttpResponseMessage> responder)
-    {
-        var mock = new Mock<IHttpClientFactory>();
-        var client = new HttpClient(new StubHttpMessageHandler(responder))
-        {
-            BaseAddress = new Uri("http://localhost")
-        };
-
-        mock.Setup(factory => factory.CreateClient(It.IsAny<string>())).Returns(client);
-        return mock.Object;
-    }
-
-    private sealed class StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(responder(request));
+        cut.WaitForAssertion(() => navigator.Verify(service => service.NavigateTo(null), Times.Once));
     }
 }
