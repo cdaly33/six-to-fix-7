@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "2201357002208317019"
+      "templateHash": "4056910674404684097"
     }
   },
   "parameters": {
@@ -18,7 +18,7 @@
     },
     "location": {
       "type": "string",
-      "defaultValue": "[resourceGroup().location]"
+      "defaultValue": "centralus"
     },
     "appName": {
       "type": "string",
@@ -103,7 +103,7 @@
               "metricNamespace": "microsoft.insights/components",
               "metricName": "dependencies/failed",
               "operator": "GreaterThan",
-              "timeAggregation": "Total",
+              "timeAggregation": "Count",
               "threshold": 5,
               "criterionType": "StaticThresholdCriterion"
             }
@@ -381,7 +381,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "13212767855847352212"
+              "templateHash": "4144418881222653504"
             }
           },
           "parameters": {
@@ -453,9 +453,9 @@
             {
               "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
               "apiVersion": "2024-08-01",
-              "name": "[format('{0}/{1}', format('psql-{0}', variables('nameSuffix')), 'connection_pooling')]",
+              "name": "[format('{0}/{1}', format('psql-{0}', variables('nameSuffix')), 'pgbouncer.enabled')]",
               "properties": {
-                "value": "PgBouncer",
+                "value": "True",
                 "source": "user-override"
               },
               "dependsOn": [
@@ -467,7 +467,7 @@
               "apiVersion": "2024-08-01",
               "name": "[format('{0}/{1}', format('psql-{0}', variables('nameSuffix')), 'require_secure_transport')]",
               "properties": {
-                "value": "ON",
+                "value": "on",
                 "source": "user-override"
               },
               "dependsOn": [
@@ -752,7 +752,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "2156956327194244491"
+              "templateHash": "664745422272798762"
             }
           },
           "parameters": {
@@ -815,7 +815,7 @@
                 "httpsOnly": true,
                 "clientAffinityEnabled": true,
                 "siteConfig": {
-                  "linuxFxVersion": "DOTNETCORE|10.0",
+                  "linuxFxVersion": "DOTNET|10.0",
                   "alwaysOn": true,
                   "webSocketsEnabled": true,
                   "http20Enabled": true,

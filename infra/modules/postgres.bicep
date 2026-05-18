@@ -45,11 +45,11 @@ resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-0
   }
 }
 
-resource connectionPoolingConfig 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@2024-08-01' = {
+resource pgBouncerConfig 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@2024-08-01' = {
   parent: postgresServer
-  name: 'connection_pooling'
+  name: 'pgbouncer.enabled'
   properties: {
-    value: 'PgBouncer'
+    value: 'True'
     source: 'user-override'
   }
 }
@@ -58,7 +58,7 @@ resource sslConfig 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@202
   parent: postgresServer
   name: 'require_secure_transport'
   properties: {
-    value: 'ON'
+    value: 'on'
     source: 'user-override'
   }
 }
