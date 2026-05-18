@@ -24,6 +24,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate linuxFxVersion in appservice.bicep
+        run: |
+          VALUE=$(grep -oP "linuxFxVersion:\s*'\K[^']+" infra/modules/appservice.bicep)
+          echo "linuxFxVersion = '$VALUE'"
+          if [[ "$VALUE" != DOTNETCORE* ]]; then
+            echo "::error file=infra/modules/appservice.bicep::linuxFxVersion must start with 'DOTNETCORE|' — got '$VALUE'. Using 'DOTNET|' silently falls back to a PHP container (403). Fix the value before deploying."
+            exit 1
+          fi
+          echo "✅ linuxFxVersion is valid: '$VALUE'"
+
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
