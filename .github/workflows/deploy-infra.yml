@@ -1,19 +1,16 @@
 name: Deploy Infrastructure
 
+# Infrastructure is deployed manually via Bicep CLI — NOT via GitHub Actions.
+# This workflow is disabled. See docs/deployment/AZURE-DEPLOYMENT-GUIDE.md.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'infra/**'
   workflow_dispatch:
     inputs:
       environment:
-        description: Target environment
+        description: Target environment (manual only — infra is deployed via Bicep CLI)
         required: true
-        default: dev
+        default: prod
         type: choice
         options:
-          - dev
           - prod
 
 permissions:
