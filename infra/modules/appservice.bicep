@@ -36,7 +36,7 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
     httpsOnly: true
     clientAffinityEnabled: true
     siteConfig: {
-      linuxFxVersion: 'DOTNET|10.0'
+      linuxFxVersion: 'DOTNETCORE|10.0'
       alwaysOn: true
       webSocketsEnabled: true
       http20Enabled: true

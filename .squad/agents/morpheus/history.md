@@ -10,6 +10,56 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-05-17 — Phase Auth: Dual Cookie+JWT Scheme (Proper Fix for Tank's prod 401)
+
+**Task:** Replace Tank's `JwtBearerEvents.OnChallenge` redirect shim with a real
+dual-auth pipeline. Branch: `dev/phase-auth-cookie-scheme`.
+
+**Architecture decision (full ADR draft: `.squad/decisions/inbox/morpheus-dual-auth-scheme.md`):**
+
+- **Cookie scheme = default** for `DefaultScheme`, `DefaultSignInScheme`,
+  `DefaultChallengeScheme`. Browser channel (Blazor Server SSR + login flow)
+  uses the cookie because HTTP nav requests carry cookies natively; they do
+  NOT carry JS-attached `Authorization` headers.
+- **JwtBearer scheme = explicitly pinned per `/api/*` endpoint** via a small
+  `BearerPolicy(policyName?)` helper that produces
+  `AuthorizeAttribute { AuthenticationSchemes = Bearer, Policy = … }`.
+  Touching the existing `.RequireAuthorization(...)` call sites was preferable
+  to introducing a route group — keeps minimal-API path strings literal.
+- **Named policies** (`SuperAdmin/TenantAdmin/Reviewer/Viewer`) accept BOTH
+  schemes so the same role logic works regardless of which scheme
+  authenticated. The API endpoints then narrow to Bearer-only via the
+  attribute override.
+- **Cookie events** route `/api/*` failures to raw `401/403`; everything else
+  to `/login` (replaces Tank's manual `Accept`/`Sec-Fetch-Mode` sniffing).
+
+**Claim parity gotcha:** `LoginResult` originally lacked `TenantSlug`. Without
+it, cookie sign-in would have produced a principal missing the `tenant_slug`
+claim that `TenantContextMiddleware` requires. Added `TenantSlug` to
+`LoginResult` and passed `user.TenantSlug` through `AuthService.BuildResultAsync`.
+
+**Package gotcha:** `JwtBearerDefaults` lives in the
+`Microsoft.AspNetCore.Authentication.JwtBearer` NuGet package, NOT in the
+`Microsoft.AspNetCore.App` shared framework. The `SixToFix.Api` project did
+not reference it (only `Microsoft.AspNetCore.App` framework ref). Added the
+package to `SixToFix.Api.csproj`. (Web only compiled because it inherits the
+ref transitively through `Infrastructure`.)
+
+**Cookie + JWT both issued on `/api/auth/login`:** The endpoint now calls
+`HttpContext.SignInAsync(CookieScheme, principal)` *and* returns the JWT in
+the response body. Same-origin `fetch` from `Login.razor` honours
+`Set-Cookie` automatically — so Trinity's `Login.razor` does not strictly
+need to change for the redirect loop to close. Her component-side work can
+focus on UX (e.g., dropping the `localStorage` JWT for first-party flows).
+
+**Logout:** Added `GET /logout` → `SignOutAsync(Cookies)` → redirect `/login`.
+Matches the existing `TopNav.razor` "Sign out" anchor href.
+
+**Verification:** Build clean. Tests: 120 passed
+(Domain 34, Infrastructure 54, Web 18, Api 14), 0 failed.
+
+---
+
 ### ⚠️ 2026-05-17 — FOLLOW-UP: Client Bearer Token Wiring (Tank flagged)
 
 Tank's prod 401 fix (PR #28) identified a critical gap: `Login.razor` stores JWT in `localStorage` but no client code wires it to HTTP requests for Blazor SSR navigations. Consequence: After login, subsequent page navigations still send no bearer token, so `[Authorize]` pages receive JwtBearer challenge → 401 → redirect loop potential.
