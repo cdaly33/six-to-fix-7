@@ -6,7 +6,7 @@ targetScope = 'resourceGroup'
 ])
 param environment string
 
-param location string = resourceGroup().location
+param location string = 'centralus'
 param appName string = 'six-to-fix'
 param tenantId string
 param postgresAdminLogin string = 'sfadmin'
@@ -153,7 +153,7 @@ resource dependencyFailuresAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = 
           metricNamespace: 'microsoft.insights/components'
           metricName: 'dependencies/failed'
           operator: 'GreaterThan'
-          timeAggregation: 'Total'
+          timeAggregation: 'Count'
           threshold: 5
           criterionType: 'StaticThresholdCriterion'
         }

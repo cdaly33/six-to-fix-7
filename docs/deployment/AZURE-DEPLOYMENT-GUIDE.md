@@ -21,7 +21,7 @@ The examples below use the **prod** environment and these expected names:
 - Log Analytics workspace: `law-sixtofix-prod`
 - Storage account: choose a globally unique lowercase name such as `stsixtofixprod1234`
 
-> **Important:** Pick one Azure region up front (recommended: `eastus2`) and use that same region for every resource unless Azure requires otherwise.
+> **Important:** Pick one Azure region up front (recommended: `centralus`) and use that same region for every resource unless Azure requires otherwise. Note: `eastus2` has quota restrictions for PostgreSQL Flexible Server on some subscriptions — use `centralus` to avoid this.
 
 ## Before You Start — Checklist
 
@@ -29,7 +29,7 @@ Before you click anything, make sure you have all of the following:
 
 - An Azure subscription where you can create resources.
 - Permission to create resource groups, App Service, PostgreSQL, Key Vault, Storage, AI Search, Application Insights, and role assignments.
-- The Azure region you want to use. Recommended: **East US 2**.
+- The Azure region you want to use. Recommended: **Central US** (`centralus`).
 - Azure CLI installed if you want the Bicep or ZIP deploy path:
   - https://learn.microsoft.com/cli/azure/install-azure-cli-windows
 - .NET SDK installed locally so you can publish the app.
@@ -66,7 +66,7 @@ This path assumes you want to create everything manually in the Azure Portal wit
 6. On the **Basics** tab, fill in:
    - **Subscription**: select your subscription.
    - **Resource group**: `rg-sixtofix-prod`
-   - **Region**: **East US 2** (or your preferred region)
+   - **Region**: **Central US** (or your preferred region)
 7. Click **Review + create**.
 8. Wait for validation to finish.
 9. Click **Create**.
@@ -587,7 +587,7 @@ az bicep install
 6. Create the resource group first. The Bicep deploys **into an existing resource group**:
 
 ```powershell
-az group create --name rg-sixtofix-prod --location eastus2
+az group create --name rg-sixtofix-prod --location centralus
 ```
 
 ### Step 1: Fill in prod.bicepparam
