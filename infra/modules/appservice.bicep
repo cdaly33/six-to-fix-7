@@ -57,6 +57,7 @@ resource appSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     Storage__BlobEndpoint: blobEndpoint
     ConnectionStrings__DefaultConnection: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=ConnectionStrings--DefaultConnection)'
     ConnectionStrings__AdminConnection: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=ConnectionStrings--AdminConnection)'
+    SeedAdmin__Enabled: isProd ? 'true' : 'false'
     Jwt__SigningKey: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=Jwt--SigningKey)'
     HubSpot__PrivateAppToken: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=HubSpot--PrivateAppToken)'
     AzureOpenAI__ApiKey: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=AzureOpenAI--ApiKey)'
