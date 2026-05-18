@@ -157,3 +157,10 @@
 - GrpcNetClient instrumentation omitted from ServiceDefaults — no stable NuGet release and project has no gRPC
 - Production deployment (Azure App Service + Azure PostgreSQL) is unchanged
 - Run locally with: `dotnet run --project src/SixToFix.AppHost`
+
+### 2026-05-17 — Env-Gated SuperAdmin Bootstrap
+
+- Added `AdminBootstrapHostedService` to create the first Identity SuperAdmin via `UserManager`/`RoleManager` only when `SeedAdmin:Enabled=true`.
+- Seeder is idempotent: if any user already has canonical role `SuperAdmin`, startup logs and skips.
+- Missing `SeedAdmin:Email` or `SeedAdmin:Password` logs a warning and does not crash the host.
+- Production wiring uses Key Vault secrets `SeedAdmin--Email`/`SeedAdmin--Password` and App Service setting `SeedAdmin__Enabled`.

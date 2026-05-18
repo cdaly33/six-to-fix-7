@@ -3,6 +3,7 @@ using SixToFix.Application.Auth;
 using SixToFix.Application.Data;
 using SixToFix.Application.Services;
 using SixToFix.Infrastructure.Auth;
+using SixToFix.Infrastructure.Bootstrap;
 using SixToFix.Infrastructure.Data;
 
 namespace SixToFix.Infrastructure.Extensions;
@@ -48,6 +49,11 @@ public static class InfrastructureServiceExtensions
 
         // pgBouncer-aware connection factory
         services.AddScoped<IDbConnectionFactory, NpgsqlConnectionFactory>();
+
+        if (configuration.GetValue<bool>("SeedAdmin:Enabled"))
+        {
+            services.AddHostedService<AdminBootstrapHostedService>();
+        }
 
         // Business + AI services
         services.AddBusinessServices(configuration);

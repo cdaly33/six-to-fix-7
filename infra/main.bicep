@@ -63,6 +63,9 @@ var bootstrapSecrets = {
   'ConnectionStrings--DefaultConnection': 'Host=${postgres.outputs.fqdn};Port=6432;Database=${databaseName};Username=sf_app;Password=${sfAppPassword};No Reset On Close=true;Ssl Mode=Require'
   // DDL admin — used only for migrations, never by the runtime app.
   'ConnectionStrings--AdminConnection': 'Host=${postgres.outputs.fqdn};Port=5432;Database=${databaseName};Username=${postgresAdminLogin};Password=${postgresAdminPassword};Ssl Mode=Require;Trust Server Certificate=false'
+  // One-time SuperAdmin bootstrap placeholders — set real values manually in Key Vault.
+  'SeedAdmin--Email': ''
+  'SeedAdmin--Password': ''
   // Jwt--SigningKey, HubSpot--PrivateAppToken, HubSpot--WebhookSecret, AzureOpenAI--ApiKey
   // must be set manually after deploy — see docs/deployment/NEXT-STEPS-FOR-CHRIS.md Step 2.
 }
