@@ -1,8 +1,8 @@
 ﻿@page "/login"
+@rendermode InteractiveServer
 @layout AuthLayout
 @inject SixToFix.Web.Navigation.ILoginNavigator LoginNavigator
 @inject AuthenticationStateProvider AuthState
-@inject IHttpClientFactory HttpFactory
 @inject IJSRuntime JS
 
 <PageTitle>Sign In — Six to Fix</PageTitle>
@@ -43,6 +43,9 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    private string? ReturnUrl { get; set; }
+
     private readonly LoginModel _model = new();
     private string? _error;
     private bool _submitting;
@@ -51,7 +54,7 @@
     {
         var auth = await AuthState.GetAuthenticationStateAsync();
         if (auth.User.Identity?.IsAuthenticated == true)
-            LoginNavigator.NavigateToDashboard();
+            LoginNavigator.NavigateTo(ReturnUrl);
     }
 
     private async Task HandleLogin()
@@ -60,24 +63,22 @@
         _error = null;
         try
         {
-            var http = HttpFactory.CreateClient();
-            var resp = await http.PostAsJsonAsync("/api/auth/login", new { _model.Email, _model.Password });
-            if (!resp.IsSuccessStatusCode)
+            // JS fetch runs in the browser, so the Set-Cookie response header is
+            // applied to the browser's cookie jar — something a server-side HttpClient
+            // call cannot do in a Blazor Server (SignalR) context.
+            var result = await JS.InvokeAsync<string>("SixToFix.login", _model.Email, _model.Password);
+            switch (result)
             {
-                _error = resp.StatusCode == System.Net.HttpStatusCode.Unauthorized
-                    ? "Invalid email or password."
-                    : $"Login failed ({(int)resp.StatusCode}).";
-                return;
+                case "ok":
+                    LoginNavigator.NavigateTo(ReturnUrl);
+                    break;
+                case "unauthorized":
+                    _error = "Invalid email or password.";
+                    break;
+                default:
+                    _error = $"Login failed ({result}).";
+                    break;
             }
-            var payload = await resp.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-            if (payload is null || !payload.TryGetValue("accessToken", out var token) || string.IsNullOrWhiteSpace(token))
-            {
-                _error = "No token returned.";
-                return;
-            }
-            var persistTokenTask = JS.InvokeVoidAsync("localStorage.setItem", "six_to_fix_token", token).AsTask();
-            LoginNavigator.NavigateToDashboard();
-            await persistTokenTask;
         }
         catch (Exception ex)
         {
