@@ -49,7 +49,7 @@ resource pgBouncerConfig 'Microsoft.DBforPostgreSQL/flexibleServers/configuratio
   parent: postgresServer
   name: 'pgbouncer.enabled'
   properties: {
-    value: 'on'
+    value: 'True'
     source: 'user-override'
   }
 }
