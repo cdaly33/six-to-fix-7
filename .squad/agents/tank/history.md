@@ -27,6 +27,12 @@
 - **2026-05-17 — PostgreSQL 16 pgBouncer Enablement:** Azure Database for PostgreSQL Flexible Server v16 does not support a `connection_pooling` configuration parameter. For this repo, the runtime connection string uses port `6432`, so the correct Bicep fix is to set `Microsoft.DBforPostgreSQL/flexibleServers/configurations` name `pgbouncer.enabled` with value `'on'` in `infra/modules/postgres.bicep`. Validate with `az bicep build --file infra/main.bicep`.
 - **2026-05-17 — pgbouncer.enabled correct value:** Azure PostgreSQL Flexible Server rejects `'on'` for the `pgbouncer.enabled` configuration parameter. The only allowed values are `'True'` and `'False'` (capital T/F, string). Always use `'True'` (not `'on'`, `'true'`, or `true`) when enabling pgBouncer via Bicep configurations resource.
 
+- **2026-05-17 — Comprehensive Bicep Audit (this session):**
+  - `linuxFxVersion` for .NET 10 on Linux App Service must be `'DOTNET|10.0'` (not `'DOTNETCORE|10.0'`). The `DOTNETCORE` prefix was used for .NET Core 1–3 and early .NET 5; from .NET 6+ the canonical prefix is `DOTNET`. Using the wrong prefix causes an invalid runtime stack error at deploy time.
+  - `require_secure_transport` PostgreSQL GUC value must be lowercase `'on'` or `'off'`. The Azure PostgreSQL Flexible Server ARM API is case-sensitive for configuration values. `'ON'` is rejected at runtime even though PostgreSQL itself is case-insensitive.
+  - **CRITICAL LESSON: Always run `az deployment group validate` — not just `az bicep build`.** `az bicep build` validates syntax only. ARM-level validation (`az deployment group validate`) catches runtime parameter errors, invalid enum values, and incompatible resource property combinations. Multiple bugs in this project would have been caught by ARM validation and were only discovered reactively at deploy time.
+  - Full audit checklist → `.squad/skills/azure-bicep-validation/SKILL.md`
+
 ---
 
 ## Phase 0 — Planning Artifacts (2026-05-10)
