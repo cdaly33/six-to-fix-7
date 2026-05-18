@@ -94,3 +94,65 @@ jobs:
         with:
           app-name: ${{ secrets.AZURE_WEBAPP_NAME_PROD }}
           package: ./publish
+
+  smoke-prod:
+    needs: deploy-prod
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post-deploy smoke test
+        env:
+          APP_URL: https://${{ secrets.AZURE_WEBAPP_NAME_PROD }}.azurewebsites.net
+        run: |
+          set -euo pipefail
+
+          smoke_check() {
+            local label="$1"
+            local url="$2"
+            local expected_status="$3"
+            local extra_flags="${4:-}"
+            local max_retries=5
+            local delay=10
+
+            for attempt in $(seq 1 $max_retries); do
+              HEADERS=$(curl -sS -D - -o /dev/null --max-redirs 0 $extra_flags "$url" 2>&1 || true)
+              STATUS=$(echo "$HEADERS" | grep -m1 "^HTTP/" | awk '{print $2}' | tr -d '\r')
+              SERVER=$(echo "$HEADERS" | grep -i "^Server:" | head -1 | tr -d '\r')
+
+              echo "[$label] attempt $attempt: HTTP $STATUS  Server: ${SERVER:-<none>}"
+
+              if [[ "$STATUS" == "$expected_status" ]]; then
+                # Fail if nginx (PHP fallback container) is serving the response
+                if echo "$SERVER" | grep -qi "nginx"; then
+                  echo "::error::[$label] Server header contains 'nginx' — this indicates a PHP fallback container, not the .NET app. Check linuxFxVersion in appservice.bicep."
+                  exit 1
+                fi
+                echo "✅ [$label] passed (HTTP $STATUS, not nginx)"
+                return 0
+              fi
+
+              if [[ "$STATUS" == "403" ]]; then
+                echo "::error::[$label] HTTP 403 received — likely PHP container fallback due to invalid linuxFxVersion. Check appservice.bicep."
+                exit 1
+              fi
+
+              if [[ $attempt -lt $max_retries ]]; then
+                echo "   status $STATUS ≠ expected $expected_status — retrying in ${delay}s..."
+                sleep $delay
+                delay=$((delay * 2))
+              fi
+            done
+
+            echo "::error::[$label] Expected HTTP $expected_status but got HTTP $STATUS after $max_retries attempts. URL: $url"
+            exit 1
+          }
+
+          # 1. Root: must redirect to /login (302), must NOT be 403 or nginx
+          smoke_check "GET /" "$APP_URL/" "302" '-H "Accept: text/html" -H "Sec-Fetch-Mode: navigate"'
+
+          # 2. Health endpoint: must return 200 (no auth required)
+          smoke_check "GET /health" "$APP_URL/health" "200"
+
+          # 3. API endpoint: must return 401 when anonymous (proves JwtBearer still gates /api)
+          smoke_check "GET /api/audit-runs (anon)" "$APP_URL/api/audit-runs?clientId=00000000-0000-0000-0000-000000000000" "401"
+
+          echo "🎉 All smoke checks passed."

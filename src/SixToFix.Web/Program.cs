@@ -63,7 +63,10 @@ builder.Services.AddAuthentication(options =>
                 ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 return Task.CompletedTask;
             }
-            ctx.Response.Redirect(ctx.RedirectUri);
+            var redirectUri = Uri.TryCreate(ctx.RedirectUri, UriKind.Absolute, out var parsedUri)
+                ? parsedUri.PathAndQuery + parsedUri.Fragment
+                : ctx.RedirectUri;
+            ctx.Response.Redirect(redirectUri);
             return Task.CompletedTask;
         };
         options.Events.OnRedirectToAccessDenied = ctx =>
@@ -73,7 +76,10 @@ builder.Services.AddAuthentication(options =>
                 ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return Task.CompletedTask;
             }
-            ctx.Response.Redirect(ctx.RedirectUri);
+            var redirectUri = Uri.TryCreate(ctx.RedirectUri, UriKind.Absolute, out var parsedUri)
+                ? parsedUri.PathAndQuery + parsedUri.Fragment
+                : ctx.RedirectUri;
+            ctx.Response.Redirect(redirectUri);
             return Task.CompletedTask;
         };
     })
@@ -104,8 +110,7 @@ static AuthorizationPolicyBuilder DualScheme(AuthorizationPolicyBuilder p) =>
 
 builder.Services.AddAuthorizationBuilder()
     .SetDefaultPolicy(new AuthorizationPolicyBuilder(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            JwtBearerDefaults.AuthenticationScheme)
+            CookieAuthenticationDefaults.AuthenticationScheme)
         .RequireAuthenticatedUser()
         .Build())
     .AddPolicy("SuperAdmin", p => DualScheme(p).RequireAuthenticatedUser().RequireRole("SuperAdmin"))

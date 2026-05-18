@@ -29,6 +29,8 @@ dual-auth pipeline. Branch: `dev/phase-auth-cookie-scheme`.
 - **Named policies** (`SuperAdmin/TenantAdmin/Reviewer/Viewer`) accept BOTH
   schemes so the same role logic works regardless of which scheme
   authenticated. API endpoints then narrow to Bearer-only via the attribute.
+  authenticated. The API endpoints then narrow to Bearer-only via the
+  attribute override.
 - **Cookie events** route `/api/*` failures to raw `401/403`; everything else
   to `/login` (replaces Tank's manual `Accept`/`Sec-Fetch-Mode` sniffing).
 
@@ -41,6 +43,11 @@ claim that `TenantContextMiddleware` requires. Added `TenantSlug` to
 `Microsoft.AspNetCore.Authentication.JwtBearer` NuGet package, NOT the
 `Microsoft.AspNetCore.App` shared framework. `SixToFix.Api` didn't reference
 it (only the framework ref). Added the package to `SixToFix.Api.csproj`.
+`Microsoft.AspNetCore.Authentication.JwtBearer` NuGet package, NOT in the
+`Microsoft.AspNetCore.App` shared framework. The `SixToFix.Api` project did
+not reference it (only `Microsoft.AspNetCore.App` framework ref). Added the
+package to `SixToFix.Api.csproj`. (Web only compiled because it inherits the
+ref transitively through `Infrastructure`.)
 
 **Cookie + JWT both issued on `/api/auth/login`:** The endpoint now calls
 `HttpContext.SignInAsync(CookieScheme, principal)` *and* returns the JWT in
@@ -48,6 +55,9 @@ the response body. Same-origin `fetch` from `Login.razor` honours
 `Set-Cookie` automatically — so Trinity's component-side update is not
 required to close the redirect loop; her work focuses on UX (dropping the
 `localStorage` JWT for first-party flows).
+`Set-Cookie` automatically — so Trinity's `Login.razor` does not strictly
+need to change for the redirect loop to close. Her component-side work can
+focus on UX (e.g., dropping the `localStorage` JWT for first-party flows).
 
 **Logout:** Added `GET /logout` → `SignOutAsync(Cookies)` → redirect `/login`.
 Matches the existing `TopNav.razor` "Sign out" anchor href.
