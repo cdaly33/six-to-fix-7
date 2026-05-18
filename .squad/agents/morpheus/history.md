@@ -10,6 +10,19 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### ⚠️ 2026-05-17 — FOLLOW-UP: Client Bearer Token Wiring (Tank flagged)
+
+Tank's prod 401 fix (PR #28) identified a critical gap: `Login.razor` stores JWT in `localStorage` but no client code wires it to HTTP requests for Blazor SSR navigations. Consequence: After login, subsequent page navigations still send no bearer token, so `[Authorize]` pages receive JwtBearer challenge → 401 → redirect loop potential.
+
+**Scope for Morpheus:**
+- Current: JwtBearer challenge override redirects browser to `/login?returnUrl=…` (302), preventing 401 exposure.
+- Next: Add bearer token attachment to all `HttpClient` requests from Blazor (both SSR and API). Determine: client-side automatic wiring vs cookie-based auth redesign for browser flows.
+- Decision required: If cookie auth for browser, JwtBearer reserved for `/api` only. Otherwise, implement `HttpMessageHandler` to inject bearer token from `localStorage`.
+
+**Documented in:** decisions.md Phase 2, recommendation #4. Tank session log: 2026-05-17T22:19:46Z.
+
+---
+
 ### Phases 0–6 Summary (Detailed learnings archived to history-archived.md)
 
 **2026-05-10 to 2026-05-14:** Completed comprehensive architecture reviews across 6 phases. Key findings: (1) Service lifetime model (PolicyEngine Singleton, others Scoped). (2) Tenant isolation via EF Core global filters. (3) 5 HubSpot integration gaps identified and fixed. (4) Cross-layer architecture enforced. (5) Reviewer lockout race conditions solved with \pg_advisory_xact_lock\. All PRs reviewed and merged; 84 tests passing.

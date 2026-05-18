@@ -13,6 +13,19 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### ⚠️ 2026-05-17 — FOLLOW-UP: Client Bearer Token Wiring (Tank flagged)
+
+Tank's prod 401 fix (PR #28) identified a critical gap: `Login.razor` stores JWT in `localStorage` but no client code wires it to HTTP requests for Blazor SSR navigations. Consequence: After login, subsequent page navigations still send no bearer token, so `[Authorize]` pages receive JwtBearer challenge → 401 → redirect loop potential.
+
+**Scope for Trinity/Morpheus:** 
+- Add bearer token attachment to all `HttpClient` requests originating from Blazor (both SSR and API calls).
+- Consider if Blazor SSR navigations need automatic token attachment or if a cookie-based auth scheme for browser flows is preferable (JwtBearer reserved for `/api`).
+- Decision required: Client-side bearer wiring vs cookie auth redesign.
+
+**Documented in:** decisions.md Phase 2, recommendation #4. Tank session log: 2026-05-17T22:19:46Z.
+
+---
+
 ### 2026-05-10 — Phase 0: Design System, Component Architecture, Role Visibility Matrix
 
 **Design System decisions locked:**
