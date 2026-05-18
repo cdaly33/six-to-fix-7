@@ -58,7 +58,7 @@ resource sslConfig 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@202
   parent: postgresServer
   name: 'require_secure_transport'
   properties: {
-    value: 'ON'
+    value: 'on'
     source: 'user-override'
   }
 }
