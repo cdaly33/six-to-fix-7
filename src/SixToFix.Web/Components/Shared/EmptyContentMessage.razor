@@ -1,0 +1,19 @@
+@* Shown when a pillar tab has no content or content has placeholder:true *@
+<div class="sh-empty-state">
+    <p class="sh-empty-state__text">
+        No content yet — your administrator can add @Tab details here.
+    </p>
+    <AuthorizeView Roles="TenantAdmin,SuperAdmin">
+        <Authorized>
+            <a href="/admin/content" class="btn btn-sm btn-secondary">Add Content</a>
+        </Authorized>
+        <NotAuthorized>
+            <p class="sh-empty-state__hint">Sign in as TenantAdmin to add content.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Pillar Pillar { get; set; }
+    [Parameter, EditorRequired] public string Tab { get; set; } = string.Empty;
+}
