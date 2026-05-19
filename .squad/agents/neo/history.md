@@ -300,3 +300,44 @@ All tagged [Trait("Category", "Integration")].
 
 ### Build
 Build succeeded. 0 Errors. Non-integration tests: 160/160 passed.
+## Phase 6 — Retire Legacy (2026-05-19)
+
+**Branch:** `dev/phase-6-retire-legacy`
+**Migration:** `DropLegacyAuditTables`
+
+### Deletion Stats
+- Domain entities deleted: 15
+- Application exceptions deleted: 19
+- Application models deleted: 22
+- Application service interfaces deleted: 12
+- Infrastructure services deleted: 10
+- Infrastructure entity configurations deleted: 16
+- Web pages deleted: 11
+- Web components deleted: 1
+- Tests deleted: 10+
+- Total files deleted: ~120+
+
+### Legacy Tables Dropped
+audits, audit_runs, blob_references, calibration_deltas, category_configs, category_results, category_result_versions, clients, council_sessions, hub_spot_sync_queue, policies, policy_flags, reviewer_actions, reviewer_lockouts, skill_runs, telemetry_events
+
+### Preserved
+- User/Tenant/Role/Identity infrastructure
+- StrategyHub domain: PillarContent, UserPillarProgress, PlaybookTemplate
+- StrategyHub services: PillarContentService, ProgressService, PlaybookTemplateService
+- Auth: JWT, dual-scheme cookie+bearer, TenantContext
+- AI infrastructure: IAIClient, IBlobStorage, ISearchClient
+
+## Followup — Phase 6 coverage restore
+
+**Date:** 2026-05-19
+**Branch:** dev/phase-6-retire-legacy (PR #48)
+**Commit:** b4a6b7b
+
+PR #48 deleted ~141 legacy files, dropping `SixToFix.Domain` coverage to 71.40% (gate: 80%).
+Root cause: `Policy` entity had 0% coverage; `Tenant` entity had ~43%.
+
+**Fix:** Added `tests/SixToFix.Domain.Tests/PolicyAndTenantTests.cs` with 12 xUnit tests covering:
+- `Policy` — defaults, full property round-trip, severity variants, IsEnabled toggle, ConfigJson null/set
+- `Tenant` — defaults, full property round-trip, LogoUrl null, IsActive false
+
+**Result:** All 6 `SixToFix.Domain` entity classes at 100% line coverage. CI green on PR #48.

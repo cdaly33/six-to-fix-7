@@ -13,70 +13,7 @@
         </button>
     </div>
 
-    <ul class="nav-list" role="list">
-        <li>
-            <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">
-                <span class="nav-icon" aria-hidden="true">🏠</span>
-                <span class="nav-label">Dashboard</span>
-            </NavLink>
-        </li>
-        <li>
-            <NavLink class="nav-link" href="/audit-runs" Match="NavLinkMatch.Prefix">
-                <span class="nav-icon" aria-hidden="true">📋</span>
-                <span class="nav-label">Audit Runs</span>
-            </NavLink>
-        </li>
-        <li>
-            <AuthorizeView Roles="Reviewer,TenantAdmin,SuperAdmin">
-                <Authorized>
-                    <NavLink class="nav-link" href="/reviewer-queue" Match="NavLinkMatch.Prefix">
-                        <span class="nav-icon" aria-hidden="true">✓</span>
-                        <span class="nav-label">Review Queue</span>
-                    </NavLink>
-                </Authorized>
-            </AuthorizeView>
-        </li>
-        <li>
-            <AuthorizeView Roles="TenantAdmin,SuperAdmin">
-                <Authorized>
-                    <NavLink class="nav-link" href="/clients" Match="NavLinkMatch.Prefix">
-                        <span class="nav-icon" aria-hidden="true">👥</span>
-                        <span class="nav-label">Clients</span>
-                    </NavLink>
-                </Authorized>
-            </AuthorizeView>
-        </li>
-        <li>
-            <AuthorizeView Roles="Reviewer,TenantAdmin,SuperAdmin">
-                <Authorized>
-                    <NavLink class="nav-link" href="/documents" Match="NavLinkMatch.Prefix">
-                        <span class="nav-icon" aria-hidden="true">📁</span>
-                        <span class="nav-label">Documents</span>
-                    </NavLink>
-                </Authorized>
-            </AuthorizeView>
-        </li>
-        <li>
-            <AuthorizeView Roles="TenantAdmin,SuperAdmin">
-                <Authorized>
-                    <NavLink class="nav-link" href="/calibration" Match="NavLinkMatch.Prefix">
-                        <span class="nav-icon" aria-hidden="true">⚡</span>
-                        <span class="nav-label">Calibration</span>
-                    </NavLink>
-                </Authorized>
-            </AuthorizeView>
-        </li>
-        <li>
-            <AuthorizeView Roles="SuperAdmin">
-                <Authorized>
-                    <NavLink class="nav-link" href="/telemetry" Match="NavLinkMatch.Prefix">
-                        <span class="nav-icon" aria-hidden="true">📊</span>
-                        <span class="nav-label">Telemetry</span>
-                    </NavLink>
-                </Authorized>
-            </AuthorizeView>
-        </li>
-    </ul>
+    <ul class="nav-list" role="list"><li><NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All"><span class="nav-icon" aria-hidden="true">🏠</span><span class="nav-label">Dashboard</span></NavLink></li><li><NavLink class="nav-link" href="/pillars" Match="NavLinkMatch.Prefix"><span class="nav-icon" aria-hidden="true">📐</span><span class="nav-label">Pillars</span></NavLink></li><li><NavLink class="nav-link" href="/templates" Match="NavLinkMatch.Prefix"><span class="nav-icon" aria-hidden="true">📄</span><span class="nav-label">Templates</span></NavLink></li></ul>
 
     <div class="nav-footer">
         <AuthorizeView Roles="TenantAdmin,SuperAdmin">

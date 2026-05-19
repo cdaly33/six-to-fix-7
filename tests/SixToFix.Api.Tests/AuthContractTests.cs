@@ -56,14 +56,15 @@ public sealed class AuthContractTests
     }
 
     [Fact]
-    public async Task Get_ApiAuditRuns_Unauthenticated_Returns401()
+    public async Task Post_AuthRefresh_Unauthenticated_Returns401()
     {
         using var factory = new CustomWebApplicationFactory();
         var client = factory.CreateClient();
 
-        var response = await client.GetAsync($"/api/audit-runs?clientId={Guid.NewGuid()}");
+        var response = await client.PostAsync("/api/auth/refresh", content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized,
             because: "JwtBearer must gate all /api/* routes and return 401 for anonymous callers");
     }
 }
+

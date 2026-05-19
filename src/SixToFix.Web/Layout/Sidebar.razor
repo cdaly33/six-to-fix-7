@@ -9,76 +9,7 @@
         </div>
     </div>
 
-    <ul class="nav-list" role="list">
-        <li>
-            <NavLink class="nav-item" href="/dashboard" Match="NavLinkMatch.All" @onclick="NotifyNavigate">
-                <span class="nav-icon" aria-hidden="true">🏠</span>
-                <span class="nav-label">Dashboard</span>
-            </NavLink>
-        </li>
-        <AuthorizeView Roles="TenantAdmin,Reviewer">
-            <li>
-                <NavLink class="nav-item" href="/audit-runs" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
-                    <span class="nav-icon" aria-hidden="true">📋</span>
-                    <span class="nav-label">Audit Runs</span>
-                </NavLink>
-            </li>
-        </AuthorizeView>
-        <AuthorizeView Roles="Reviewer">
-            <li>
-                <NavLink class="nav-item" href="/reviewer-queue" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
-                    <span class="nav-icon" aria-hidden="true">✅</span>
-                    <span class="nav-label">Reviewer Queue</span>
-                </NavLink>
-            </li>
-        </AuthorizeView>
-        <AuthorizeView Roles="TenantAdmin,SuperAdmin">
-            <li>
-                <NavLink class="nav-item" href="/clients" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
-                    <span class="nav-icon" aria-hidden="true">🏢</span>
-                    <span class="nav-label">Clients</span>
-                </NavLink>
-            </li>
-            <li>
-                <NavLink class="nav-item" href="/calibration" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
-                    <span class="nav-icon" aria-hidden="true">📈</span>
-                    <span class="nav-label">Calibration</span>
-                </NavLink>
-            </li>
-            <li>
-                <NavLink class="nav-item" href="/admin/tenant" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
-                    <span class="nav-icon" aria-hidden="true">⚙️</span>
-                    <span class="nav-label">Admin</span>
-                </NavLink>
-            </li>
-        </AuthorizeView>
-        <AuthorizeView Roles="SuperAdmin">
-            <li>
-                <NavLink class="nav-item" href="/telemetry" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
-                    <span class="nav-icon" aria-hidden="true">📊</span>
-                    <span class="nav-label">Telemetry</span>
-                </NavLink>
-            </li>
-            <li>
-                <NavLink class="nav-item" href="/admin/super" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate">
-                    <span class="nav-icon" aria-hidden="true">🛡️</span>
-                    <span class="nav-label">Super Admin</span>
-                </NavLink>
-            </li>
-        </AuthorizeView>
-    </ul>
-
-    <AuthorizeView>
-        <Authorized Context="authState">
-            <div class="sidebar-user">
-                <span class="top-nav-avatar" aria-hidden="true">@GetInitials(authState.User.Identity?.Name)</span>
-                <div class="sidebar-user-copy">
-                    <div class="sidebar-user-name">@(authState.User.Identity?.Name ?? "Signed in")</div>
-                    <div class="sidebar-user-role">@GetRoleLabel(authState.User)</div>
-                </div>
-            </div>
-        </Authorized>
-    </AuthorizeView>
+    <ul class="nav-list" role="list"><li><NavLink class="nav-item" href="/dashboard" Match="NavLinkMatch.All" @onclick="NotifyNavigate"><span class="nav-icon" aria-hidden="true">🏠</span><span class="nav-label">Dashboard</span></NavLink></li><li><NavLink class="nav-item" href="/pillars" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate"><span class="nav-icon" aria-hidden="true">📐</span><span class="nav-label">Pillars</span></NavLink></li><li><NavLink class="nav-item" href="/templates" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate"><span class="nav-icon" aria-hidden="true">📄</span><span class="nav-label">Templates</span></NavLink></li><AuthorizeView Roles="TenantAdmin,SuperAdmin"><li><NavLink class="nav-item" href="/admin/tenant" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Admin</span></NavLink></li></AuthorizeView><AuthorizeView Roles="SuperAdmin"><li><NavLink class="nav-item" href="/admin/super" Match="NavLinkMatch.Prefix" @onclick="NotifyNavigate"><span class="nav-icon" aria-hidden="true">🛡️</span><span class="nav-label">Super Admin</span></NavLink></li></AuthorizeView></ul>
 </nav>
 
 @code {
@@ -101,3 +32,4 @@
         return "Viewer";
     }
 }
+
