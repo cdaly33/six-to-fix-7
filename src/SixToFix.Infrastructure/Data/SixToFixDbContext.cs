@@ -34,6 +34,11 @@ public sealed class SixToFixDbContext : IdentityDbContext<ApplicationUser, Ident
     public DbSet<CalibrationDelta> CalibrationDeltas => Set<CalibrationDelta>();
     public DbSet<ReviewerAction> ReviewerActions => Set<ReviewerAction>();
 
+    // ── StrategyHub domain ──────────────────────────────────────────────────
+    public DbSet<PillarContent> PillarContents => Set<PillarContent>();
+    public DbSet<UserPillarProgress> UserPillarProgresses => Set<UserPillarProgress>();
+    public DbSet<PlaybookTemplate> PlaybookTemplates => Set<PlaybookTemplate>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -59,5 +64,10 @@ public sealed class SixToFixDbContext : IdentityDbContext<ApplicationUser, Ident
         builder.Entity<TelemetryEvent>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
         builder.Entity<CalibrationDelta>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
         builder.Entity<ReviewerAction>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
+
+        // ── StrategyHub tenant isolation ────────────────────────────────────
+        builder.Entity<PillarContent>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
+        builder.Entity<UserPillarProgress>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
+        builder.Entity<PlaybookTemplate>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
     }
 }

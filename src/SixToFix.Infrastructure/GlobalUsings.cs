@@ -10,4 +10,6 @@ global using Microsoft.Extensions.Logging;
 global using SixToFix.Application;
 global using SixToFix.Application.Multitenancy;
 global using SixToFix.Domain;
+global using SixToFix.Domain.Constants;
 global using SixToFix.Domain.Entities;
+global using SixToFix.Domain.Enums;
