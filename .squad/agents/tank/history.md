@@ -33,6 +33,12 @@
   - **CRITICAL LESSON: Always run `az deployment group validate` — not just `az bicep build`.** `az bicep build` validates syntax only. ARM-level validation (`az deployment group validate`) catches runtime parameter errors, invalid enum values, and incompatible resource property combinations. Multiple bugs in this project would have been caught by ARM validation and were only discovered reactively at deploy time.
   - Full audit checklist → `.squad/skills/azure-bicep-validation/SKILL.md`
 
+- **2026-05-18 — Bicep Drift Prevention (SeedAdmin settings, PR #39):**
+  - **Standing rule:** Any time a manual Azure change is made (Portal, az CLI, or otherwise) that is not yet reflected in Bicep, Tank must proactively open a Bicep PR to codify it — do NOT wait for Chris to ask. Manual changes that survive in Bicep are safe; manual changes not in Bicep are a time-bomb waiting for the next `deploy-infra` run to wipe them.
+  - `SeedAdmin__Email` and `SeedAdmin__Password` KV references were missing from `infra/modules/appservice.bicep`. Chris had manually set them on `app-sixtofix-prod` to wire the bootstrap seeder, but the next `deploy-infra` would have overwritten the entire `appsettings` block and deleted them.
+  - Added both as `@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=SeedAdmin--Email/Password)` following existing KV-reference pattern. `SeedAdmin__Enabled` was already present.
+  - PR #39: `infra(bicep): add SeedAdmin app settings to prevent drift`
+
 ---
 
 ## Phase 0 — Planning Artifacts (2026-05-10)
@@ -97,3 +103,37 @@
   2. `AuthContractTests.cs` in `SixToFix.Api.Tests` — `[Trait("Category","Contract")]` WebApplicationFactory tests assert unauthenticated GET / → 302 to /login and GET /api/audit-runs → 401. Runs in the standard PR filter.
   3. `linuxFxVersion` guardrail in `deploy-infra.yml` — validates the value starts with `DOTNETCORE|` before any Bicep deploy; fails with an actionable error message on mismatch. Also corrected the actual value in `infra/modules/appservice.bicep`: `'DOTNET|10.0'` → `'DOTNETCORE|10.0'`.
   Prevention checklist: `.squad/decisions/inbox/tank-401-prod-fix.md`.
+
+- **2026-05-18 — Postgres Burstable Downsize (dev/phase-postgres-burstable, PR #38):**
+  - `infra/modules/postgres.bicep` prod SKU changed: `Standard_D4s_v3`/`GeneralPurpose` → `Standard_B2ms`/`Burstable`. Expected savings ~$700–$820/month.
+  - **Azure constraint:** Burstable tier does NOT support HA (`SameZone` or `ZoneRedundant`). HA must be `Disabled` for all environments when using Burstable. Attempting to deploy Burstable + any HA mode will fail at ARM validation.
+  - **Azure constraint:** Geo-redundant backups (`geoRedundantBackup: 'Enabled'`) are only available on General Purpose and Memory Optimized tiers. Burstable tier only supports LRS — `geoRedundantBackup` must be `'Disabled'`.
+  - **Portal prerequisite for in-place downgrade:** Azure blocks a GeneralPurpose → Burstable SKU change while HA is enabled. Chris must disable HA in the Portal first, then change the SKU, before running `deploy-infra`. PR #38 contains the manual checklist.
+  - **Duplicate module deleted:** `infra/bicep/` (10 files) was a parallel Bicep tree with zero references in any workflow, CI job, or docs. Active deploy tree is `infra/main.bicep` + `infra/modules/` only. The duplicate postgresql.bicep had stale prod SKU values. Deleted to prevent future confusion.
+  - Decision note: `.squad/decisions/inbox/tank-postgres-burstable-downsize.md`.
+
+- **2026-05-18 — KV Reference Diagnosis (prod `Jwt__SigningKey` error):**
+  - **Root cause confirmed:** The App Setting `Jwt__SigningKey` references `Jwt--SigningKey` in `kv-sixtofix-prod`, but that secret **does not exist** in Key Vault. The Portal error icon is exactly this — a 404 on the secret. Fix: `az keyvault secret set --vault-name kv-sixtofix-prod --name Jwt--SigningKey --file <path-to-signing-key>`.
+  - **Two other broken KV references:** `AzureOpenAI--ApiKey` and `HubSpot--PrivateAppToken` are also referenced in App Settings but missing from KV. They will also show error status in Portal. These need to be set once credentials are available.
+  - **Managed identity RBAC is correct:** App Service principal `2bcf226b-0f3f-4312-aa16-b378da34aa9e` has `Key Vault Secrets User` role scoped to `kv-sixtofix-prod` — not the problem.
+  - **KV is RBAC mode** (`enableRbacAuthorization: true`). Access policy panel in Portal is irrelevant; role assignments are the authority.
+  - **Seeder wiring gap:** Chris added KV secrets `SeedAdmin--Email` and `SeedAdmin--Password` (both enabled, no expiry ✅), and `SeedAdmin__Enabled=true` app setting is correct. BUT the App Settings `SeedAdmin__Email` and `SeedAdmin__Password` (the KV reference pointers) were never added. Seeder will not receive credentials until those two app settings are created.
+  - **Chris's "SeedAdmin--Email is set to true" confusion:** This setting does NOT appear in the App Settings list. The KV secrets page has an "Enabled" toggle — Chris likely toggled the secret itself (which is correct, enabled=true) rather than creating a `SeedAdmin--Email=true` app setting. No incorrect app setting was persisted.
+  - **App is running fine:** Startup probe succeeded (12s), `Site started` status confirmed. KV resolution errors are lazy (portal-side resolution status), not startup crashes. App passes health check.
+  - **Fix commands (Chris to run):**
+    ```
+    # 1. JWT signing key (most critical — causes auth failures)
+    $key = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 64 | ForEach-Object { [char]$_ })
+    az keyvault secret set --vault-name kv-sixtofix-prod --name Jwt--SigningKey --value $key
+
+    # 2. Seeder app settings (KV references — run as-is, safe to run)
+    az webapp config appsettings set --resource-group rg-sixtofix-prod --name app-sixtofix-prod --settings `
+      "SeedAdmin__Email=@Microsoft.KeyVault(VaultName=kv-sixtofix-prod;SecretName=SeedAdmin--Email)" `
+      "SeedAdmin__Password=@Microsoft.KeyVault(VaultName=kv-sixtofix-prod;SecretName=SeedAdmin--Password)"
+
+    # 3. AzureOpenAI and HubSpot secrets — set when credentials are ready
+    # az keyvault secret set --vault-name kv-sixtofix-prod --name AzureOpenAI--ApiKey --value <key>
+    # az keyvault secret set --vault-name kv-sixtofix-prod --name HubSpot--PrivateAppToken --value <token>
+    ```
+  - **Bicep follow-up:** `infra/modules/appservice.bicep` app settings block should include `SeedAdmin__Email` and `SeedAdmin__Password` KV references. They are currently absent. Add them to match live config before next `deploy-infra` run (otherwise Bicep will DELETE the manually-added settings on next deploy).
+  - Decision note: `.squad/decisions/inbox/tank-keyvault-secret-naming.md`.
