@@ -1,80 +1,122 @@
-/* StrategicGlue Six-to-Fix Design System Tokens */
+/* StrategyHub Design System Tokens */
 /* Load order: tokens.css → components.css → app.css */
 
 :root {
-  /* Brand */
-  --color-brand-primary: #1a56db;
-  --color-brand-secondary: #7c3aed;
-  --color-brand-accent: #0ea5e9;
+  /* ── Navy Scale ───────────────────────────────── */
+  --color-navy-950: #040b20;
+  --color-navy-900: #07112e;
+  --color-navy-800: #081432;
+  --color-navy-700: #162856;
 
-  /* Semantic */
-  --color-success: #16a34a;
-  --color-warning: #d97706;
-  --color-danger: #dc2626;
-  --color-info: #0284c7;
-  --color-error: var(--color-danger);
+  /* ── Gold Scale ───────────────────────────────── */
+  --color-gold-400: #facc15;
+  --color-gold-300: #fde047;
 
-  /* Neutrals */
-  --color-neutral-50: #f9fafb;
-  --color-neutral-100: #f3f4f6;
-  --color-neutral-200: #e5e7eb;
-  --color-neutral-300: #d1d5db;
-  --color-neutral-400: #9ca3af;
-  --color-neutral-500: #6b7280;
-  --color-neutral-600: #4b5563;
-  --color-neutral-700: #374151;
-  --color-neutral-800: #1f2937;
-  --color-neutral-900: #111827;
+  /* ── Slate Scale ──────────────────────────────── */
+  --color-slate-50:  #f3f3f5;
+  --color-slate-100: #f5f5f7;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
 
-  /* Surfaces */
-  --surface-page: var(--color-neutral-50);
+  /* ── Pillar Accents ───────────────────────────── */
+  --pillar-brand:         #f43f5e;
+  --pillar-customer:      #3b82f6;
+  --pillar-offering:      #8b5cf6;
+  --pillar-communication: #f97316;
+  --pillar-sales:         #22c55e;
+  --pillar-management:    #64748b;
+
+  /* ── Semantic Status ──────────────────────────── */
+  --color-success:       #16a34a;
+  --color-warning:       #d97706;
+  --color-danger:        #dc2626;
+  --color-error:         var(--color-danger);
+  --color-info:          #0284c7;
+  --color-success-light: #dcfce7;
+  --color-warning-light: #fef3c7;
+  --color-error-light:   #fee2e2;
+  --color-info-light:    #dbeafe;
+
+  /* ── Status Tints (legacy components) ────────── */
+  --status-pending-bg:       var(--color-slate-100);
+  --status-pending-text:     var(--color-slate-600);
+  --status-running-bg:       var(--color-info-light);
+  --status-running-text:     #1d4ed8;
+  --status-awaiting-bg:      var(--color-warning-light);
+  --status-awaiting-text:    #92400e;
+  --status-completed-bg:     var(--color-success-light);
+  --status-completed-text:   #15803d;
+  --status-failed-bg:        var(--color-error-light);
+  --status-failed-text:      #991b1b;
+  --status-published-bg:     #ede9fe;
+  --status-published-text:   #6d28d9;
+
+  /* ── Tier Colors (legacy components) ─────────── */
+  --tier-1-color:       var(--color-success);
+  --tier-2-color:       #1a56db;
+  --tier-3-color:       var(--color-warning);
+  --tier-1-color-light: var(--color-success-light);
+  --tier-2-color-light: var(--color-info-light);
+  --tier-3-color-light: var(--color-warning-light);
+
+  /* ── Page & Surface ───────────────────────────── */
+  --bg-page:     var(--color-slate-50);
+  --surface:     #ffffff;
   --surface-card: #ffffff;
-  --surface-sidebar: var(--color-neutral-900);
-  --surface-overlay: rgba(17, 24, 39, 0.5);
 
-  /* Typography */
-  --text-primary: var(--color-neutral-900);
-  --text-secondary: var(--color-neutral-500);
-  --text-muted: var(--color-neutral-400);
-  --text-inverse: #ffffff;
-  --text-link: var(--color-brand-primary);
+  /* ── Semantic Tokens ──────────────────────────── */
+  --text-primary:   var(--color-slate-900);
+  --text-secondary: var(--color-slate-500);
+  --text-muted:     var(--color-slate-400);
+  --text-inverse:   #ffffff;
+  --text-link:      var(--color-navy-700);
+  --border:         var(--color-slate-200);
+  --accent:         var(--color-navy-700);
+  --accent-hover:   var(--color-navy-800);
+  --accent-light:   #dbeafe;
+  --accent-contrast: #ffffff;
 
-  /* Tier colors */
-  --tier-1-color: var(--color-success);
-  --tier-2-color: var(--color-brand-primary);
-  --tier-3-color: var(--color-warning);
-  --tier-1-color-light: #dcfce7;
-  --tier-2-color-light: #dbeafe;
-  --tier-3-color-light: #fef3c7;
+  /* ── Typography ───────────────────────────────── */
+  --font-serif:   'Playfair Display', Georgia, serif;
+  --font-sans:    'Inter', -apple-system, system-ui, sans-serif;
+  --font-primary: var(--font-sans);
+  --font-mono:    'Cascadia Code', 'Fira Code', Consolas, Monaco, 'Courier New', monospace;
+  --font-normal:   400;
+  --font-medium:   500;
+  --font-semibold: 600;
+  --font-bold:     700;
+  --leading-tight:   1.25;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.75;
+  --tracking-tight:  -0.025em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.05em;
+  --tracking-widest:  0.1em;
 
-  /* Status badge colors */
-  --status-pending-bg: var(--color-neutral-100);
-  --status-pending-text: var(--color-neutral-600);
-  --status-running-bg: #dbeafe;
-  --status-running-text: #1d4ed8;
-  --status-awaiting-bg: #fef3c7;
-  --status-awaiting-text: #92400e;
-  --status-completed-bg: #dcfce7;
-  --status-completed-text: #15803d;
-  --status-failed-bg: #fee2e2;
-  --status-failed-text: #991b1b;
-  --status-published-bg: #ede9fe;
-  --status-published-text: #6d28d9;
+  /* ── Type Scale ───────────────────────────────── */
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.125rem;
+  --text-xl:   1.25rem;
+  --text-2xl:  1.5rem;
+  --text-3xl:  1.875rem;
+  --text-4xl:  2.25rem;
 
-  /* Semantic tints */
-  --color-success-light: var(--status-completed-bg);
-  --color-warning-light: var(--status-awaiting-bg);
-  --color-error-light: var(--status-failed-bg);
-  --color-info-light: var(--status-running-bg);
-
-  /* Spacing scale */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
+  /* ── Spacing ──────────────────────────────────── */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
   --space-10: 2.5rem;
   --space-12: 3rem;
   --space-16: 4rem;
@@ -85,80 +127,54 @@
   --space-40: 10rem;
   --space-48: 12rem;
 
-  /* Typography scale */
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
-
-  /* Typography helpers */
-  --font-primary: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Cascadia Code", "Fira Code", Consolas, Monaco, "Courier New", monospace;
-  --font-normal: 400;
-  --font-medium: 500;
-  --font-semibold: 600;
-  --font-bold: 700;
-  --leading-tight: 1.25;
-  --leading-normal: 1.5;
-  --leading-relaxed: 1.75;
-  --tracking-tight: -0.025em;
-  --tracking-normal: 0;
-  --tracking-wide: 0.05em;
-
-  /* Radius */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  /* ── Radius ───────────────────────────────────── */
+  --radius-sm:  8px;
+  --radius-md:  16px;
+  --radius-lg:  24px;
+  --radius-xl:  32px;
   --radius-full: 9999px;
 
-  /* Shadow */
+  /* ── Shadow ───────────────────────────────────── */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.14);
 
-  /* Sidebar */
-  --sidebar-width: 240px;
+  /* ── Layout ───────────────────────────────────── */
+  --sidebar-width:           260px;
   --sidebar-width-collapsed: 72px;
-  --topbar-height: 60px;
-  --header-height: var(--topbar-height);
-  --content-max-width: 1280px;
-  --drawer-width: 480px;
+  --topbar-height:           56px;
+  --header-height:           var(--topbar-height);
+  --content-max-width:       1280px;
+  --drawer-width:            480px;
 
-  /* Borders */
-  --border-default: var(--color-neutral-200);
-  --border-focus: var(--color-brand-primary);
-  --border-error: var(--color-danger);
+  /* ── Borders ──────────────────────────────────── */
+  --border-default: var(--border);
+  --border-focus:   var(--color-navy-700);
+  --border-error:   var(--color-danger);
 
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 200ms ease;
+  /* ── Transitions ──────────────────────────────── */
+  --transition-fast:   150ms ease;
+  --transition-base:   200ms ease;
   --transition-normal: var(--transition-base);
-  --transition-slow: 300ms ease;
+  --transition-slow:   300ms ease;
 
-  /* Z-index */
-  --z-base: 0;
-  --z-raised: 10;
+  /* ── Z-index ──────────────────────────────────── */
+  --z-base:     0;
+  --z-raised:   10;
   --z-dropdown: 100;
-  --z-sticky: 200;
-  --z-overlay: 300;
-  --z-modal: 400;
-  --z-toast: 500;
+  --z-sticky:   200;
+  --z-overlay:  300;
+  --z-modal:    400;
+  --z-toast:    500;
 
-  /* Compatibility aliases */
-  --bg-primary: var(--surface-page);
-  --bg-secondary: var(--color-neutral-100);
-  --bg-dark: var(--surface-sidebar);
-  --bg-card: var(--surface-card);
-  --bg-sidebar: var(--surface-sidebar);
-  --bg-overlay: var(--surface-overlay);
-  --accent: var(--color-brand-primary);
-  --accent-hover: #1d4ed8;
-  --accent-light: #eff6ff;
-  --accent-contrast: var(--text-inverse);
+  /* ── Compatibility Aliases ────────────────────── */
+  --bg-primary:   var(--bg-page);
+  --bg-secondary: var(--color-slate-100);
+  --bg-dark:      var(--color-navy-950);
+  --bg-card:      var(--surface-card);
+  --bg-sidebar:   var(--color-navy-800);
+  --bg-overlay:   rgba(4, 11, 32, 0.6);
+  --surface-page:    var(--bg-page);
+  --surface-sidebar: var(--color-navy-800);
 }
