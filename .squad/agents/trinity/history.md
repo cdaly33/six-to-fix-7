@@ -241,6 +241,60 @@ Web.Tests grew from 20 → 27: +7 `PillarPageTests`, +5 rewritten `DashboardPage
 ### PR
 https://github.com/cdaly33/six-to-fix-7/pull/47
 
+## Hotfix — 2026-05-19: CSS Rendering Broken on Prod (PR #50)
+
+### Root cause 1 — Hero section invisible on homepage
+
+`tokens.css` was missing `--hero-radial-overlay`, `--text-5xl`, `--text-6xl`, and `--text-7xl`.
+
+Per CSS spec, when a `var()` references an undefined custom property the **entire property
+declaration becomes invalid at computed-value time** and falls back to its initial value.
+The `.hero { background: radial-gradient(var(--hero-radial-overlay), ...) }` declaration in
+`public.css` collapsed to `transparent`. The hero heading had `color: var(--text-inverse)` = white,
+which was invisible on the light cream body background (`--color-slate-50`).
+
+**Playwright confirmation:** `hero bg: rgba(0, 0, 0, 0) none` (before fix).
+
+### Root cause 2 — Sidebar/shell completely unstyled on /dashboard
+
+`App.razor` did not include `<link rel="stylesheet" href="SixToFix.Web.styles.css" />`.
+
+In Blazor, component-scoped `.razor.css` files compile into a single isolation bundle named
+`{ProjectName}.styles.css`. Without the `<link>` tag the bundle is never sent to the browser.
+All of `StrategyHubShell.razor.css`, `SectionSidebar.razor.css`, and `NavItem.razor.css` were
+absent — the 260px navy sidebar, the flex shell layout, and nav item styles did not apply.
+
+### Fix applied (2 files, 7 lines)
+
+| File | Change |
+|------|--------|
+| `tokens.css` | Added `--hero-radial-overlay`, `--text-5xl`, `--text-6xl`, `--text-7xl` |
+| `App.razor` | Added `<link rel="stylesheet" href="SixToFix.Web.styles.css" />` |
+
+### Lessons
+
+1. **Always link `{ProjectName}.styles.css` in App.razor.** Blazor CSS isolation is opt-in;
+   the bundle exists at build time but won't load unless explicitly referenced. Add it when the
+   project is scaffolded, not when isolation CSS first appears.
+2. **Validate all `var()` tokens before shipping.** An undefined `var()` inside any CSS shorthand
+   (background, border, animation, transition) silently nukes the whole declaration. Run a token
+   coverage check: `grep -r 'var(--' wwwroot/css/ | grep -v ':root' | sort -u` and cross-reference
+   against all definitions in tokens.css.
+3. **History.md ≠ deployed code.** Phase 2 history recorded `--text-5xl` / `--hero-radial-overlay`
+   as added, but the PR (#45) either didn't include the tokens.css diff or it was lost in a rebase.
+   Treat history notes as aspirational until CI confirms the file diff.
+
+### Post-deploy smoke test note
+
+The smoke test expected `GET /` → 302 (redirect to /login), but the homepage is now a public 200
+page. That mismatch is pre-existing (introduced with the public homepage in Phase 2); it is NOT
+caused by this hotfix. It should be fixed separately by updating the smoke test expectation.
+
+### PR
+https://github.com/cdaly33/six-to-fix-7/pull/50
+
+---
+
 ## Learnings — Phase 2 (2026-05-19)
 
 ### What was built
