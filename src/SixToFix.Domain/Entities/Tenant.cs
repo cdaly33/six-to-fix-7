@@ -9,7 +9,4 @@ public class Tenant
     public bool IsActive { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
-
-    public ICollection<Client> Clients { get; set; } = [];
-    public ICollection<Audit> Audits { get; set; } = [];
 }

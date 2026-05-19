@@ -63,21 +63,13 @@
     private static string MapSegment(string segment) => segment.ToLowerInvariant() switch
     {
         "dashboard" => "Dashboard",
-        "audit-runs" => "Audit Runs",
-        "audits" => "Audit Runs",
-        "reviewer-queue" => "Reviewer Queue",
-        "review" => "Category Review",
-        "categories" => "Categories",
-        "clients" => "Clients",
-        "documents" => "Documents",
-        "calibration" => "Calibration",
-        "telemetry" => "Telemetry",
+        "pillars" => "Pillars",
+        "templates" => "Templates",
         "admin" => "Admin",
         "tenant" => "Tenant Admin",
         "super" => "Super Admin",
         _ => string.Join(' ', segment.Split('-', StringSplitOptions.RemoveEmptyEntries).Select(UpperFirst))
     };
-
     private static string UpperFirst(string value) => string.IsNullOrWhiteSpace(value) ? value : char.ToUpperInvariant(value[0]) + value[1..];
 
     private static string GetInitials(string name)
@@ -89,3 +81,4 @@
             : char.ToUpperInvariant(parts[0][0]).ToString();
     }
 }
+
