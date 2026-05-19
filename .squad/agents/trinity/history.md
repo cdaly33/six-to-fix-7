@@ -239,7 +239,7 @@ Single `PillarPage.razor` handles all 6 pillars. Pillar resolved from last URL s
 Web.Tests grew from 20 → 27: +7 `PillarPageTests`, +5 rewritten `DashboardPageTests` (old 3 tests replaced).
 
 ### PR
-(to be filled after push)
+https://github.com/cdaly33/six-to-fix-7/pull/47
 
 ## Learnings — Phase 2 (2026-05-19)
 
