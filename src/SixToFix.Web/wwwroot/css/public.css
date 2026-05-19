@@ -1,0 +1,338 @@
+/* ==========================================
+   PUBLIC PAGES — Hero, Pillars, Layout
+   Load after: tokens.css, components.css, app.css
+   All values via CSS custom properties — no hardcoded hex.
+   ========================================== */
+
+/* ── Public Layout ────────────────────────── */
+
+.public-layout {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Public Header ───────────────────────── */
+
+.public-header {
+    background-color: var(--color-navy-950);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+}
+
+.public-header__inner {
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.public-header__logo-link {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+}
+
+.public-header__nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.public-header__link {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    transition: color var(--transition-fast);
+}
+
+.public-header__link:hover {
+    color: var(--text-inverse);
+}
+
+/* ── Gold Button (Public Variant) ─────────── */
+
+.public-btn-gold {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    background-color: var(--color-gold-400);
+    color: var(--color-slate-900);
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    padding: var(--space-2) var(--space-5);
+    border-radius: var(--radius-md);
+    border: none;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color var(--transition-fast);
+}
+
+.public-btn-gold:hover {
+    background-color: var(--color-gold-300);
+    color: var(--color-slate-900);
+}
+
+.public-btn-gold--lg {
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    padding: 0 var(--space-8);
+    height: 56px;
+    border-radius: var(--radius-md);
+}
+
+/* ── Hero Section ────────────────────────── */
+
+.hero {
+    background:
+        radial-gradient(circle at center, var(--hero-radial-overlay), transparent 50%),
+        linear-gradient(90deg, var(--color-navy-900) 0%, var(--color-navy-700) 100%);
+    color: var(--text-inverse);
+    padding: var(--space-24) var(--space-6);
+}
+
+@media (min-width: 768px) {
+    .hero {
+        padding: var(--space-28) var(--space-6);
+    }
+}
+
+.hero__inner {
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    text-align: center;
+}
+
+.hero__badge {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--color-gold-400);
+    color: var(--color-slate-900);
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+    padding: var(--space-2) var(--space-5);
+    border-radius: var(--radius-full);
+    margin-bottom: var(--space-8);
+}
+
+.hero__heading {
+    font-family: var(--font-serif);
+    font-size: var(--text-5xl);
+    font-weight: var(--font-bold);
+    line-height: var(--leading-tight);
+    max-width: 56rem;
+    margin: 0 auto var(--space-8);
+    color: var(--text-inverse);
+}
+
+@media (min-width: 768px) {
+    .hero__heading {
+        font-size: var(--text-7xl);
+    }
+}
+
+.hero__accent {
+    color: var(--color-gold-400);
+}
+
+.hero__sub {
+    font-size: var(--text-lg);
+    color: rgba(255, 255, 255, 0.75);
+    max-width: 48rem;
+    margin: 0 auto var(--space-10);
+    line-height: var(--leading-relaxed);
+}
+
+@media (min-width: 768px) {
+    .hero__sub {
+        font-size: var(--text-2xl);
+    }
+}
+
+.hero__cta-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+}
+
+/* ── Six Pillars Section ─────────────────── */
+
+.pillars {
+    background-color: var(--bg-page);
+    padding: var(--space-20) var(--space-6);
+    flex: 1;
+}
+
+.pillars__intro {
+    max-width: var(--content-max-width);
+    margin: 0 auto var(--space-12);
+    text-align: center;
+}
+
+.pillars__heading {
+    font-family: var(--font-serif);
+    font-size: var(--text-4xl);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+}
+
+@media (min-width: 768px) {
+    .pillars__heading {
+        font-size: var(--text-5xl);
+    }
+}
+
+.pillars__sub {
+    font-size: var(--text-lg);
+    color: var(--text-secondary);
+    max-width: 48rem;
+    margin: 0 auto;
+}
+
+.pillar-grid {
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    display: grid;
+    gap: var(--space-6);
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .pillar-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1280px) {
+    .pillar-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.pillar-card {
+    background-color: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    text-align: left;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: var(--shadow-sm);
+    transition:
+        box-shadow var(--transition-fast),
+        transform var(--transition-fast);
+    display: block;
+}
+
+.pillar-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+    color: inherit;
+}
+
+.pillar-card__icon-tile {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    display: grid;
+    place-items: center;
+    margin-bottom: var(--space-6);
+    color: var(--text-inverse);
+    flex-shrink: 0;
+}
+
+.pillar-card__icon-tile--brand         { background-color: var(--pillar-brand); }
+.pillar-card__icon-tile--customer      { background-color: var(--pillar-customer); }
+.pillar-card__icon-tile--offering      { background-color: var(--pillar-offering); }
+.pillar-card__icon-tile--communication { background-color: var(--pillar-communication); }
+.pillar-card__icon-tile--sales         { background-color: var(--pillar-sales); }
+.pillar-card__icon-tile--management    { background-color: var(--pillar-management); }
+
+.pillar-card__name {
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-3);
+}
+
+.pillar-card__desc {
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    margin: 0;
+}
+
+/* ── Public Footer ───────────────────────── */
+
+.public-footer {
+    background-color: var(--color-navy-950);
+    color: rgba(255, 255, 255, 0.6);
+    padding: var(--space-6);
+    margin-top: auto;
+}
+
+.public-footer__inner {
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+}
+
+.public-footer__copy {
+    font-size: var(--text-sm);
+}
+
+.public-footer__links {
+    display: flex;
+    gap: var(--space-4);
+}
+
+.public-footer__link {
+    font-size: var(--text-sm);
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.public-footer__link:hover {
+    color: var(--text-inverse);
+}
+
+/* ── Fade-slide-up Animations ────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+    @keyframes fadeSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(16px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-slide-up {
+        animation: fadeSlideUp 300ms ease-out both;
+    }
+
+    .animate-delay-1 { animation-delay: 50ms; }
+    .animate-delay-2 { animation-delay: 100ms; }
+    .animate-delay-3 { animation-delay: 150ms; }
+}
