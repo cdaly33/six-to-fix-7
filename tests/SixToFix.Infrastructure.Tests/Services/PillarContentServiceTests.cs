@@ -124,8 +124,11 @@ public sealed class PillarContentServiceTests : IntegrationTestBase
         var result = await _sut.GetAllForTenantAsync(_tenantId);
 
         result.Should().HaveCount(6);
-        result.Single(r => r.Pillar == Pillar.Brand).BodyJson.Should().Be("""{"seeded":true}""");
-        result.Single(r => r.Pillar == Pillar.Offering).BodyJson.Should().Be("""{"placeholder":true}""");
+        // Postgres jsonb normalizes whitespace; compare parsed JSON equality.
+        var brandBody = System.Text.Json.JsonDocument.Parse(result.Single(r => r.Pillar == Pillar.Brand).BodyJson).RootElement;
+        brandBody.GetProperty("seeded").GetBoolean().Should().BeTrue();
+        var offeringBody = System.Text.Json.JsonDocument.Parse(result.Single(r => r.Pillar == Pillar.Offering).BodyJson).RootElement;
+        offeringBody.GetProperty("placeholder").GetBoolean().Should().BeTrue();
     }
 
     // ──────────────────────────────────────────────────────────────
