@@ -164,3 +164,30 @@
 - Seeder is idempotent: if any user already has canonical role `SuperAdmin`, startup logs and skips.
 - Missing `SeedAdmin:Email` or `SeedAdmin:Password` logs a warning and does not crash the host.
 - Production wiring uses Key Vault secrets `SeedAdmin--Email`/`SeedAdmin--Password` and App Service setting `SeedAdmin__Enabled`.
+
+### 2026-05-18 — Prod Login 500 Fix
+
+**Three-layer root cause cascade — not one bug, three:**
+
+**1. `sf_app` PostgreSQL role did not exist.**
+The runtime connection string (`DefaultConnection`) uses role `sf_app` on pgBouncer port 6432. That role was never created on the Azure PostgreSQL Flexible Server. pgBouncer returned `FATAL: no such user (SqlState 08P01)` on every DB call → unhandled `NpgsqlException` in `ExceptionHandlerMiddlewareImpl` → 500.
+Fix: `CREATE ROLE sf_app WITH LOGIN PASSWORD '<from-KV>'` via psql as sfadmin.
+
+**2. EF Core migrations had never been applied.**
+The DB was empty — no tables, including no `AspNetUsers`, `AspNetRoles`, etc. The migration `20260516042353_InitialCreate` had never been run against prod.
+Fix: `dotnet ef database update` with `DESIGN_TIME_CONNECTION_STRING` = AdminConnection (sfadmin, port 5432). Then granted DML to sf_app with `REVOKE UPDATE, DELETE ON category_result_versions` per append-only schema rule.
+
+**3. `SeedAdmin--Password` KV secret failed Identity password complexity.**
+The original password `GYyE3jnmvGJuMyjtNQAk` had no digit and no non-alphanumeric character. `UserManager.CreateAsync` returned `PasswordRequiresNonAlphanumeric` / `PasswordRequiresDigit`. The seeder caught the error and logged it, so the host stayed up, but the user was never created.
+Fix: Updated KV secret `SeedAdmin--Password` to `GYyE3jnmvGJuMyjtNQAk1!` (appended `1!`). Restarted app; seeder ran successfully, user seeded. Login confirmed.
+
+**Code fixes committed (PR #41):**
+- `Program.cs`: added startup migration runner using `AdminConnection` (sfadmin). Every deploy now auto-applies pending migrations — no more manual `dotnet ef database update` required.
+- New migration `20260519033146_GrantAppRolePermissions`: codifies GRANT/REVOKE on sf_app in source control; includes fail-fast DO block if sf_app doesn't exist.
+
+**Gotchas for future:**
+- When creating a new PostgreSQL Flexible Server, `sf_app` must be created manually (or via a deploy-infra step) BEFORE the app starts, since EF Core migrations need a working connection.
+- The startup migration runner uses `AdminConnection` (port 5432 direct, DDL perms). `DefaultConnection` (port 6432 pgBouncer, DML-only) cannot run DDL — never swap these.
+- `SeedAdmin--Password` in KV must meet Identity password policy: ≥12 chars, uppercase, digit, non-alphanumeric. Always verify before storing.
+- The seeder creates the `SuperAdmin` role BEFORE creating the user, so a partial seeder failure leaves the role but not the user. Idempotency handles this correctly on next run.
+
