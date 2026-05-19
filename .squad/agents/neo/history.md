@@ -255,3 +255,48 @@ Fix: Updated KV secret `SeedAdmin--Password` to `GYyE3jnmvGJuMyjtNQAk1!` (append
 
 **Result:** Domain line coverage lifted from 74.20% → ~99.58%. Total test count: 159 (all passing). CI green on PR #43.
 
+
+
+## Phase 4 Services — 2026-05-19
+
+**Branch:** `dev/phase-4-services`
+
+### Summary
+Implemented all three StrategyHub services + interfaces + DI registration + 50 integration tests.
+
+### Services Implemented
+
+**PillarContentService (IPillarContentService)**
+- GetForTenantAsync: single pillar lookup, null if not seeded
+- GetAllForTenantAsync: lazy placeholder seeding; always returns exactly 6 rows
+- UpsertAsync: insert-or-update; stamps UpdatedAt + UpdatedByUserId
+- Placeholder body: {"placeholder":true}; subtitle describes missing content to admin
+
+**ProgressService (IProgressService)**
+- GetForUserAsync / GetForUserPillarAsync: reads existing rows
+- SetPercentAsync: Math.Clamp(percent, 0, 100); insert if missing via ITenantContext; updates LastActivityAt
+- GetAverageForUserAsync: integer average over 6 pillars; missing = 0
+- Injects ITenantContext (consistent with ClientService pattern)
+
+**PlaybookTemplateService (IPlaybookTemplateService)**
+- GetPublishedAsync(tenantId, pillar?): pillar filter includes null-pillar cross-cutting rows
+- GetByIdAsync: null if not found
+- CreateAsync: always forces Status = Draft
+- UpdateAsync: mutates mutable fields; Status unchanged
+- PublishAsync / ArchiveAsync: throw InvalidOperationException if not found
+
+### Tenant Isolation
+Dual-layer: global EF query filter + explicit WHERE TenantId == tenantId in every query.
+
+### DI Registration
+Three AddScoped calls added to BusinessServiceExtensions.cs.
+
+### Tests (50 integration tests)
+- PillarContentServiceTests.cs: 13 tests
+- ProgressServiceTests.cs: 17 tests
+- PlaybookTemplateServiceTests.cs: 20 tests
+
+All tagged [Trait("Category", "Integration")].
+
+### Build
+Build succeeded. 0 Errors. Non-integration tests: 160/160 passed.

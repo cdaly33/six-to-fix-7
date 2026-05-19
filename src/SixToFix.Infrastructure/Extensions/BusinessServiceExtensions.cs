@@ -16,6 +16,11 @@ public static class BusinessServiceExtensions
         services.AddScoped<ITelemetryCollector, TelemetryCollector>();
         services.AddScoped<IClientService, ClientService>();
 
+        // StrategyHub services (Phase 4)
+        services.AddScoped<IPillarContentService, PillarContentService>();
+        services.AddScoped<IProgressService, ProgressService>();
+        services.AddScoped<IPlaybookTemplateService, PlaybookTemplateService>();
+
         return services;
     }
 }
