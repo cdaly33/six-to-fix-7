@@ -172,3 +172,39 @@ Tank's prod 401 fix (PR #28) identified a critical gap: `Login.razor` stores JWT
 - src/SixToFix.Api/Endpoints/ApiEndpointExtensions.cs — renamed /logout → /account/logout
 - src/SixToFix.Web/Program.cs — updated LogoutPath to /account/logout
 - 	ests/SixToFix.Web.Tests/Pages/LoginPageTests.cs — replaced IHttpClientFactory mocks with JSInterop stubs
+
+## Learnings — Phase 1 (2026-05-18)
+
+### What was built
+- Design token system rewritten to StrategyHub navy/gold/slate palette (`wwwroot/css/tokens.css`)
+- 10 inline SVG icon components in `Components/Icons/` (Lucide-style, `currentColor` stroke)
+- `Components/Brand/Logo.razor` — book-open SVG tile + Playfair Display wordmark
+- `Components/Nav/NavItem.razor` — active/hover state nav link
+- `Components/Nav/SectionSidebar.razor` — full nav with auth state (display name, role, initials)
+- `Layout/StrategyHubShell.razor` — 260px navy sidebar + 56px topbar + content area
+- `Layout/MainLayout.razor` — authenticates then routes to StrategyHubShell or auth-shell wrapper
+
+### Where the token system lives
+`src/SixToFix.Web/wwwroot/css/tokens.css` — loaded first, before components.css and app.css.
+Semantic tokens (`--text-primary`, `--accent`, `--bg-page`, etc.) map to primitive tokens.
+Components should only ever reference semantic tokens; primitives are for the token file only.
+
+### Shell composition
+```
+MainLayout (LayoutComponentBase)
+  └─ AuthorizeView
+       ├─ Authorized → StrategyHubShell (ChildContent wrapper)
+       │    ├─ SectionSidebar (nav + auth state)
+       │    │    ├─ Logo (book-open + wordmark)
+       │    │    └─ NavItem (×8 pillar links)
+       │    └─ main.sh-shell__content (@ChildContent = @Body)
+       └─ NotAuthorized → div.auth-shell (login page)
+```
+
+### Google Fonts + CSP gotcha
+Google Fonts CDN requires the browser to reach `fonts.googleapis.com` and `fonts.gstatic.com`.
+If the app has a Content-Security-Policy header, `font-src` and `style-src` must include those origins.
+Current CSP is managed by Neo/Tank — they need to add:
+- `style-src: https://fonts.googleapis.com`
+- `font-src: https://fonts.gstatic.com`
+This is deferred to Phase 2 / Neo Phase 3.
