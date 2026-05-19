@@ -1,0 +1,175 @@
+@page "/templates"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@attribute [Authorize]
+@layout StrategyHubShell
+@inject IPlaybookTemplateService TemplateService
+@inject IPillarContentService PillarContentService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Template Library — StrategyHub</PageTitle>
+
+<div class="sh-templates">
+
+    <div class="sh-templates__header">
+        <div>
+            <h1 class="sh-templates__title">Template Library</h1>
+            <p class="sh-templates__sub">A reusable toolkit for strategy, execution, and client delivery.</p>
+        </div>
+    </div>
+
+    @* ── Filters ── *@
+    <div class="sh-templates__filters">
+        <div class="sh-filter-group">
+            <label class="input-label" for="pillar-filter">Pillar</label>
+            <select id="pillar-filter" class="input-field sh-filter-select"
+                    @onchange="OnPillarFilterChanged">
+                <option value="">All Pillars</option>
+                @foreach (Pillar p in Enum.GetValues<Pillar>())
+                {
+                    <option value="@((int)p)">@p</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @* ── Template cards ── *@
+    @if (_loading)
+    {
+        <p class="sh-templates__loading">Loading templates…</p>
+    }
+    else if (_templates.Count == 0)
+    {
+        <div class="sh-empty-state sh-templates__empty">
+            <p class="sh-empty-state__text">No templates yet.</p>
+            <AuthorizeView Roles="TenantAdmin,SuperAdmin">
+                <Authorized>
+                    <p class="sh-empty-state__hint">Admins can publish templates from the admin panel.</p>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    }
+    else
+    {
+        <div class="sh-template-card-grid">
+            @foreach (var tpl in _templates)
+            {
+                <div class="sh-template-card @(_selectedTemplate == tpl ? "sh-template-card--selected" : "")">
+                    <div class="sh-template-card__top">
+                        <div class="sh-template-card__icon">
+                            <ClipboardIcon Size="22" />
+                        </div>
+                        <div class="sh-template-card__meta">
+                            @if (tpl.Pillar.HasValue)
+                            {
+                                <span class="sh-pillar-tag sh-pillar-tag--@tpl.Pillar.Value.ToString().ToLowerInvariant()">
+                                    @tpl.Pillar.Value
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="sh-pillar-tag sh-pillar-tag--cross-cutting">All Pillars</span>
+                            }
+                            @if (!string.IsNullOrEmpty(tpl.Format))
+                            {
+                                <span class="sh-format-badge">@tpl.Format</span>
+                            }
+                        </div>
+                    </div>
+                    <h3 class="sh-template-card__name">@tpl.Name</h3>
+                    @if (!string.IsNullOrEmpty(tpl.Notes))
+                    {
+                        <p class="sh-template-card__notes">@tpl.Notes</p>
+                    }
+                    <div class="sh-template-card__footer">
+                        <span class="sh-template-card__updated">Updated @tpl.LastUpdatedAt.ToString("MMM d, yyyy")</span>
+                        <button class="btn btn-sm btn-secondary" @onclick="() => OpenTemplate(tpl)">Open</button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @* ── Template detail modal ── *@
+    @if (_selectedTemplate is not null)
+    {
+        <div class="sh-modal-backdrop" @onclick="CloseModal">
+            <div class="sh-modal" @onclick:stopPropagation>
+                <div class="sh-modal__header">
+                    <h2 class="sh-modal__title">@_selectedTemplate.Name</h2>
+                    <button class="sh-modal__close" @onclick="CloseModal" aria-label="Close">✕</button>
+                </div>
+                <div class="sh-modal__body">
+                    @if (_selectedTemplate.Pillar.HasValue)
+                    {
+                        <p><strong>Pillar:</strong> @_selectedTemplate.Pillar.Value</p>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedTemplate.Format))
+                    {
+                        <p><strong>Format:</strong> @_selectedTemplate.Format</p>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedTemplate.Notes))
+                    {
+                        <p class="sh-modal__notes">@_selectedTemplate.Notes</p>
+                    }
+                    <p class="sh-modal__updated">Last updated: @_selectedTemplate.LastUpdatedAt.ToString("MMMM d, yyyy")</p>
+                </div>
+                <div class="sh-modal__footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Close</button>
+                </div>
+            </div>
+        </div>
+    }
+
+</div>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
+
+    private bool _loading = true;
+    private List<PlaybookTemplate> _templates = [];
+    private PlaybookTemplate? _selectedTemplate;
+    private Pillar? _pillarFilter;
+    private Guid _tenantId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState;
+        var user = auth.User;
+        if (!(user.Identity?.IsAuthenticated ?? false)) return;
+
+        Guid.TryParse(user.FindFirst("tenant_id")?.Value, out _tenantId);
+        await LoadTemplatesAsync();
+    }
+
+    private async Task LoadTemplatesAsync()
+    {
+        _loading = true;
+        try
+        {
+            if (_tenantId == Guid.Empty) return;
+
+            var isAdmin = (await AuthState).User.IsInRole("TenantAdmin")
+                          || (await AuthState).User.IsInRole("SuperAdmin");
+
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            _templates = (await TemplateService.GetPublishedAsync(_tenantId, _pillarFilter, cts.Token)).ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnPillarFilterChanged(ChangeEventArgs e)
+    {
+        if (e.Value is string val && int.TryParse(val, out var intVal))
+            _pillarFilter = (Pillar)intVal;
+        else
+            _pillarFilter = null;
+
+        await LoadTemplatesAsync();
+    }
+
+    private void OpenTemplate(PlaybookTemplate tpl) => _selectedTemplate = tpl;
+    private void CloseModal() => _selectedTemplate = null;
+}

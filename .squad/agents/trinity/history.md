@@ -209,6 +209,38 @@ Current CSP is managed by Neo/Tank — they need to add:
 - `font-src: https://fonts.gstatic.com`
 This is deferred to Phase 2 / Neo Phase 3.
 
+## Learnings — Phase 4 (2026-05-20)
+
+### What was built
+- `Dashboard.razor` — completely rewritten for StrategyHub. Serif H1 welcome, gold Resume CTA → /brand, overall progress card, 6-pillar card grid (3-col XL / 2-col MD / 1-col SM), recently-updated section.
+- `PillarPage.razor` — new single component with 6 `@page` directives (/brand … /management). 5 tabs: Strategy, Execution Blueprint, Templates, Examples, Metrics. Mark Progress buttons (25/50/75/100%). `EmptyContentMessage` when DB content is absent.
+- `Templates.razor` — new `/templates` page. Pillar filter dropdown, card grid, modal for template detail. Calls `IPlaybookTemplateService.GetPublishedAsync`.
+- `Components/Shared/EmptyContentMessage.razor` — shared empty-state component; shows role-gated message (TenantAdmin/SuperAdmin see setup guidance, others see "coming soon").
+- CSS — ~600 lines appended to `components.css`: gold button, progress bars (thin/filled/pillar-colored), pillar icon tiles, pillar tags, dashboard/pillar/templates/empty-state layout.
+
+### Routing pattern
+Single `PillarPage.razor` handles all 6 pillars. Pillar resolved from last URL segment via `NavigationManager.Uri`. Ordinal ("PILLAR N OF 6") from `(int)Pillar`. This avoids 6 near-identical files.
+
+### BodyJson schema
+```json
+{ "strategy": [{"title": "…", "points": ["…"]}],
+  "execution": ["…"], "templates": ["…"],
+  "examples": ["…"], "metrics": [["label", "value"]] }
+```
+`"placeholder": true` → treat as empty.
+
+### Pillar cards always-render pattern
+`_pillarCards` is built unconditionally from static `PillarMeta` with 0% defaults. Progress percents are patched in only when userId resolves. Previously an early return on missing `NameIdentifier` left the grid empty. Fixed to be resilient in tests and any auth edge-case.
+
+### Cherry-pick dependency
+`IPillarContentService`, `IProgressService`, `IPlaybookTemplateService` live in PR #46 (Neo). Cherry-picked commit `449ffd1` to unblock build. **PR dependency**: this PR must be merged after PR #46, or the cherry-picked commits need to be dropped post-merge.
+
+### Test counts
+Web.Tests grew from 20 → 27: +7 `PillarPageTests`, +5 rewritten `DashboardPageTests` (old 3 tests replaced).
+
+### PR
+https://github.com/cdaly33/six-to-fix-7/pull/47
+
 ## Learnings — Phase 2 (2026-05-19)
 
 ### What was built

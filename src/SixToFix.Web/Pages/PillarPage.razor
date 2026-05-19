@@ -1,0 +1,350 @@
+@page "/brand"
+@page "/customer"
+@page "/offering"
+@page "/communication"
+@page "/sales"
+@page "/management"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@attribute [Authorize]
+@layout StrategyHubShell
+@inject IPillarContentService PillarContentService
+@inject IProgressService ProgressService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<PageTitle>@_pillarTitle — StrategyHub</PageTitle>
+
+<div class="sh-pillar-page">
+
+    @* ── Header ── *@
+    <div class="sh-pillar-page__header sh-pillar-page__header--@_accentKey">
+        <div class="sh-pillar-page__header-left">
+            <div class="sh-pillar-page__icon-tile sh-pillar-card__icon-tile--@_accentKey">
+                @_icon
+            </div>
+            <div>
+                <div class="sh-pillar-page__ordinal">PILLAR @_pillarOrdinal OF 6</div>
+                <h1 class="sh-pillar-page__title">@_pillarTitle</h1>
+                <p class="sh-pillar-page__subtitle">@_subtitle</p>
+            </div>
+        </div>
+    </div>
+
+    @* ── Tabs ── *@
+    <div class="sh-tabs">
+        @foreach (var tab in _tabs)
+        {
+            <button class="sh-tabs__tab @(tab == _activeTab ? "sh-tabs__tab--active" : "")"
+                    @onclick="() => _activeTab = tab">
+                @TabLabel(tab)
+            </button>
+        }
+    </div>
+
+    @* ── Tab content ── *@
+    <div class="sh-pillar-page__content">
+        @if (_loading)
+        {
+            <p class="sh-pillar-page__loading">Loading content…</p>
+        }
+        else
+        {
+            @if (_activeTab == "strategy")
+            {
+                @if (_strategy.Count > 0)
+                {
+                    <div class="sh-strategy-grid">
+                        @foreach (var block in _strategy)
+                        {
+                            <div class="sh-strategy-block">
+                                <h3 class="sh-strategy-block__title">@block.Title</h3>
+                                <ul class="sh-strategy-block__points">
+                                    @foreach (var point in block.Points)
+                                    {
+                                        <li class="sh-strategy-block__point">
+                                            <span class="sh-strategy-block__check" aria-hidden="true">✓</span>
+                                            @point
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <EmptyContentMessage Pillar="_pillarEnum" Tab="strategy" />
+                }
+            }
+
+            @if (_activeTab == "execution")
+            {
+                @if (_execution.Count > 0)
+                {
+                    <div class="sh-execution-grid">
+                        @for (int i = 0; i < _execution.Count; i++)
+                        {
+                            var step = _execution[i];
+                            var num = i + 1;
+                            <div class="sh-execution-step">
+                                <div class="sh-execution-step__num">@num</div>
+                                <div class="sh-execution-step__text">@step</div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <EmptyContentMessage Pillar="_pillarEnum" Tab="execution" />
+                }
+            }
+
+            @if (_activeTab == "templates")
+            {
+                @if (_templateItems.Count > 0)
+                {
+                    <div class="sh-template-grid">
+                        @foreach (var item in _templateItems)
+                        {
+                            <div class="sh-template-item">
+                                <div class="sh-template-item__icon">
+                                    <ClipboardIcon Size="20" />
+                                </div>
+                                <div class="sh-template-item__name">@item</div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <EmptyContentMessage Pillar="_pillarEnum" Tab="templates" />
+                }
+            }
+
+            @if (_activeTab == "examples")
+            {
+                @if (_examples.Count > 0)
+                {
+                    <ul class="sh-examples-list">
+                        @foreach (var ex in _examples)
+                        {
+                            <li class="sh-examples-list__item">@ex</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <EmptyContentMessage Pillar="_pillarEnum" Tab="examples" />
+                }
+            }
+
+            @if (_activeTab == "metrics")
+            {
+                @if (_metrics.Count > 0)
+                {
+                    <div class="sh-metrics-grid">
+                        @foreach (var (label, value) in _metrics)
+                        {
+                            <div class="sh-metric-card">
+                                <div class="sh-metric-card__label">@label</div>
+                                <div class="sh-metric-card__value">@value</div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <EmptyContentMessage Pillar="_pillarEnum" Tab="metrics" />
+                }
+            }
+        }
+    </div>
+
+    @* ── Mark Progress ── *@
+    <div class="sh-pillar-page__mark-progress">
+        <p class="sh-pillar-page__mark-label">Mark your progress on this pillar:</p>
+        <div class="sh-progress-buttons">
+            @foreach (var pct in new[] { 25, 50, 75, 100 })
+            {
+                <button class="btn btn-sm @(_currentProgress == pct ? "btn-progress-active" : "btn-secondary")"
+                        @onclick="() => MarkProgressAsync(pct)"
+                        disabled="@_savingProgress">
+                    @pct%
+                </button>
+            }
+        </div>
+        @if (_progressSaved)
+        {
+            <span class="sh-pillar-page__saved">✓ Saved</span>
+        }
+    </div>
+
+</div>
+
+@code {
+    private static readonly string[] _tabs = ["strategy", "execution", "templates", "examples", "metrics"];
+
+    private Pillar _pillarEnum;
+    private string _accentKey = string.Empty;
+    private string _pillarTitle = string.Empty;
+    private string _subtitle = string.Empty;
+    private int _pillarOrdinal;
+    private RenderFragment? _icon;
+    private string _activeTab = "strategy";
+    private bool _loading = true;
+    private bool _savingProgress;
+    private bool _progressSaved;
+    private int _currentProgress;
+
+    private List<StrategyBlock> _strategy = [];
+    private List<string> _execution = [];
+    private List<string> _templateItems = [];
+    private List<string> _examples = [];
+    private List<(string Label, string Value)> _metrics = [];
+
+    private Guid _userId;
+    private Guid _tenantId;
+
+    private static readonly (Pillar Pillar, string Route, string AccentKey, string OrdinalLabel, string DefaultSubtitle, RenderFragment Icon)[] AllPillars =
+    [
+        (Pillar.Brand,         "brand",         "brand",         "1", "Build a powerful brand identity and positioning",                             @<PaletteIcon />),
+        (Pillar.Customer,      "customer",      "customer",      "2", "Understand audience segments, acquisition priorities, and retention motion",  @<UsersIcon />),
+        (Pillar.Offering,      "offering",      "offering",      "3", "Package services for clarity, recurring revenue, and easier buying decisions",@<BoxesIcon />),
+        (Pillar.Communication, "communication", "communication", "4", "Deliver the right message at the right time across all channels",             @<MessageSquareIcon />),
+        (Pillar.Sales,         "sales",         "sales",         "5", "Turn demand into predictable revenue with clear process and follow-through",  @<TrendingUpIcon />),
+        (Pillar.Management,    "management",    "management",    "6", "Operationalize the framework with ownership, KPIs, and execution rhythm",     @<SettingsIcon />),
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Resolve pillar from current URL
+        var segment = Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].Trim('/').ToLowerInvariant();
+        var meta = AllPillars.FirstOrDefault(p => p.Route == segment);
+        if (meta == default)
+        {
+            Nav.NavigateTo("/dashboard");
+            return;
+        }
+
+        _pillarEnum   = meta.Pillar;
+        _accentKey    = meta.AccentKey;
+        _pillarTitle  = meta.Pillar.ToString() + " Strategy";
+        _subtitle     = meta.DefaultSubtitle;
+        _pillarOrdinal = (int)meta.Pillar;
+        _icon         = meta.Icon;
+
+        // Auth
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+        if (!(user.Identity?.IsAuthenticated ?? false)) return;
+
+        Guid.TryParse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value, out _userId);
+        Guid.TryParse(user.FindFirst("tenant_id")?.Value, out _tenantId);
+
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+        // Load content
+        if (_tenantId != Guid.Empty)
+        {
+            var content = await PillarContentService.GetForTenantAsync(_tenantId, _pillarEnum, cts.Token);
+            if (content is not null)
+            {
+                if (!string.IsNullOrEmpty(content.Title)) _pillarTitle = content.Title;
+                if (!string.IsNullOrEmpty(content.Subtitle)) _subtitle = content.Subtitle;
+                ParseBodyJson(content.BodyJson);
+            }
+        }
+
+        // Load current progress
+        if (_userId != Guid.Empty)
+        {
+            var progress = await ProgressService.GetForUserPillarAsync(_userId, _pillarEnum, cts.Token);
+            _currentProgress = progress?.PercentComplete ?? 0;
+        }
+
+        _loading = false;
+    }
+
+    private void ParseBodyJson(string bodyJson)
+    {
+        if (string.IsNullOrWhiteSpace(bodyJson) || bodyJson == "{}") return;
+
+        try
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(bodyJson);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("placeholder", out var ph) && ph.GetBoolean()) return;
+
+            if (root.TryGetProperty("strategy", out var stratEl) && stratEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var block in stratEl.EnumerateArray())
+                {
+                    var title = block.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
+                    var points = new List<string>();
+                    if (block.TryGetProperty("points", out var pts) && pts.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        foreach (var p in pts.EnumerateArray()) points.Add(p.GetString() ?? "");
+                    _strategy.Add(new StrategyBlock(title, points));
+                }
+            }
+
+            if (root.TryGetProperty("execution", out var execEl) && execEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                foreach (var item in execEl.EnumerateArray()) _execution.Add(item.GetString() ?? "");
+
+            if (root.TryGetProperty("templates", out var tplEl) && tplEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                foreach (var item in tplEl.EnumerateArray()) _templateItems.Add(item.GetString() ?? "");
+
+            if (root.TryGetProperty("examples", out var exEl) && exEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                foreach (var item in exEl.EnumerateArray()) _examples.Add(item.GetString() ?? "");
+
+            if (root.TryGetProperty("metrics", out var metEl) && metEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var pair in metEl.EnumerateArray())
+                {
+                    if (pair.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        var arr = pair.EnumerateArray().ToArray();
+                        if (arr.Length >= 2) _metrics.Add((arr[0].GetString() ?? "", arr[1].GetString() ?? ""));
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Malformed JSON — leave lists empty; empty state messages will render.
+        }
+    }
+
+    private async Task MarkProgressAsync(int percent)
+    {
+        if (_userId == Guid.Empty) return;
+        _savingProgress = true;
+        _progressSaved  = false;
+        try
+        {
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await ProgressService.SetPercentAsync(_userId, _pillarEnum, percent, cts.Token);
+            _currentProgress = percent;
+            _progressSaved = true;
+            StateHasChanged();
+            await Task.Delay(2000);
+            _progressSaved = false;
+        }
+        finally
+        {
+            _savingProgress = false;
+        }
+    }
+
+    private static string TabLabel(string tab) => tab switch
+    {
+        "strategy"  => "Strategy",
+        "execution" => "Execution Blueprint",
+        "templates" => "Templates",
+        "examples"  => "Examples",
+        "metrics"   => "Metrics",
+        _ => tab
+    };
+
+    private sealed record StrategyBlock(string Title, List<string> Points);
+}
