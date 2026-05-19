@@ -13,6 +13,25 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-05-18 — PROD BUG: Login form empty-model validation race (prerender: false fix)
+
+**Bug:** Users visiting `/login` on prod saw "The Email field is required." and "The Password field is required." even after filling in both fields and clicking Submit.
+
+**Root cause — Blazor prerender race condition:**
+`@rendermode InteractiveServer` defaults to `prerender: true`. Blazor renders the form as static HTML first, then the SignalR circuit connects and re-initialises the component from scratch (`_model = new LoginModel()` — empty). If the user fills in the form during the prerendered window and clicks Submit before the circuit reconnects, the EditForm validates the circuit's fresh empty model, not the values the user typed into the static DOM. The DOM and the interactive model are out of sync.
+
+**Fix:** `@rendermode @(new InteractiveServerRenderMode(prerender: false))`  
+Disabling prerender means the form only appears after the interactive circuit is live. Every keystroke routes directly to the bound `_model` — no stale DOM mismatch possible.
+
+**Rule to remember:** Any Blazor page that:
+- Has user input fields bound via `@bind-Value`
+- AND uses `@rendermode InteractiveServer`
+  ...should use `prerender: false` unless there's an explicit SEO or TTFB reason to prerender. Login pages are the highest-risk case because they're the first thing a user touches on cold load.
+
+**Files changed:** `src/SixToFix.Web/Pages/Login.razor` (1 line)  
+**PR:** https://github.com/cdaly33/six-to-fix-7/pull/40  
+**All 18 Web unit tests passed including LoginPageTests.**
+
 ### ⚠️ 2026-05-17 — FOLLOW-UP: Client Bearer Token Wiring (Tank flagged)
 
 Tank's prod 401 fix (PR #28) identified a critical gap: `Login.razor` stores JWT in `localStorage` but no client code wires it to HTTP requests for Blazor SSR navigations. Consequence: After login, subsequent page navigations still send no bearer token, so `[Authorize]` pages receive JwtBearer challenge → 401 → redirect loop potential.

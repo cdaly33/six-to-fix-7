@@ -1,5 +1,5 @@
 ﻿@page "/login"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @layout AuthLayout
 @inject SixToFix.Web.Navigation.ILoginNavigator LoginNavigator
 @inject AuthenticationStateProvider AuthState
