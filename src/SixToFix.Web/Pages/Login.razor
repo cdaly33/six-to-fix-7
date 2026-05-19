@@ -68,6 +68,9 @@
             switch (result)
             {
                 case "ok":
+                    // TODO (Phase 4): swap for a dedicated /dashboard once the playbook dashboard
+                    // is built. LoginNavigator.NavigateTo already defaults to /dashboard when no
+                    // returnUrl is supplied.
                     LoginNavigator.NavigateTo(ReturnUrl);
                     break;
                 case "unauthorized":
