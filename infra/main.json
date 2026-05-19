@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "4056910674404684097"
+      "templateHash": "9577510296132470750"
     }
   },
   "parameters": {
@@ -381,7 +381,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "4144418881222653504"
+              "templateHash": "5446344133302142327"
             }
           },
           "parameters": {
@@ -416,8 +416,8 @@
               "name": "[format('psql-{0}', variables('nameSuffix'))]",
               "location": "[parameters('location')]",
               "sku": {
-                "name": "[if(variables('isProd'), 'Standard_D4s_v3', 'Standard_B1ms')]",
-                "tier": "[if(variables('isProd'), 'GeneralPurpose', 'Burstable')]"
+                "name": "[if(variables('isProd'), 'Standard_B2ms', 'Standard_B1ms')]",
+                "tier": "Burstable"
               },
               "properties": {
                 "version": "16",
@@ -428,10 +428,10 @@
                 },
                 "backup": {
                   "backupRetentionDays": "[if(variables('isProd'), 35, 7)]",
-                  "geoRedundantBackup": "[if(variables('isProd'), 'Enabled', 'Disabled')]"
+                  "geoRedundantBackup": "Disabled"
                 },
                 "highAvailability": {
-                  "mode": "[if(variables('isProd'), 'ZoneRedundant', 'Disabled')]"
+                  "mode": "Disabled"
                 },
                 "network": {
                   "publicNetworkAccess": "Enabled"
@@ -615,7 +615,9 @@
           "secrets": {
             "value": {
               "ConnectionStrings--DefaultConnection": "[format('Host={0};Port=6432;Database={1};Username=sf_app;Password={2};No Reset On Close=true;Ssl Mode=Require', reference(resourceId('Microsoft.Resources/deployments', format('postgres-{0}', parameters('environment'))), '2025-04-01').outputs.fqdn.value, variables('databaseName'), parameters('sfAppPassword'))]",
-              "ConnectionStrings--AdminConnection": "[format('Host={0};Port=5432;Database={1};Username={2};Password={3};Ssl Mode=Require;Trust Server Certificate=false', reference(resourceId('Microsoft.Resources/deployments', format('postgres-{0}', parameters('environment'))), '2025-04-01').outputs.fqdn.value, variables('databaseName'), parameters('postgresAdminLogin'), parameters('postgresAdminPassword'))]"
+              "ConnectionStrings--AdminConnection": "[format('Host={0};Port=5432;Database={1};Username={2};Password={3};Ssl Mode=Require;Trust Server Certificate=false', reference(resourceId('Microsoft.Resources/deployments', format('postgres-{0}', parameters('environment'))), '2025-04-01').outputs.fqdn.value, variables('databaseName'), parameters('postgresAdminLogin'), parameters('postgresAdminPassword'))]",
+              "SeedAdmin--Email": "",
+              "SeedAdmin--Password": ""
             }
           }
         },
@@ -752,7 +754,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "664745422272798762"
+              "templateHash": "2554212845770429267"
             }
           },
           "parameters": {
@@ -815,7 +817,7 @@
                 "httpsOnly": true,
                 "clientAffinityEnabled": true,
                 "siteConfig": {
-                  "linuxFxVersion": "DOTNET|10.0",
+                  "linuxFxVersion": "DOTNETCORE|10.0",
                   "alwaysOn": true,
                   "webSocketsEnabled": true,
                   "http20Enabled": true,
@@ -839,6 +841,7 @@
                 "Storage__BlobEndpoint": "[parameters('blobEndpoint')]",
                 "ConnectionStrings__DefaultConnection": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=ConnectionStrings--DefaultConnection)', parameters('keyVaultName'))]",
                 "ConnectionStrings__AdminConnection": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=ConnectionStrings--AdminConnection)', parameters('keyVaultName'))]",
+                "SeedAdmin__Enabled": "[if(variables('isProd'), 'true', 'false')]",
                 "Jwt__SigningKey": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=Jwt--SigningKey)', parameters('keyVaultName'))]",
                 "HubSpot__PrivateAppToken": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=HubSpot--PrivateAppToken)', parameters('keyVaultName'))]",
                 "AzureOpenAI__ApiKey": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=AzureOpenAI--ApiKey)', parameters('keyVaultName'))]",

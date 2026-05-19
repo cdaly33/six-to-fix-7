@@ -13,8 +13,10 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' =
   name: 'psql-${nameSuffix}'
   location: location
   sku: {
-    name: isProd ? 'Standard_D4s_v3' : 'Standard_B1ms'
-    tier: isProd ? 'GeneralPurpose' : 'Burstable'
+    // Prod downgraded from Standard_D4s_v3/GeneralPurpose to B2ms/Burstable for cost.
+    // Workload: 2-5 concurrent users. Burstable tier is appropriate.
+    name: isProd ? 'Standard_B2ms' : 'Standard_B1ms'
+    tier: 'Burstable'
   }
   properties: {
     version: '16'
@@ -24,11 +26,15 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' =
       storageSizeGB: isProd ? 128 : 32
     }
     backup: {
+      // Prod: 35-day retention gives a full month of recovery window at minimal extra cost.
+      // geoRedundantBackup disabled for both envs — Burstable tier requires LRS; geo-redundant
+      // backups are only available on General Purpose and Memory Optimized tiers.
       backupRetentionDays: isProd ? 35 : 7
-      geoRedundantBackup: isProd ? 'Enabled' : 'Disabled'
+      geoRedundantBackup: 'Disabled'
     }
     highAvailability: {
-      mode: isProd ? 'ZoneRedundant' : 'Disabled'
+      // Burstable tier does NOT support HA — must be Disabled for all envs.
+      mode: 'Disabled'
     }
     network: {
       publicNetworkAccess: 'Enabled'
