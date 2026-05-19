@@ -1,0 +1,39 @@
+@inherits LayoutComponentBase
+
+<CascadingAuthenticationState>
+    <div class="public-layout">
+        <header class="public-header" role="banner">
+            <div class="public-header__inner">
+                <a href="/" class="public-header__logo-link" aria-label="StrategyHub home">
+                    <Logo Variant="dark" />
+                </a>
+
+                <nav class="public-header__nav" aria-label="Site navigation">
+                    <AuthorizeView>
+                        <Authorized>
+                            <a href="/dashboard" class="public-header__link">Dashboard</a>
+                            <a href="/logout" class="btn public-btn-gold">My Playbook</a>
+                        </Authorized>
+                        <NotAuthorized>
+                            <a href="/login" class="public-header__link">Sign In</a>
+                            <a href="/login" class="btn public-btn-gold">Get Started</a>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </nav>
+            </div>
+        </header>
+
+        <main id="main-content" role="main">
+            @Body
+        </main>
+
+        <footer class="public-footer" role="contentinfo">
+            <div class="public-footer__inner">
+                <span class="public-footer__copy">&copy; @DateTime.UtcNow.Year StrategyHub. All rights reserved.</span>
+                <nav class="public-footer__links" aria-label="Footer navigation">
+                    <a href="/login" class="public-footer__link">Sign In</a>
+                </nav>
+            </div>
+        </footer>
+    </div>
+</CascadingAuthenticationState>
