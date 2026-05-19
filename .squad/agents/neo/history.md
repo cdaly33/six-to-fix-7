@@ -240,4 +240,18 @@ Fix: Updated KV secret `SeedAdmin--Password` to `GYyE3jnmvGJuMyjtNQAk1!` (append
 - Legacy Reviewer/Viewer role rows stay in `asp_net_roles` until Phase 6.
 - Migration SQL promotes existing Reviewer/Viewer users to Client role (additive — no membership rows deleted).
 - Program.cs legacy policies kept as aliases so old `.razor` page attributes (Trinity's domain) continue to work during transition.
+## Followup — 2026-05-19: Domain Coverage Fix (PR #43)
+
+**Why coverage dipped:** PR #43 added 4 new StrategyHub domain types (`Pillar` enum, `PlaybookTemplateStatus` enum, `PillarContent`, `UserPillarProgress`, `PlaybookTemplate`) — 5 files, ~60 new lines — with no corresponding tests. The `User` entity and `Roles` constants from Phase 1 were also uncovered. This dropped `SixToFix.Domain` line coverage from ~80%+ to 74.20%, failing the coverage gate.
+
+**Tests added (37 new tests in `tests/SixToFix.Domain.Tests/StrategyHubTests.cs`):**
+- `Pillar` enum: all 6 values map to expected int values (Brand=1…Management=6); 6-value count check
+- `PlaybookTemplateStatus` enum: all 3 values map to expected ints; 3-value count check
+- `PillarContent`: default values, property assignment round-trip, JSON body round-trip via `System.Text.Json`, all pillar values assignable
+- `UserPillarProgress`: default values, property assignment round-trip, boundary percent values (0/50/100), all pillar values assignable
+- `PlaybookTemplate`: default values, property assignment round-trip, null-pillar (spans-all) case, all 3 status transitions, format variant strings
+- `User`: default values, property assignment round-trip
+- `Roles`: all 3 constants verified
+
+**Result:** Domain line coverage lifted from 74.20% → ~99.58%. Total test count: 159 (all passing). CI green on PR #43.
 
