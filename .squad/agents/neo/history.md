@@ -191,3 +191,53 @@ Fix: Updated KV secret `SeedAdmin--Password` to `GYyE3jnmvGJuMyjtNQAk1!` (append
 - `SeedAdmin--Password` in KV must meet Identity password policy: ≥12 chars, uppercase, digit, non-alphanumeric. Always verify before storing.
 - The seeder creates the `SuperAdmin` role BEFORE creating the user, so a partial seeder failure leaves the role but not the user. Idempotency handles this correctly on next run.
 
+## Phase 3 — StrategyHub Domain Model + Role Rename (2026-05-18)
+
+**Branch:** `dev/phase-3-strategyhub-domain` | **PR:** (see decisions inbox)
+
+### Completed
+
+**New Domain Entities (`src/SixToFix.Domain/`)**
+- `Enums/Pillar.cs` — Brand=1, Customer=2, Offering=3, Communication=4, Sales=5, Management=6
+- `Enums/PlaybookTemplateStatus.cs` — Draft=0, Published=1, Archived=2
+- `Constants/Roles.cs` — SuperAdmin, TenantAdmin, Client constants replacing magic strings
+- `Entities/PillarContent.cs` — per-tenant per-pillar content with `BodyJson` (JSONB) holding strategy/execution/templates/examples/metrics
+- `Entities/UserPillarProgress.cs` — per-user per-pillar progress (0–100%), LastActivityAt
+- `Entities/PlaybookTemplate.cs` — tenant-scoped template catalogue; nullable Pillar for cross-pillar templates
+
+**EF Core Configuration (`src/SixToFix.Infrastructure/Data/EntityConfigurations/`)**
+- `PillarContentConfiguration` — `BodyJson` → `HasColumnType("jsonb")`, unique index `(tenant_id, pillar)`
+- `UserPillarProgressConfiguration` — unique index `(user_id, pillar)`, standard index `(tenant_id, pillar)`
+- `PlaybookTemplateConfiguration` — standard index `(tenant_id, status)`, nullable Pillar stored as int?
+- All three entities added to `SixToFixDbContext` with tenant-scoped global query filters
+
+**Migration: `20260519042934_AddStrategyHubDomain`**
+- Three new tables: `pillar_contents`, `user_pillar_progresses`, `playbook_templates`
+- ADDITIVE ONLY — zero DROP TABLE / DROP COLUMN on legacy audit tables
+- Data migration in `Up()`: inserts `Client` identity role; grants Client to all existing Reviewer/Viewer users (old roles stay — Phase 6 cleanup)
+
+**Role Rename**
+- `Roles.cs` constants class; Program.cs gets a new `Client` authorization policy
+- Legacy `Reviewer`/`Viewer` policies updated to also accept `Client` during transition window
+- `AdminBootstrapHostedService` refactored: now seeds SuperAdmin + TenantAdmin + Client roles; pillar content placeholder seeder runs once per tenant
+- 2 authorization policies in `Program.cs` updated; 1 Roles.cs constant class introduced
+
+**Service Stubs (Phase 4 hooks)**
+- `IPillarContentService` — GetAsync / UpsertAsync / ListForTenantAsync
+- `IProgressService` — GetForUserAsync / UpdateAsync
+- `IPlaybookTemplateService` — ListAsync / CreateAsync / UpdateAsync
+- Stubs throw `NotImplementedException("Implemented in Phase 4")`, registered Scoped in DI
+
+### Schema Decisions
+
+- **JSONB for BodyJson:** Pillar content shape evolves independently of schema. JSONB allows admin editing of nested arrays (strategy blocks, execution items, examples) without new columns/migrations. Phase 5 admin editor writes structured JSON directly.
+- **Pillar stored as int:** EF Core enum-as-int is efficient and unambiguous. Display names live in the UI layer.
+- **Unique (TenantId, Pillar) on PillarContent:** exactly one content row per pillar per tenant. Upsert pattern (Phase 4) checks existence before insert.
+- **Unique (UserId, Pillar) on UserPillarProgress:** one progress row per user per pillar; TenantId index for dashboard aggregations.
+- **PlaybookTemplate.Pillar nullable:** null = cross-pillar (e.g., general onboarding kit). Non-null = pillar-specific template.
+
+### Role Rename Approach
+- Legacy Reviewer/Viewer role rows stay in `asp_net_roles` until Phase 6.
+- Migration SQL promotes existing Reviewer/Viewer users to Client role (additive — no membership rows deleted).
+- Program.cs legacy policies kept as aliases so old `.razor` page attributes (Trinity's domain) continue to work during transition.
+
