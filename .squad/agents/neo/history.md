@@ -341,3 +341,11 @@ Root cause: `Policy` entity had 0% coverage; `Tenant` entity had ~43%.
 - `Tenant` — defaults, full property round-trip, LogoUrl null, IsActive false
 
 **Result:** All 6 `SixToFix.Domain` entity classes at 100% line coverage. CI green on PR #48.
+PR #48 deleted ~141 legacy files, dropping SixToFix.Domain coverage to 71.40% (gate: 80%).
+Root cause: Policy entity had 0% coverage; Tenant entity had ~43%.
+
+**Fix:** Added 	ests/SixToFix.Domain.Tests/PolicyAndTenantTests.cs with 12 xUnit tests covering:
+- Policy — defaults, full property round-trip, severity variants, IsEnabled toggle, ConfigJson null/set
+- Tenant — defaults, full property round-trip, LogoUrl null, IsActive false
+
+**Result:** All 6 SixToFix.Domain entity classes at 100% line coverage. CI green on PR #48.

@@ -1,0 +1,356 @@
+@page "/admin/content"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@attribute [Authorize(Roles = "SuperAdmin,TenantAdmin")]
+@layout StrategyHubShell
+@inject IPillarContentService PillarContentService
+@inject NavigationManager Nav
+
+<PageTitle>Admin — Pillar Content — StrategyHub</PageTitle>
+
+<div class="sh-content-admin">
+
+    <div class="sh-content-admin__header">
+        <h1 class="sh-content-admin__title">Pillar Content Editor</h1>
+        <p class="sh-content-admin__subtitle">Edit strategy content for each of the six pillars.</p>
+    </div>
+
+    <AuthorizeView Roles="SuperAdmin,TenantAdmin">
+        <Authorized>
+    <div class="sh-content-admin__layout">
+
+        <aside class="sh-content-admin__sidebar">
+            @foreach (var meta in _allPillars)
+            {
+                <button class="sh-content-admin__pillar-btn @(_selected == meta.Pillar ? "sh-content-admin__pillar-btn--active" : "")"
+                        @onclick="() => SelectPillarAsync(meta.Pillar)">
+                    <span class="sh-content-admin__pillar-icon sh-content-admin__pillar-icon--@meta.AccentKey">
+                        @meta.Icon
+                    </span>
+                    <span class="sh-content-admin__pillar-label">@meta.Label</span>
+                </button>
+            }
+        </aside>
+
+        <section class="sh-content-admin__panel">
+
+            @if (_loadingContent)
+            {
+                <p class="sh-content-admin__loading">Loading content...</p>
+            }
+            else
+            {
+                <h2 class="sh-content-admin__pillar-heading">
+                    @_allPillars.First(p => p.Pillar == _selected).Label
+                </h2>
+
+                <div class="sh-content-admin__fields">
+
+                    <div class="sh-content-admin__field">
+                        <label class="sh-content-admin__label" for="field-strategy">Strategy</label>
+                        <p class="sh-content-admin__hint">Describe the overall strategic intent for this pillar.</p>
+                        <textarea id="field-strategy"
+                                  class="sh-content-admin__textarea"
+                                  rows="6"
+                                  placeholder="Enter strategy content..."
+                                  @bind="_fStrategy"></textarea>
+                    </div>
+
+                    <div class="sh-content-admin__field">
+                        <label class="sh-content-admin__label" for="field-execution">Execution Blueprint</label>
+                        <p class="sh-content-admin__hint">One step per line.</p>
+                        <textarea id="field-execution"
+                                  class="sh-content-admin__textarea"
+                                  rows="6"
+                                  placeholder="Step 1"
+                                  @bind="_fExecution"></textarea>
+                    </div>
+
+                    <div class="sh-content-admin__field">
+                        <label class="sh-content-admin__label" for="field-templates">Templates</label>
+                        <p class="sh-content-admin__hint">One template name per line.</p>
+                        <textarea id="field-templates"
+                                  class="sh-content-admin__textarea"
+                                  rows="5"
+                                  placeholder="Template A"
+                                  @bind="_fTemplates"></textarea>
+                    </div>
+
+                    <div class="sh-content-admin__field">
+                        <label class="sh-content-admin__label" for="field-examples">Examples</label>
+                        <p class="sh-content-admin__hint">One example per line.</p>
+                        <textarea id="field-examples"
+                                  class="sh-content-admin__textarea"
+                                  rows="5"
+                                  placeholder="Example 1"
+                                  @bind="_fExamples"></textarea>
+                    </div>
+
+                    <div class="sh-content-admin__field">
+                        <label class="sh-content-admin__label" for="field-metrics">Metrics</label>
+                        <p class="sh-content-admin__hint">One metric per line in the format: Label: Value</p>
+                        <textarea id="field-metrics"
+                                  class="sh-content-admin__textarea"
+                                  rows="5"
+                                  placeholder="Revenue: $1M"
+                                  @bind="_fMetrics"></textarea>
+                    </div>
+
+                </div>
+
+                <div class="sh-content-admin__actions">
+                    <button class="sh-content-admin__save-btn"
+                            @onclick="SaveAsync"
+                            disabled="@_saving">
+                        @(_saving ? "Saving..." : "Save")
+                    </button>
+
+                    @if (_saveSuccess)
+                    {
+                        <span class="sh-content-admin__toast sh-content-admin__toast--success" role="status">
+                            Content saved successfully
+                        </span>
+                    }
+                    @if (_saveError is not null)
+                    {
+                        <span class="sh-content-admin__toast sh-content-admin__toast--error" role="alert">
+                            @_saveError
+                        </span>
+                    }
+                </div>
+
+                @if (_currentContent is not null && _currentContent.UpdatedByUserId.HasValue)
+                {
+                    <p class="sh-content-admin__meta">
+                        Last updated by <strong>@FormatUserId(_currentContent.UpdatedByUserId.Value)</strong>
+                        at <strong>@_currentContent.UpdatedAt.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</strong>
+                    </p>
+                }
+            }
+
+        </section>
+    </div>
+        </Authorized>
+        <NotAuthorized>
+            <p class="sh-content-admin__meta">You do not have permission to access this page.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = null!;
+
+    [SupplyParameterFromQuery(Name = "pillar")]
+    public string? PillarSlug { get; set; }
+
+    private static readonly (Pillar Pillar, string Label, string AccentKey, RenderFragment Icon)[] _allPillars =
+    [
+        (Pillar.Brand,         "Brand",         "brand",         @<PaletteIcon />),
+        (Pillar.Customer,      "Customer",      "customer",      @<UsersIcon />),
+        (Pillar.Offering,      "Offering",      "offering",      @<BoxesIcon />),
+        (Pillar.Communication, "Communication", "communication", @<MessageSquareIcon />),
+        (Pillar.Sales,         "Sales",         "sales",         @<TrendingUpIcon />),
+        (Pillar.Management,    "Management",    "management",    @<SettingsIcon />),
+    ];
+
+    private Pillar _selected = Pillar.Brand;
+    private bool _loadingContent = true;
+    private bool _saving;
+    private bool _saveSuccess;
+    private string? _saveError;
+    private PillarContent? _currentContent;
+
+    private string _fStrategy  = string.Empty;
+    private string _fExecution = string.Empty;
+    private string _fTemplates = string.Empty;
+    private string _fExamples  = string.Empty;
+    private string _fMetrics   = string.Empty;
+
+    private Guid _userId;
+    private Guid _tenantId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateTask;
+        var user = auth.User;
+        if (!(user.Identity?.IsAuthenticated ?? false)) return;
+
+        Guid.TryParse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                   ?? user.FindFirst("sub")?.Value, out _userId);
+        Guid.TryParse(user.FindFirst("tenant_id")?.Value, out _tenantId);
+
+        if (!string.IsNullOrWhiteSpace(PillarSlug))
+        {
+            var match = _allPillars.FirstOrDefault(
+                p => p.Label.Equals(PillarSlug, StringComparison.OrdinalIgnoreCase));
+            if (match.Pillar != default) _selected = match.Pillar;
+        }
+
+        await LoadContentAsync();
+    }
+
+    private async Task SelectPillarAsync(Pillar pillar)
+    {
+        _selected = pillar;
+        await LoadContentAsync();
+    }
+
+    private async Task LoadContentAsync()
+    {
+        _loadingContent = true;
+        _saveSuccess = false;
+        _saveError = null;
+
+        try
+        {
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            _currentContent = await PillarContentService.GetForTenantAsync(_tenantId, _selected, cts.Token);
+            PopulateFields(_currentContent?.BodyJson);
+        }
+        finally
+        {
+            _loadingContent = false;
+        }
+    }
+
+    private void PopulateFields(string? bodyJson)
+    {
+        _fStrategy  = string.Empty;
+        _fExecution = string.Empty;
+        _fTemplates = string.Empty;
+        _fExamples  = string.Empty;
+        _fMetrics   = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(bodyJson) || bodyJson == "{}") return;
+
+        try
+        {
+            var doc  = System.Text.Json.JsonDocument.Parse(bodyJson);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("placeholder", out var ph) && ph.GetBoolean()) return;
+
+            if (root.TryGetProperty("strategy", out var stratEl))
+            {
+                if (stratEl.ValueKind == System.Text.Json.JsonValueKind.String)
+                    _fStrategy = stratEl.GetString() ?? string.Empty;
+                else if (stratEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    foreach (var block in stratEl.EnumerateArray())
+                    {
+                        if (block.TryGetProperty("title", out var t)) sb.AppendLine(t.GetString());
+                        if (block.TryGetProperty("points", out var pts)
+                            && pts.ValueKind == System.Text.Json.JsonValueKind.Array)
+                            foreach (var p in pts.EnumerateArray())
+                                sb.AppendLine($"  - {p.GetString()}");
+                        sb.AppendLine();
+                    }
+                    _fStrategy = sb.ToString().TrimEnd();
+                }
+            }
+
+            if (root.TryGetProperty("execution", out var execEl)) _fExecution = ReadStringOrArray(execEl);
+            if (root.TryGetProperty("templates", out var tplEl))  _fTemplates = ReadStringOrArray(tplEl);
+            if (root.TryGetProperty("examples",  out var exEl))   _fExamples  = ReadStringOrArray(exEl);
+
+            if (root.TryGetProperty("metrics", out var metEl))
+            {
+                if (metEl.ValueKind == System.Text.Json.JsonValueKind.String)
+                    _fMetrics = metEl.GetString() ?? string.Empty;
+                else if (metEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    foreach (var pair in metEl.EnumerateArray())
+                    {
+                        if (pair.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        {
+                            var arr = pair.EnumerateArray().ToArray();
+                            if (arr.Length == 2)
+                                sb.AppendLine($"{arr[0].GetString()}: {arr[1].GetString()}");
+                        }
+                        else if (pair.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            sb.AppendLine(pair.GetString());
+                        }
+                    }
+                    _fMetrics = sb.ToString().TrimEnd();
+                }
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // Malformed JSON — leave fields empty
+        }
+    }
+
+    private static string ReadStringOrArray(System.Text.Json.JsonElement el)
+    {
+        if (el.ValueKind == System.Text.Json.JsonValueKind.String)
+            return el.GetString() ?? string.Empty;
+
+        if (el.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var item in el.EnumerateArray())
+                sb.AppendLine(item.GetString());
+            return sb.ToString().TrimEnd();
+        }
+
+        return string.Empty;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving      = true;
+        _saveSuccess = false;
+        _saveError   = null;
+
+        try
+        {
+            var body = BuildBodyJson();
+            var cts  = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            _currentContent = await PillarContentService.UpsertAsync(_tenantId, _selected, body, _userId, cts.Token);
+            _saveSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            _saveError = $"Save failed: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private string BuildBodyJson()
+    {
+        var strategy  = _fStrategy.Trim();
+        var execution = _fExecution.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
+        var templates = _fTemplates.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
+        var examples  = _fExamples.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
+        var metrics   = _fMetrics.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(l => l.Trim()).Where(l => l.Length > 0)
+                                   .Select(l =>
+                                   {
+                                       var idx = l.IndexOf(':');
+                                       return idx > 0
+                                           ? new[] { l[..idx].Trim(), l[(idx + 1)..].Trim() }
+                                           : new[] { l, "" };
+                                   }).ToArray();
+
+        return System.Text.Json.JsonSerializer.Serialize(new
+        {
+            strategy,
+            execution,
+            templates,
+            examples,
+            metrics
+        });
+    }
+
+    private static string FormatUserId(Guid id) =>
+        id.ToString()[..8];
+}

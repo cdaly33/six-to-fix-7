@@ -24,7 +24,17 @@
             </div>
             <div>
                 <div class="sh-pillar-page__ordinal">PILLAR @_pillarOrdinal OF 6</div>
-                <h1 class="sh-pillar-page__title">@_pillarTitle</h1>
+                <div class="sh-pillar-page__header">
+    <h1 class="sh-pillar-page__title">@_pillarTitle</h1>
+    <div class="sh-pillar-page__header-right">
+        <AuthorizeView Roles="SuperAdmin,TenantAdmin">
+            <Authorized>
+                <a href="/admin/content?pillar=@_accentKey" class="sh-pillar-page__edit-btn">Edit content</a>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+</div>
+
                 <p class="sh-pillar-page__subtitle">@_subtitle</p>
             </div>
         </div>
