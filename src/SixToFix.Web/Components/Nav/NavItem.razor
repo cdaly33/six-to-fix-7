@@ -1,0 +1,14 @@
+<a href="@Href" class="nav-item @(IsActive ? "nav-item--active" : "")">
+    @if (Icon is not null)
+    {
+        <span class="nav-item__icon">@Icon</span>
+    }
+    <span class="nav-item__label">@Label</span>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? Icon { get; set; }
+    [Parameter, EditorRequired] public string Href { get; set; } = "/";
+    [Parameter] public bool IsActive { get; set; }
+}

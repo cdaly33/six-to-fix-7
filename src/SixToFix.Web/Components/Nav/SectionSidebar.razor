@@ -1,0 +1,114 @@
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+<nav class="section-sidebar" aria-label="Primary navigation">
+    <div class="section-sidebar__header">
+        <Logo Variant="dark" />
+        <p class="section-sidebar__tagline">PLAYBOOK</p>
+    </div>
+
+    <ul class="section-sidebar__nav" role="list">
+        <li>
+            <NavItem Label="Dashboard" Href="/dashboard" IsActive="@IsActive("/dashboard", exact: true)">
+                <Icon><DashboardIcon /></Icon>
+            </NavItem>
+        </li>
+        <li>
+            <NavItem Label="Brand" Href="/brand" IsActive="@IsActive("/brand")">
+                <Icon><PaletteIcon /></Icon>
+            </NavItem>
+        </li>
+        <li>
+            <NavItem Label="Customer" Href="/customer" IsActive="@IsActive("/customer")">
+                <Icon><UsersIcon /></Icon>
+            </NavItem>
+        </li>
+        <li>
+            <NavItem Label="Offering" Href="/offering" IsActive="@IsActive("/offering")">
+                <Icon><BoxesIcon /></Icon>
+            </NavItem>
+        </li>
+        <li>
+            <NavItem Label="Communication" Href="/communication" IsActive="@IsActive("/communication")">
+                <Icon><MessageSquareIcon /></Icon>
+            </NavItem>
+        </li>
+        <li>
+            <NavItem Label="Sales" Href="/sales" IsActive="@IsActive("/sales")">
+                <Icon><TrendingUpIcon /></Icon>
+            </NavItem>
+        </li>
+        <li>
+            <NavItem Label="Management" Href="/management" IsActive="@IsActive("/management")">
+                <Icon><SettingsIcon /></Icon>
+            </NavItem>
+        </li>
+        <li>
+            <NavItem Label="Templates" Href="/templates" IsActive="@IsActive("/templates")">
+                <Icon><ClipboardIcon /></Icon>
+            </NavItem>
+        </li>
+    </ul>
+
+    <div class="section-sidebar__footer">
+        <div class="section-sidebar__user">
+            <div class="section-sidebar__user-avatar">@_initials</div>
+            <div class="section-sidebar__user-info">
+                <span class="section-sidebar__user-name">@_displayName</span>
+                <span class="section-sidebar__user-role">@_roleLabel</span>
+            </div>
+        </div>
+        <a href="/logout" class="section-sidebar__signout" title="Sign Out">
+            <LogOutIcon Size="18" />
+            <span>Sign Out</span>
+        </a>
+    </div>
+</nav>
+
+@code {
+    [Parameter] public string? ActiveSection { get; set; }
+
+    private string _displayName = string.Empty;
+    private string _initials = "?";
+    private string _roleLabel = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = state.User;
+        var name = user.FindFirst("name")?.Value
+                   ?? user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                   ?? user.Identity?.Name
+                   ?? user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                   ?? "User";
+        _displayName = name;
+        _initials = GetInitials(name);
+        _roleLabel = GetRoleLabel(user);
+    }
+
+    private bool IsActive(string path, bool exact = false)
+    {
+        var current = Nav.ToBaseRelativePath(Nav.Uri).TrimEnd('/');
+        if (string.IsNullOrEmpty(current)) current = "dashboard";
+        var target = path.TrimStart('/').TrimEnd('/');
+        return exact
+            ? current.Equals(target, StringComparison.OrdinalIgnoreCase)
+            : current.StartsWith(target, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetInitials(string name)
+    {
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 1
+            ? $"{char.ToUpperInvariant(parts[0][0])}{char.ToUpperInvariant(parts[^1][0])}"
+            : parts.Length == 1 ? char.ToUpperInvariant(parts[0][0]).ToString() : "?";
+    }
+
+    private static string GetRoleLabel(System.Security.Claims.ClaimsPrincipal user)
+    {
+        if (user.IsInRole("SuperAdmin")) return "Super Admin";
+        if (user.IsInRole("TenantAdmin")) return "Tenant Admin";
+        if (user.IsInRole("Client")) return "Client";
+        return "Member";
+    }
+}

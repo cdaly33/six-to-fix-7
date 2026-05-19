@@ -1,0 +1,100 @@
+.section-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: var(--sidebar-width);
+    min-height: 100vh;
+    background-color: var(--color-navy-800);
+    padding: var(--space-6) var(--space-4);
+    flex-shrink: 0;
+}
+
+.section-sidebar__header {
+    margin-bottom: var(--space-8);
+}
+
+.section-sidebar__tagline {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    letter-spacing: var(--tracking-widest);
+    color: var(--color-slate-500);
+    margin-top: var(--space-4);
+    margin-bottom: 0;
+    padding: 0 var(--space-4);
+}
+
+.section-sidebar__nav {
+    list-style: none;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.section-sidebar__footer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-top: var(--space-6);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: auto;
+}
+
+.section-sidebar__user {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-2);
+}
+
+.section-sidebar__user-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    background-color: var(--color-navy-700);
+    color: var(--color-gold-400);
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    flex-shrink: 0;
+}
+
+.section-sidebar__user-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.section-sidebar__user-name {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.section-sidebar__user-role {
+    font-size: var(--text-xs);
+    color: var(--color-slate-400);
+}
+
+.section-sidebar__signout {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    color: var(--color-slate-400);
+    text-decoration: none;
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.section-sidebar__signout:hover {
+    color: #ffffff;
+    background-color: var(--color-navy-950);
+    text-decoration: none;
+}

@@ -1,0 +1,42 @@
+.sh-shell {
+    display: flex;
+    min-height: 100vh;
+    background-color: var(--bg-page);
+}
+
+.sh-shell__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.sh-shell__topbar {
+    height: var(--topbar-height);
+    background-color: var(--color-slate-100);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-8);
+    flex-shrink: 0;
+}
+
+.sh-shell__topbar-title {
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--color-navy-800);
+    letter-spacing: var(--tracking-tight);
+}
+
+.sh-shell__content {
+    flex: 1;
+    padding: var(--space-6);
+    overflow-y: auto;
+}
+
+@media (min-width: 768px) {
+    .sh-shell__content {
+        padding: var(--space-8);
+    }
+}
