@@ -1,0 +1,19 @@
+@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="sh-shell">
+    <SectionSidebar />
+
+    <div class="sh-shell__body">
+        <header class="sh-shell__topbar">
+            <div class="sh-shell__topbar-title">StrategyHub</div>
+        </header>
+        <main class="sh-shell__content" id="main-content" role="main">
+            @ChildContent
+        </main>
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

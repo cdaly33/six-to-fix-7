@@ -3,7 +3,7 @@
 @attribute [Authorize]
 @inject NavigationManager Nav
 
-<PageTitle>Dashboard — Six to Fix</PageTitle>
+<PageTitle>Dashboard — StrategyHub</PageTitle>
 
 <div class="page-header">
     <div class="page-header-left">
@@ -21,9 +21,9 @@
     @* Welcome card *@
     <div class="card dashboard-welcome">
         <div class="card-body">
-            <h3>Welcome to Six to Fix</h3>
+            <h3>Welcome to StrategyHub</h3>
             <p class="text-secondary">
-                Six to Fix automates marketing maturity audits across six key domains,
+                StrategyHub automates marketing maturity audits across six key domains,
                 delivering actionable insights with AI-powered analysis.
             </p>
             <AuthorizeView Roles="TenantAdmin,SuperAdmin">
@@ -101,3 +101,4 @@
             Nav.NavigateTo("/login", forceLoad: false);
     }
 }
+

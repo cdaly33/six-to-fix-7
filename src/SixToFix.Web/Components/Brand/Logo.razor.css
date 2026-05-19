@@ -1,0 +1,42 @@
+.logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    text-decoration: none;
+    user-select: none;
+}
+
+.logo__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1.5px solid var(--color-gold-400);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.logo--dark .logo__icon {
+    color: var(--color-gold-400);
+}
+
+.logo--light .logo__icon {
+    color: var(--color-navy-800);
+    border-color: var(--color-navy-800);
+}
+
+.logo__wordmark {
+    font-family: var(--font-serif);
+    font-size: var(--text-xl);
+    font-weight: 600;
+    letter-spacing: var(--tracking-tight);
+}
+
+.logo--dark .logo__wordmark {
+    color: #ffffff;
+}
+
+.logo--light .logo__wordmark {
+    color: var(--color-navy-800);
+}

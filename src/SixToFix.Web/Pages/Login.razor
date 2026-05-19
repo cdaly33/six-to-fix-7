@@ -1,44 +1,45 @@
-﻿@page "/login"
+@page "/login"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @layout AuthLayout
 @inject SixToFix.Web.Navigation.ILoginNavigator LoginNavigator
 @inject AuthenticationStateProvider AuthState
 @inject IJSRuntime JS
 
-<PageTitle>Sign In — Six to Fix</PageTitle>
+<PageTitle>Sign In — StrategyHub</PageTitle>
 
-<div class="login-container">
-    <div class="card login-card">
-        <div class="card-body">
-            <h1>Sign In</h1>
-            <p class="text-secondary">Access your Six to Fix audit platform.</p>
-
-            @if (_error is not null)
-            {
-                <div class="alert alert-error" role="alert">@_error</div>
-            }
-
-            <EditForm Model="_model" OnValidSubmit="HandleLogin" FormName="login">
-                <DataAnnotationsValidator />
-
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <InputText id="email" @bind-Value="_model.Email" class="form-control" type="email" autocomplete="username" />
-                    <ValidationMessage For="@(() => _model.Email)" />
-                </div>
-
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <InputText id="password" @bind-Value="_model.Password" class="form-control" type="password" autocomplete="current-password" />
-                    <ValidationMessage For="@(() => _model.Password)" />
-                </div>
-
-                <button type="submit" class="btn btn-primary btn-block" disabled="@_submitting">
-                    @if (_submitting) { <span>Signing in…</span> } else { <span>Sign In</span> }
-                </button>
-            </EditForm>
-
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-card__brand">
+            <Logo Variant="light" />
         </div>
+
+        <h1 class="login-card__heading">Sign In to StrategyHub</h1>
+        <p class="login-card__sub">Access your strategic business playbook.</p>
+
+        @if (_error is not null)
+        {
+            <div class="alert alert-error" role="alert">@_error</div>
+        }
+
+        <EditForm Model="_model" OnValidSubmit="HandleLogin" FormName="login">
+            <DataAnnotationsValidator />
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <InputText id="email" @bind-Value="_model.Email" class="form-control" type="email" autocomplete="username" />
+                <ValidationMessage For="@(() => _model.Email)" />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <InputText id="password" @bind-Value="_model.Password" class="form-control" type="password" autocomplete="current-password" />
+                <ValidationMessage For="@(() => _model.Password)" />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" disabled="@_submitting">
+                @if (_submitting) { <span>Signing in…</span> } else { <span>Sign In</span> }
+            </button>
+        </EditForm>
     </div>
 </div>
 
@@ -63,9 +64,6 @@
         _error = null;
         try
         {
-            // JS fetch runs in the browser, so the Set-Cookie response header is
-            // applied to the browser's cookie jar — something a server-side HttpClient
-            // call cannot do in a Blazor Server (SignalR) context.
             var result = await JS.InvokeAsync<string>("SixToFix.login", _model.Email, _model.Password);
             switch (result)
             {
@@ -95,5 +93,4 @@
         [Required, EmailAddress] public string Email { get; set; } = string.Empty;
         [Required, MinLength(8)] public string Password { get; set; } = string.Empty;
     }
-
 }
