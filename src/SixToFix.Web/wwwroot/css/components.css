@@ -1591,3 +1591,240 @@ select.input-field {
   color: var(--text-muted);
   margin: 0;
 }
+/* ============================================================
+   ADMIN — Pillar Content Editor  (.sh-content-admin__*)
+   ============================================================ */
+
+.sh-content-admin {
+    padding: var(--space-8) var(--space-6);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.sh-content-admin__header {
+    margin-bottom: var(--space-8);
+}
+
+.sh-content-admin__title {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-2);
+}
+
+.sh-content-admin__subtitle {
+    color: var(--color-text-secondary);
+    font-size: var(--text-base);
+    margin: 0;
+}
+
+.sh-content-admin__layout {
+    display: flex;
+    gap: var(--space-6);
+    align-items: flex-start;
+}
+
+.sh-content-admin__sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.sh-content-admin__pillar-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: transparent;
+    cursor: pointer;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    transition: background-color 0.15s, border-color 0.15s;
+    text-align: left;
+}
+
+.sh-content-admin__pillar-btn:hover {
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-strong);
+}
+
+.sh-content-admin__pillar-btn--active {
+    background: var(--color-surface-active);
+    border-color: var(--color-accent-gold);
+    color: var(--color-text-primary);
+    font-weight: var(--font-semibold);
+}
+
+.sh-content-admin__pillar-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.sh-content-admin__pillar-icon--brand        { background: var(--color-brand-bg);         color: var(--color-brand); }
+.sh-content-admin__pillar-icon--customer     { background: var(--color-customer-bg);      color: var(--color-customer); }
+.sh-content-admin__pillar-icon--offering     { background: var(--color-offering-bg);      color: var(--color-offering); }
+.sh-content-admin__pillar-icon--communication{ background: var(--color-communication-bg); color: var(--color-communication); }
+.sh-content-admin__pillar-icon--sales        { background: var(--color-sales-bg);         color: var(--color-sales); }
+.sh-content-admin__pillar-icon--management   { background: var(--color-management-bg);    color: var(--color-management); }
+
+.sh-content-admin__pillar-label {
+    font-size: var(--text-sm);
+}
+
+.sh-content-admin__panel {
+    flex: 1;
+    min-width: 0;
+}
+
+.sh-content-admin__pillar-heading {
+    font-size: var(--text-xl);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-6);
+}
+
+.sh-content-admin__loading {
+    color: var(--color-text-secondary);
+    padding: var(--space-4);
+}
+
+.sh-content-admin__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+.sh-content-admin__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.sh-content-admin__label {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-primary);
+}
+
+.sh-content-admin__hint {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--space-2);
+}
+
+.sh-content-admin__textarea {
+    width: 100%;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-size: var(--text-sm);
+    font-family: var(--font-mono);
+    resize: vertical;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+
+.sh-content-admin__textarea:focus {
+    outline: none;
+    border-color: var(--color-accent-gold);
+    box-shadow: 0 0 0 2px var(--color-accent-gold-subtle);
+}
+
+.sh-content-admin__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+}
+
+.sh-content-admin__save-btn {
+    padding: var(--space-3) var(--space-6);
+    background: var(--color-accent-gold);
+    color: var(--color-text-on-gold);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.sh-content-admin__save-btn:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.sh-content-admin__save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sh-content-admin__toast {
+    font-size: var(--text-sm);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+}
+
+.sh-content-admin__toast--success {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.sh-content-admin__toast--error {
+    background: var(--color-error-bg);
+    color: var(--color-error);
+}
+
+.sh-content-admin__meta {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-4);
+}
+
+/* ---- Pillar-page header row ---- */
+
+.sh-pillar-page__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.sh-pillar-page__header-right {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.sh-pillar-page__edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-accent-gold);
+    color: var(--color-text-on-gold);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    text-decoration: none;
+    transition: opacity 0.15s;
+}
+
+.sh-pillar-page__edit-btn:hover {
+    opacity: 0.9;
+    text-decoration: none;
+}

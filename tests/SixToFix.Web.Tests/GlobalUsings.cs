@@ -16,4 +16,5 @@ global using SixToFix.Domain.Enums;
 global using SixToFix.Web.Components.Shared;
 global using SixToFix.Web.Navigation;
 global using SixToFix.Web.Pages;
+global using SixToFix.Web.Pages.Admin;
 global using Xunit;

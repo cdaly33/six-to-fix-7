@@ -42,13 +42,21 @@
             <NavItem Label="Management" Href="/management" IsActive="@IsActive("/management")">
                 <Icon><SettingsIcon /></Icon>
             </NavItem>
-        </li>
-        <li>
+        </li>        <li>
             <NavItem Label="Templates" Href="/templates" IsActive="@IsActive("/templates")">
                 <Icon><ClipboardIcon /></Icon>
             </NavItem>
         </li>
+        @if (_isAdmin)
+        {
+            <li>
+                <NavItem Label="Admin" Href="/admin/content" IsActive="@IsActive("/admin")">
+                    <Icon><SettingsIcon /></Icon>
+                </NavItem>
+            </li>
+        }
     </ul>
+
 
     <div class="section-sidebar__footer">
         <div class="section-sidebar__user">
@@ -71,6 +79,7 @@
     private string _displayName = string.Empty;
     private string _initials = "?";
     private string _roleLabel = string.Empty;
+    private bool _isAdmin;
 
     protected override async Task OnInitializedAsync()
     {
@@ -84,6 +93,7 @@
         _displayName = name;
         _initials = GetInitials(name);
         _roleLabel = GetRoleLabel(user);
+        _isAdmin = user.IsInRole("SuperAdmin") || user.IsInRole("TenantAdmin");
     }
 
     private bool IsActive(string path, bool exact = false)
