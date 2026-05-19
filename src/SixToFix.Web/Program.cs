@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SixToFix.Api.Endpoints;
 using SixToFix.Application.Extensions;
 using SixToFix.Application.Multitenancy;
+using SixToFix.Infrastructure.Data;
 using SixToFix.Infrastructure.Extensions;
 using SixToFix.Infrastructure.Multitenancy;
 using SixToFix.Web.Middleware;
@@ -133,6 +135,28 @@ builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
+// Run EF Core migrations on startup using the admin connection (sfadmin, port 5432, DDL permissions).
+// The runtime DefaultConnection uses sf_app (port 6432 via pgBouncer, DML-only) which cannot run DDL.
+// This ensures the schema is always current after a deploy without manual intervention.
+var adminConnStr = app.Configuration.GetConnectionString("AdminConnection");
+if (!string.IsNullOrEmpty(adminConnStr))
+{
+    try
+    {
+        var migrationOptions = new DbContextOptionsBuilder<SixToFixDbContext>()
+            .UseNpgsql(adminConnStr, npgsql => npgsql.CommandTimeout(120))
+            .UseSnakeCaseNamingConvention()
+            .Options;
+        using var migrationCtx = new SixToFixDbContext(migrationOptions, new StartupMigrationTenantContext());
+        await migrationCtx.Database.MigrateAsync();
+        app.Logger.LogInformation("EF Core migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "EF Core startup migration failed; app continuing (check AdminConnection and DB state)");
+    }
+}
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
@@ -163,3 +187,14 @@ app.Run();
 
 // For WebApplicationFactory test discovery
 public partial class Program { }
+
+/// <summary>
+/// No-op tenant context used exclusively by the startup migration runner.
+/// Migrations are DDL operations with no tenant scope.
+/// </summary>
+file sealed class StartupMigrationTenantContext : ITenantContext
+{
+    public Guid TenantId => Guid.Empty;
+    public string TenantSlug => string.Empty;
+    public bool IsResolved => false;
+}
