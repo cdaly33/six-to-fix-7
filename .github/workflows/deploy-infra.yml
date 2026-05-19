@@ -44,7 +44,7 @@ jobs:
       - name: Deploy Bicep
         run: |
           az deployment group create \
-            --resource-group rg-StrategicGlue-CommandCenter \
+            --resource-group rg-sixtofix-prod \
             --template-file infra/main.bicep \
             --parameters infra/params/${{ github.event.inputs.environment || 'dev' }}.bicepparam \
             --name deploy-$(date +%Y%m%d%H%M%S)
