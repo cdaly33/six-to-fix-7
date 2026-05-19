@@ -39,6 +39,28 @@
   - Added both as `@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=SeedAdmin--Email/Password)` following existing KV-reference pattern. `SeedAdmin__Enabled` was already present.
   - PR #39: `infra(bicep): add SeedAdmin app settings to prevent drift`
 
+- **2026-05-18 — CSP Allowlist for Google Fonts + CI Pipeline Checkup (branch: dev/phase-csp-fonts-and-pipeline):**
+  - **CSP added:** Created `src/SixToFix.Web/Middleware/SecurityHeadersMiddleware.cs` and registered it as middleware step 2 in `Program.cs` (between CorrelationId and HttpsRedirection). No CSP existed before this change.
+  - **CSP directives set:**
+    - `default-src 'self'`
+    - `script-src 'self' 'unsafe-inline'` — Blazor Server requires unsafe-inline for its bootstrapping script
+    - `style-src 'self' https://fonts.googleapis.com 'unsafe-inline'` — unsafe-inline required for Blazor scoped-CSS isolation
+    - `font-src 'self' https://fonts.gstatic.com data:` — gstatic.com serves the actual font files; data: covers any base64-inlined fonts
+    - `connect-src 'self' wss: https://fonts.googleapis.com https://fonts.gstatic.com` — wss: for SignalR WebSocket; Google Fonts CDN hosts for font API calls
+    - `img-src 'self' data: blob:`
+    - `frame-ancestors 'none'`
+    - `base-uri 'self'`
+    - `form-action 'self'`
+  - **Also added:** `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`
+  - **CI audit — test.yml:** `SixToFix.slnx` ✅, `--filter "Category!=Integration&Category!=E2E"` ✅, `dotnet-version: '10.x'` ✅ — no changes needed.
+  - **CI audit — deploy-app.yml:** `SixToFix.slnx` ✅, `10.x` ✅ — no changes needed.
+  - **CI audit — deploy-infra.yml:** Stale resource group name `rg-StrategicGlue-CommandCenter` found on line 49 — fixed to `rg-sixtofix-prod`.
+  - **Bicep audit — postgres.bicep:** Prod SKU `Standard_B2ms / Burstable` ✅, HA `Disabled` ✅ — in sync with what was manually deployed.
+  - **Bicep audit — appservice.bicep:** `clientAffinityEnabled: true` ✅ — no drift.
+  - **Bicep audit verdict:** No unreflected drift found. No second drift-fix PR needed.
+  - **.gitignore audit:** `*.lscache` already present on line 32 — no change needed.
+  - **Build:** Pre-existing Infrastructure build errors on main (missing `Pillar` domain type — in-flight StrategyHub pivot work by Neo/Trinity); 34 Domain unit tests pass ✅.
+
 ---
 
 ## Phase 0 — Planning Artifacts (2026-05-10)

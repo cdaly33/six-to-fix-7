@@ -117,8 +117,10 @@ builder.Services.AddAuthorizationBuilder()
         .Build())
     .AddPolicy("SuperAdmin", p => DualScheme(p).RequireAuthenticatedUser().RequireRole("SuperAdmin"))
     .AddPolicy("TenantAdmin", p => DualScheme(p).RequireAuthenticatedUser().RequireRole("SuperAdmin", "TenantAdmin"))
-    .AddPolicy("Reviewer", p => DualScheme(p).RequireAuthenticatedUser().RequireRole("SuperAdmin", "TenantAdmin", "Reviewer"))
-    .AddPolicy("Viewer", p => DualScheme(p).RequireAuthenticatedUser().RequireRole("SuperAdmin", "TenantAdmin", "Reviewer", "Viewer"));
+    .AddPolicy("Client", p => DualScheme(p).RequireAuthenticatedUser().RequireRole("SuperAdmin", "TenantAdmin", "Client"))
+    // Legacy policy names kept as aliases during phase-3 → phase-6 transition
+    .AddPolicy("Reviewer", p => DualScheme(p).RequireAuthenticatedUser().RequireRole("SuperAdmin", "TenantAdmin", "Client", "Reviewer"))
+    .AddPolicy("Viewer", p => DualScheme(p).RequireAuthenticatedUser().RequireRole("SuperAdmin", "TenantAdmin", "Client", "Reviewer", "Viewer"));
 
 // Blazor Server
 builder.Services.AddRazorComponents()
@@ -165,13 +167,14 @@ if (!app.Environment.IsDevelopment())
 
 // Middleware pipeline order is critical — see di-wiring-map.md
 app.UseMiddleware<CorrelationIdMiddleware>();        // 1. Correlation ID (first)
-app.UseHttpsRedirection();                          // 2.
-app.UseStaticFiles();                               // 3.
-app.UseRouting();                                   // 4.
-app.UseAuthentication();                            // 5.
-app.UseAuthorization();                             // 6.
-app.UseMiddleware<TenantContextMiddleware>();        // 7. After auth, before endpoints
-app.UseAntiforgery();                               // 8.
+app.UseMiddleware<SecurityHeadersMiddleware>();      // 2. CSP + security headers (before any content)
+app.UseHttpsRedirection();                          // 3.
+app.UseStaticFiles();                               // 4.
+app.UseRouting();                                   // 5.
+app.UseAuthentication();                            // 6.
+app.UseAuthorization();                             // 7.
+app.UseMiddleware<TenantContextMiddleware>();        // 8. After auth, before endpoints
+app.UseAntiforgery();                               // 9.
 
 // Map API endpoints (defined in SixToFix.Api)
 app.MapApiEndpoints();
