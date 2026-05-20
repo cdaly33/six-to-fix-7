@@ -13,6 +13,51 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-05-20 — Pillar Content Seeding & Dashboard Getting Started UX
+
+**Problem:** First-time users saw completely empty pillar pages and a sparse Dashboard with no guidance, creating a poor onboarding experience. Pillar pages showed placeholder content (`{"placeholder":true}`) and Dashboard didn't help users understand next steps.
+
+**Solution implemented:**
+1. **Default pillar content seeding** via `AdminBootstrapHostedService.GetDefaultPillarContent` — each pillar now gets meaningful scaffolding:
+   - 1 strategy block with 3 actionable points
+   - 3 execution steps
+   - Conservative, generic copy (no invented marketing-specific advice per charter rule)
+2. **Migration 20260520025400_SeedDefaultPillarContent** — backfills existing tenants with rows matching `body_json = '{}'` OR `'{"placeholder":true}'`
+3. **Dashboard "Getting Started" empty state** — shows when `averageProgress == 0 && clients.Count == 0`:
+   - 3 numbered cards: (1) Add a Client → /clients, (2) Review the 6 Pillars → /brand, (3) Create Your First Playbook Template → /templates
+   - Normal dashboard with progress percentage when user has progress > 0
+   - Uses `prerender: false` (learned from login form bug on 2026-05-18)
+
+**Pillar content structure:** BodyJson is JSONB with schema:
+```json
+{
+  "strategy": [{"title": string, "points": string[]}],
+  "execution": string[],
+  "templates": string[],
+  "examples": string[],
+  "metrics": [[string, string]]
+}
+```
+
+**Test learnings:**
+- BuildContext helper for DashboardPageTests needs BOTH `ClaimTypes.NameIdentifier` and `tenant_id` claims to properly initialize `_userId` and `_tenantId` in Dashboard.razor
+- Must mock IProgressService and IClientService for Dashboard tests (using Moq, not NSubstitute per codebase convention)
+- Test scenarios: no progress + no clients (getting started), has progress (normal dashboard), has clients (normal dashboard), progress percentage display
+
+**Files changed:**
+- AdminBootstrapHostedService.cs (GetDefaultPillarContent method with switch expression for 6 pillars)
+- Dashboard.razor (conditional rendering, service injections, OnInitializedAsync logic)
+- app.css (`.getting-started` and `.dashboard-progress` styles using CSS tokens)
+- DashboardPageTests.cs (BuildContext with claim mocks, 4 new test methods)
+- Migration: 20260520025400_SeedDefaultPillarContent.cs
+
+**PR:** https://github.com/cdaly33/six-to-fix-7/pull/58  
+**Tests:** All 35 Web unit tests passing (5 new Dashboard tests added)
+
+**Architectural note:** Lazy seeding pattern provides defense-in-depth — `PillarContentService.GetAllForTenantAsync` already checks for missing pillars and seeds on-demand, so migration + AdminBootstrapHostedService create dual guarantees.
+
+---
+
 ### 2026-05-18 — PROD BUG: Login form empty-model validation race (prerender: false fix)
 
 **Bug:** Users visiting `/login` on prod saw "The Email field is required." and "The Password field is required." even after filling in both fields and clicking Submit.
