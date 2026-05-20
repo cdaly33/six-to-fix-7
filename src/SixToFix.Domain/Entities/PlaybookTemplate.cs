@@ -19,4 +19,5 @@ public sealed class PlaybookTemplate
     public int Popularity { get; set; }
     public DateTimeOffset LastUpdatedAt { get; set; }
     public string? Notes { get; set; }
+    public string ContentMarkdown { get; set; } = string.Empty;
 }

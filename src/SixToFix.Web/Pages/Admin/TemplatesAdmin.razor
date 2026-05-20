@@ -1,0 +1,329 @@
+@page "/admin/templates"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@attribute [Authorize(Policy = "TenantAdmin")]
+@layout StrategyHubShell
+@inject IPlaybookTemplateService TemplateService
+
+<PageTitle>Admin — Templates — StrategyHub</PageTitle>
+
+<div class="sh-template-admin">
+    <div class="sh-template-admin__header">
+        <div>
+            <h1 class="sh-template-admin__title">Manage Templates</h1>
+            <p class="sh-template-admin__subtitle">Author and publish tenant playbook templates.</p>
+        </div>
+        <button class="btn btn-primary" @onclick="OpenNewForm" disabled="@(!_canCreate)">New Template</button>
+    </div>
+
+    @if (_loading)
+    {
+        <p class="sh-template-admin__message">Loading templates...</p>
+    }
+    else if (_templates.Count == 0)
+    {
+        <div class="sh-empty-state">
+            <p class="sh-empty-state__text">No templates yet.</p>
+            <p class="sh-empty-state__hint">Create a draft, then publish it to the template library.</p>
+        </div>
+    }
+    else
+    {
+        <div class="sh-template-admin__table-wrap">
+            <table class="sh-template-admin__table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Pillar</th>
+                        <th>Status</th>
+                        <th>Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var template in _templates)
+                    {
+                        <tr>
+                            <td>@template.Name</td>
+                            <td>@FormatPillar(template.Pillar)</td>
+                            <td>
+                                <span class="sh-template-admin__status sh-template-admin__status--@template.Status.ToString().ToLowerInvariant()">
+                                    @template.Status
+                                </span>
+                            </td>
+                            <td>@template.LastUpdatedAt.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</td>
+                            <td>
+                                <div class="sh-template-admin__row-actions">
+                                    <button class="btn btn-sm btn-secondary" @onclick="() => OpenEditForm(template)">Edit</button>
+                                    <button class="btn btn-sm btn-ghost" @onclick="() => TogglePublishedAsync(template)" disabled="@_saving">
+                                        @(template.Status == PlaybookTemplateStatus.Published ? "Unpublish" : "Publish")
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (_message is not null)
+    {
+        <p class="sh-template-admin__toast" role="status">@_message</p>
+    }
+    @if (_error is not null)
+    {
+        <p class="sh-template-admin__toast sh-template-admin__toast--error" role="alert">@_error</p>
+    }
+
+    @if (_showForm)
+    {
+        <div class="sh-modal-backdrop" @onclick="CloseForm">
+            <div class="sh-modal sh-template-admin__modal" @onclick:stopPropagation>
+                <div class="sh-modal__header">
+                    <h2 class="sh-modal__title">@(_editingId.HasValue ? "Edit Template" : "New Template")</h2>
+                    <button class="sh-modal__close" @onclick="CloseForm" aria-label="Close">✕</button>
+                </div>
+
+                <EditForm Model="_form" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <div class="sh-modal__body sh-template-admin__form">
+                        <div>
+                            <label class="input-label" for="template-title">Title</label>
+                            <InputText id="template-title" class="input-field" @bind-Value="_form.Title" maxlength="200" />
+                            <ValidationMessage For="() => _form.Title" />
+                        </div>
+
+                        <div class="sh-template-admin__form-grid">
+                            <div>
+                                <label class="input-label" for="template-pillar">Pillar</label>
+                                <InputSelect id="template-pillar" class="input-field" @bind-Value="_form.Pillar">
+                                    @foreach (Pillar pillar in Enum.GetValues<Pillar>())
+                                    {
+                                        <option value="@pillar">@pillar</option>
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div>
+                                <label class="input-label" for="template-status">Status</label>
+                                <InputSelect id="template-status" class="input-field" @bind-Value="_form.Status">
+                                    <option value="@PlaybookTemplateStatus.Draft">Draft</option>
+                                    <option value="@PlaybookTemplateStatus.Published">Published</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="input-label" for="template-description">Description</label>
+                            <InputTextArea id="template-description" class="input-field" rows="4" @bind-Value="_form.Description" />
+                        </div>
+
+                        <div>
+                            <label class="input-label" for="template-content">Content</label>
+                            <InputTextArea id="template-content" class="input-field sh-template-admin__content-field" rows="12" @bind-Value="_form.ContentMarkdown" />
+                        </div>
+                    </div>
+
+                    <div class="sh-modal__footer sh-template-admin__form-actions">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancel</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">@(_saving ? "Saving..." : "Save Template")</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = null!;
+
+    private readonly TemplateForm _form = new();
+    private List<PlaybookTemplate> _templates = [];
+    private bool _loading = true;
+    private bool _saving;
+    private bool _showForm;
+    private bool _isSuperAdmin;
+    private bool _canCreate;
+    private Guid _tenantId;
+    private Guid? _editingId;
+    private string? _message;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateTask;
+        var user = auth.User;
+        _isSuperAdmin = user.IsInRole("SuperAdmin");
+        Guid.TryParse(user.FindFirst("tenant_id")?.Value, out _tenantId);
+        _canCreate = _tenantId != Guid.Empty;
+        await LoadTemplatesAsync();
+    }
+
+    private async Task LoadTemplatesAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var tenantFilter = _isSuperAdmin ? (Guid?)null : _tenantId;
+            _templates = (await TemplateService.GetAllAsync(tenantFilter, cts.Token)).ToList();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not load templates: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenNewForm()
+    {
+        _editingId = null;
+        _form.Reset();
+        _showForm = true;
+        _message = null;
+        _error = null;
+    }
+
+    private void OpenEditForm(PlaybookTemplate template)
+    {
+        _editingId = template.Id;
+        _form.TenantId = template.TenantId;
+        _form.Title = template.Name;
+        _form.Pillar = template.Pillar ?? Pillar.Brand;
+        _form.Status = template.Status == PlaybookTemplateStatus.Published
+            ? PlaybookTemplateStatus.Published
+            : PlaybookTemplateStatus.Draft;
+        _form.Description = template.Notes ?? string.Empty;
+        _form.ContentMarkdown = template.ContentMarkdown;
+        _showForm = true;
+        _message = null;
+        _error = null;
+    }
+
+    private void CloseForm()
+    {
+        if (_saving) return;
+        _showForm = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        _message = null;
+        _error = null;
+
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            PlaybookTemplate saved;
+
+            if (_editingId is null)
+            {
+                saved = await TemplateService.CreateAsync(_tenantId, _form.ToTemplate(), cts.Token);
+            }
+            else
+            {
+                var update = _form.ToTemplate();
+                update.Id = _editingId.Value;
+                update.TenantId = _form.TenantId;
+                saved = await TemplateService.UpdateAsync(
+                    _form.TenantId, update, cts.Token, includeAllTenants: _isSuperAdmin);
+            }
+
+            if (_form.Status == PlaybookTemplateStatus.Published)
+            {
+                await TemplateService.PublishAsync(saved.TenantId, saved.Id, cts.Token, includeAllTenants: _isSuperAdmin);
+            }
+            else
+            {
+                await TemplateService.UnpublishAsync(saved.TenantId, saved.Id, cts.Token, includeAllTenants: _isSuperAdmin);
+            }
+
+            _message = "Template saved.";
+            _showForm = false;
+            await LoadTemplatesAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Save failed: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task TogglePublishedAsync(PlaybookTemplate template)
+    {
+        _saving = true;
+        _message = null;
+        _error = null;
+
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            if (template.Status == PlaybookTemplateStatus.Published)
+            {
+                await TemplateService.UnpublishAsync(template.TenantId, template.Id, cts.Token, includeAllTenants: _isSuperAdmin);
+                _message = "Template unpublished.";
+            }
+            else
+            {
+                await TemplateService.PublishAsync(template.TenantId, template.Id, cts.Token, includeAllTenants: _isSuperAdmin);
+                _message = "Template published.";
+            }
+
+            await LoadTemplatesAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Status update failed: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static string FormatPillar(Pillar? pillar) => pillar?.ToString() ?? "All Pillars";
+
+    private sealed class TemplateForm
+    {
+        public Guid TenantId { get; set; }
+
+        [Required]
+        [StringLength(200)]
+        public string Title { get; set; } = string.Empty;
+
+        public Pillar Pillar { get; set; } = Pillar.Brand;
+        public PlaybookTemplateStatus Status { get; set; } = PlaybookTemplateStatus.Draft;
+        public string Description { get; set; } = string.Empty;
+        public string ContentMarkdown { get; set; } = string.Empty;
+
+        public void Reset()
+        {
+            TenantId = Guid.Empty;
+            Title = string.Empty;
+            Pillar = Pillar.Brand;
+            Status = PlaybookTemplateStatus.Draft;
+            Description = string.Empty;
+            ContentMarkdown = string.Empty;
+        }
+
+        public PlaybookTemplate ToTemplate() => new()
+        {
+            Name = Title.Trim(),
+            Pillar = Pillar,
+            Status = Status,
+            Format = "markdown",
+            Notes = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim(),
+            ContentMarkdown = ContentMarkdown ?? string.Empty,
+            Popularity = 0
+        };
+    }
+}

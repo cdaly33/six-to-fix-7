@@ -6,11 +6,10 @@ namespace SixToFix.Infrastructure.Services;
 /// <summary>
 /// EF Core implementation of IPlaybookTemplateService.
 ///
-/// Tenant isolation: every query includes an explicit e.TenantId == tenantId predicate
-/// in addition to the global query filter, providing defence-in-depth.
+/// Tenant isolation: every tenant-scoped query includes an explicit e.TenantId == tenantId
+/// predicate in addition to the global query filter, providing defence-in-depth. The only
+/// cross-tenant path is GetAllAsync(null), reserved for authorized SuperAdmin callers.
 ///
-/// Status lifecycle: Draft → Published → Archived. An archived template can be
-/// re-published by calling PublishAsync again if needed (not blocked here).
 /// CreateAsync always forces Draft regardless of the caller-supplied Status value.
 /// </summary>
 public sealed class PlaybookTemplateService : IPlaybookTemplateService
@@ -24,6 +23,19 @@ public sealed class PlaybookTemplateService : IPlaybookTemplateService
         _logger = logger;
     }
 
+    public async Task<IReadOnlyList<PlaybookTemplate>> GetAllAsync(
+        Guid? tenantId, CancellationToken ct = default)
+    {
+        var query = tenantId.HasValue
+            ? _db.PlaybookTemplates.Where(e => e.TenantId == tenantId.Value)
+            : _db.PlaybookTemplates.IgnoreQueryFilters();
+
+        return await query
+            .OrderByDescending(e => e.LastUpdatedAt)
+            .ThenBy(e => e.Name)
+            .ToListAsync(ct);
+    }
+
     public async Task<IReadOnlyList<PlaybookTemplate>> GetPublishedAsync(
         Guid tenantId, Pillar? pillar, CancellationToken ct = default)
     {
@@ -32,7 +44,6 @@ public sealed class PlaybookTemplateService : IPlaybookTemplateService
 
         if (pillar is not null)
         {
-            // Include templates for the specific pillar AND cross-cutting (null pillar) ones.
             query = query.Where(e => e.Pillar == pillar || e.Pillar == null);
         }
 
@@ -58,6 +69,7 @@ public sealed class PlaybookTemplateService : IPlaybookTemplateService
         template.TenantId = tenantId;
         template.Status = PlaybookTemplateStatus.Draft;
         template.LastUpdatedAt = now;
+        template.ContentMarkdown ??= string.Empty;
 
         _db.PlaybookTemplates.Add(template);
         await _db.SaveChangesAsync(ct);
@@ -70,15 +82,16 @@ public sealed class PlaybookTemplateService : IPlaybookTemplateService
     }
 
     public async Task<PlaybookTemplate> UpdateAsync(
-        Guid tenantId, PlaybookTemplate template, CancellationToken ct = default)
+        Guid tenantId, PlaybookTemplate template, CancellationToken ct = default, bool includeAllTenants = false)
     {
-        var existing = await RequireTemplateAsync(tenantId, template.Id, ct);
+        var existing = await RequireTemplateAsync(tenantId, template.Id, includeAllTenants, ct);
 
         existing.Name = template.Name;
         existing.Format = template.Format;
         existing.Pillar = template.Pillar;
         existing.Popularity = template.Popularity;
         existing.Notes = template.Notes;
+        existing.ContentMarkdown = template.ContentMarkdown;
         existing.LastUpdatedAt = DateTimeOffset.UtcNow;
 
         await _db.SaveChangesAsync(ct);
@@ -86,9 +99,9 @@ public sealed class PlaybookTemplateService : IPlaybookTemplateService
     }
 
     public async Task<PlaybookTemplate> PublishAsync(
-        Guid tenantId, Guid id, CancellationToken ct = default)
+        Guid tenantId, Guid id, CancellationToken ct = default, bool includeAllTenants = false)
     {
-        var template = await RequireTemplateAsync(tenantId, id, ct);
+        var template = await RequireTemplateAsync(tenantId, id, includeAllTenants, ct);
         template.Status = PlaybookTemplateStatus.Published;
         template.LastUpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
@@ -98,10 +111,23 @@ public sealed class PlaybookTemplateService : IPlaybookTemplateService
         return template;
     }
 
-    public async Task<PlaybookTemplate> ArchiveAsync(
-        Guid tenantId, Guid id, CancellationToken ct = default)
+    public async Task<PlaybookTemplate> UnpublishAsync(
+        Guid tenantId, Guid id, CancellationToken ct = default, bool includeAllTenants = false)
     {
-        var template = await RequireTemplateAsync(tenantId, id, ct);
+        var template = await RequireTemplateAsync(tenantId, id, includeAllTenants, ct);
+        template.Status = PlaybookTemplateStatus.Draft;
+        template.LastUpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Unpublished playbook template {TemplateId} for tenant {TenantId}", id, tenantId);
+        return template;
+    }
+
+    public async Task<PlaybookTemplate> ArchiveAsync(
+        Guid tenantId, Guid id, CancellationToken ct = default, bool includeAllTenants = false)
+    {
+        var template = await RequireTemplateAsync(tenantId, id, includeAllTenants, ct);
         template.Status = PlaybookTemplateStatus.Archived;
         template.LastUpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
@@ -112,9 +138,13 @@ public sealed class PlaybookTemplateService : IPlaybookTemplateService
     }
 
     private async Task<PlaybookTemplate> RequireTemplateAsync(
-        Guid tenantId, Guid id, CancellationToken ct)
+        Guid tenantId, Guid id, bool includeAllTenants, CancellationToken ct)
     {
-        return await _db.PlaybookTemplates
+        var query = includeAllTenants
+            ? _db.PlaybookTemplates.IgnoreQueryFilters()
+            : _db.PlaybookTemplates;
+
+        return await query
             .FirstOrDefaultAsync(e => e.TenantId == tenantId && e.Id == id, ct)
             ?? throw new InvalidOperationException(
                 $"PlaybookTemplate {id} not found for tenant {tenantId}.");
