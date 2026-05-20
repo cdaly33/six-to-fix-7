@@ -180,6 +180,204 @@ All implementation work must land on named development branches and reach `main`
 
 ---
 
+---
+
+### ADR-013: Admin Bootstrap Seeder — Idempotent SuperAdmin Creation
+**Status:** Accepted | **Author:** Neo | **Date:** 2026-05-18
+
+Production had no users in ASP.NET Core Identity, so Chris needed a safe bootstrap path to create the first SuperAdmin without direct database writes. An environment-gated startup hosted service uses `UserManager<ApplicationUser>` and `RoleManager<IdentityRole<Guid>>` to create exactly one bootstrap SuperAdmin when no SuperAdmin user exists. The service is registered only when `SeedAdmin:Enabled=true`, reads `SeedAdmin:Email` and `SeedAdmin:Password` from configuration, confirms email immediately, and assigns the canonical `SuperAdmin` role. Idempotent: any existing SuperAdmin user makes startup a no-op. Non-fatal: missing config or Identity failures are logged and do not crash the host. All user/role changes flow through ASP.NET Core Identity managers. Prod wiring uses Key Vault flat secrets `SeedAdmin--Email` and `SeedAdmin--Password`, plus App Service env var `SeedAdmin__Enabled`.
+
+**Key decisions:**
+- Idempotent on startup: no-op if SuperAdmin exists
+- Non-fatal error handling: logs and continues
+- No raw Identity table writes; all changes via managers
+- Prod uses Key Vault references for secrets
+
+---
+
+### ADR-014: StrategyHub Domain Layer — Phase 3 Foundation
+**Status:** Accepted | **Author:** Neo | **Date:** 2026-05-19
+
+Phase 3 (PR #43) added the StrategyHub domain model: `PillarContent` (per-tenant per-pillar JSONB content), `UserPillarProgress` (per-user per-pillar 0–100%), `PlaybookTemplate` (tenant-scoped template catalogue). Enums: `Pillar` (Brand=1 … Management=6), `PlaybookTemplateStatus` (Draft/Published/Archived). Three new roles: `SuperAdmin`, `TenantAdmin`, `Client` replace magic strings; migration grants `Client` role to all existing Reviewer/Viewer users. Service interfaces (`IPillarContentService`, `IProgressService`, `IPlaybookTemplateService`) are stubs in Phase 3, implemented in Phase 4. `PillarContent.BodyJson` uses JSONB schema `{strategy: [title, points[]], execution: [string], templates: [string], examples: [string], metrics: [[label, value]]}` for evolving content without migration churn. Unique constraint `(tenant_id, pillar)` on pillar_contents ensures idempotent seeding.
+
+**Key decisions:**
+- JSONB for evolving content schema; relational columns avoided
+- Pillar stored as int; display names/colors in UI
+- Unique (tenant_id, pillar) for idempotent seeding
+- `PlaybookTemplate.Pillar` nullable for cross-pillar templates
+- Old Reviewer/Viewer role rows kept; legacy policies aliased in Program.cs until Phase 6 cleanup
+
+---
+
+### ADR-015: StrategyHub Services — Phase 4 Implementations
+**Status:** Accepted | **Author:** Neo | **Date:** 2026-05-19
+
+Phase 4 (PR #46) implements three services from Phase 3 interfaces. `PillarContentService` provides `GetForTenantAsync(tenantId, pillar)`, `GetAllForTenantAsync(tenantId)` (lazy-seeds 6 rows), `UpsertAsync(...)`. `ProgressService` provides `GetForUserAsync(userId)`, `SetPercentAsync(userId, pillar, percent, clamp 0-100)`, `GetAverageForUserAsync(...)` (sum/6). `PlaybookTemplateService` provides `GetPublishedAsync(tenantId, pillar?)` (matching + cross-pillar rows, ordered Popularity DESC then Name ASC), CRUD with status transitions (Draft→Published→Archived). Tenant isolation: EF Core global query filters + explicit service-layer predicates (two layers of defence). Lazy seeding in `GetAllForTenantAsync`: if < 6 rows exist, missing pillars seeded with `{"placeholder":true}` before return. All three services marked Scoped in DI.
+
+**Key decisions:**
+- Lazy seeding inside GetAllForTenantAsync (no separate seeder)
+- `SetPercentAsync` stamps TenantId from ITenantContext (Scoped injection)
+- `CreateAsync` always forces Draft regardless of input
+- Two-layer tenant isolation: global filter + explicit predicate
+- All services Scoped (phase 4 hook pattern consistent with Phase 3)
+
+---
+
+### ADR-016: Phase 6 — Remove Legacy Audit/Calibration System
+**Status:** Accepted | **Author:** Neo | **Date:** 2026-05-19
+
+The product pivoted from the Six-to-Fix audit/calibration system to StrategyHub. Phase 6 removes all domain entities, services, pages, and tests tied to legacy audit/calibration/skill-chain/telemetry system. Forward-only EF migration `DropLegacyAuditTables` drops 16 legacy tables. Post-Phase-6: clean domain model focused on StrategyHub (~120 files removed). Migration is forward-only; rollback requires manual DDL. Only remaining references are in EF Core migration Designer snapshots, which are historical metadata and should never be manually edited.
+
+**Key decisions:**
+- Complete removal of legacy entities/services/pages
+- Forward-only migration (no rollback)
+- Designer snapshots left intact (auto-generated, historical)
+- No orphaned policies or nav entries
+
+---
+
+### ADR-017: Prod Login 500 — Three-Layer Root Cause & Fixes
+**Status:** Accepted | **Author:** Neo | **Date:** 2026-05-18
+
+Production login failed (HTTP 500) due to three cascading issues. **Layer 1:** `sf_app` PostgreSQL role did not exist (created during burstable tier migration but not in pgBouncer). Fixed by manual `CREATE ROLE sf_app` executed as sfadmin. **Layer 2:** EF Core migrations never ran against prod (database empty). Fixed by `dotnet ef database update` with AdminConnection + startup migration runner in Program.cs (uses AdminConnection/sfadmin for DDL, DefaultConnection for DML). Migration `20260519033146_GrantAppRolePermissions` codifies GRANT/REVOKE SQL; fail-fast if `sf_app` missing. **Layer 3:** `SeedAdmin--Password` lacked digit+non-alphanumeric (Identity policy violation). Fixed by updating KV secret to meet policy. Standing rules: provision `sf_app` role before first deploy; validate `SeedAdmin--Password` meets Identity policy (≥12 chars, uppercase, digit, non-alphanumeric); never use DefaultConnection for DDL; startup migration runner prevents manual intervention.
+
+**Key decisions:**
+- Startup migration runner (Program.cs) + AdminConnection for all DDL
+- Migration `GrantAppRolePermissions` codifies role permissions + fail-fast guard
+- Prod KV secret management separate from Bicep (runtime secret, no Bicep PR)
+- Standing rules for future PostgreSQL provisioning
+
+---
+
+### ADR-018: ITenantService API — TenantAdminPanel MVP
+**Status:** Accepted | **Author:** Neo | **Date:** 2026-05-19
+
+`ITenantService` interface for TenantAdminPanel MVP (PR #57). `GetCurrentTenantAsync(tenantId)` returns TenantDto or null (active only). `UpdateTenantNameAsync(tenantId, newName)` validates non-empty, trims, updates Name + UpdatedAt, returns DTO. `GetTenantUsersAsync(tenantId)` returns list of TenantUserDto (Id, Email, FullName, Role via UserManager, IsActive, LastLogin null, CreatedAt), ordered by Email. Uses `UserManager<ApplicationUser>` for role lookup (not DbContext.Users). Scoped service. DTOs are immutable records. LastLogin always null (deferred enhancement). Following `IClientService` pattern: Scoped, DTOs, validation in service, logs updates.
+
+**Key decisions:**
+- `UserManager<ApplicationUser>` for role lookups (abstracts Identity schema)
+- LastLogin nullable in DTO (enhancement deferred)
+- Name-only editing for MVP (slug immutable, plan tier/HubSpot deferred)
+- User list read-only for MVP (invite/delete deferred)
+
+---
+
+### ADR-019: Bicep Drift Prevention — SeedAdmin App Settings
+**Status:** Accepted | **Author:** Tank | **Date:** 2026-05-18
+
+Chris manually wired three App Settings on `app-sixtofix-prod` for bootstrap seeder: `SeedAdmin__Enabled`, `SeedAdmin__Email` (KV ref), `SeedAdmin__Password` (KV ref). `infra/modules/appservice.bicep` was missing the KV references—next deploy would have overwritten and re-broken the seeder. Added `SeedAdmin__Email` and `SeedAdmin__Password` as KV references to `appservice.bicep` (same pattern as ConnectionStrings/Jwt). `SeedAdmin__Enabled` conditional expression kept: `isProd ? 'true' : 'false'`. **Standing rule:** When any manual Azure change is made (Portal, az CLI) not yet in Bicep, Tank must proactively open a Bicep PR to codify it—do NOT wait for Chris. Manual changes not in Bicep are time-bombs: next deploy silently wipes them.
+
+**Key decisions:**
+- Added KV references for Email + Password (following existing pattern)
+- Conditional expression preserved for Enabled flag
+- Proactive Bicep PR required for all manual changes
+
+---
+
+### ADR-020: CSP & Security Headers — Font Allowlist + Hardened Policy
+**Status:** Accepted | **Author:** Tank | **Date:** 2026-05-18
+
+Added CSP to prevent XSS and control resource loading. New middleware `SecurityHeadersMiddleware.cs` (Program.cs step 2). Policy: `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' wss: https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`. `'unsafe-inline'` on script-src required for Blazor Server circuit bootstrapper; `'unsafe-inline'` on style-src for Blazor scoped CSS. `wss:` in connect-src for SignalR WebSocket. `data:` in font-src for base64-encoded fonts. Additional headers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`. CI workflows validated: test.yml uses SixToFix.slnx ✅; deploy-app.yml ✅; deploy-infra.yml fixed stale RG name (`rg-StrategicGlue-CommandCenter` → `rg-sixtofix-prod`). No unreflected Bicep drift. `.gitignore` already has `*.lscache`.
+
+**Key decisions:**
+- CSP as single middleware injected early (step 2)
+- `'unsafe-inline'` justified for Blazor requirements
+- `wss:` for SignalR WebSocket connections
+- Additional headers for DENY + strict origin-when-cross-origin
+
+---
+
+### ADR-021: CSS Hotfix — Hero + Sidebar Styling
+**Status:** Accepted | **Author:** Trinity | **Date:** 2026-05-19
+
+Production CSS broken (PR #50): Hero H1 invisible, sidebar collapsed. **Root cause 1:** `tokens.css` missing `--hero-radial-overlay` (hero background radial-gradient var), `--text-5xl/6xl/7xl` (heading sizes). Missing CSS custom properties make entire property declaration invalid at computed-value time—fallback to initial (transparent background). **Root cause 2:** `App.razor` missing `<link href="SixToFix.Web.styles.css" />` (Blazor CSS isolation bundle not linked). `StrategyHubShell.razor.css`, `SectionSidebar.razor.css`, `NavItem.razor.css` never loaded. Chose NOT to add Tailwind CDN—custom CSS token system is complete, no Tailwind utility classes used. Minimal fix: add 4 missing tokens to `tokens.css` + add CSS isolation link to `App.razor`. Verified: hero now renders navy gradient ✅, sidebar styles load ✅, H1 visible on navy ✅. Known issue (not caused): smoke test expects 302 → 200 (Phase 2 public homepage), deferred.
+
+**Key decisions:**
+- Custom CSS token system complete; Tailwind not needed
+- Add missing var tokens instead of CDN
+- Add Blazor CSS isolation link to App.razor
+- Defer smoke test update to separate PR
+
+---
+
+### ADR-022: Login.razor Prerendering Disabled for Form Data
+**Status:** Accepted | **Author:** Trinity | **Date:** 2026-05-18
+
+Production bug (PR #40): Login form showed "Email required" + "Password required" errors even when fields visibly filled. **Root cause:** `Login.razor` used `@rendermode InteractiveServer` (defaults `prerender: true`). Lifecycle: (1) server prerender → static HTML form, (2) user fills inputs in static DOM, (3) Blazor SignalR circuit connects → component re-initializes with empty `_model = new LoginModel()`, (4) user submits → validates empty model → required-field errors. Stale DOM / empty model race. **Decision:** Disable prerendering: `@rendermode @(new InteractiveServerRenderMode(prerender: false))`. Form only appears after circuit live, all keystrokes flow directly to `_model`, no race. **Standing rule:** Any page with `@bind-Value` user inputs under InteractiveServer should use `prerender: false` unless explicit SEO/TTFB requirement. Read-only display pages safe with `prerender: true`. Login/registration/data-entry highest risk.
+
+**Key decisions:**
+- Disable prerender for form-heavy pages
+- Keep prerender on read-only display pages
+- Apply rule to Login, registration, data-entry
+
+---
+
+### ADR-023: Visual Foundation — Phase 1 StrategyHub Shell
+**Status:** Accepted | **Author:** Trinity | **Date:** 2026-05-19
+
+Phase 1 (PR #44) delivered StrategyHub UI shell: navbar, sidebar, layout components, tokens, icon system, form styles. Blazor components: `StrategyHubShell.razor` (flex-based responsive shell), `SectionSidebar.razor` (260px navy sidebar), `NavItem.razor` (nav with hover/active states), `Logo.razor`, icon sprites. CSS: token system (`tokens.css` → `components.css` → `app.css` → `public.css` cascade), custom properties for colors/spacing/type, component styles. Signed in / logged out layouts differ. Deferred to Phase 2: public homepage, hero section, pillar marketing cards, new pillar pages (`/brand`, etc.), legacy page deletion, role rename outside shell, CSP for fonts.
+
+**Key decisions:**
+- Token cascade: tokens → components → app → public
+- Flex-based responsive shell (no grid)
+- Custom properties for theming (no Tailwind)
+- Signed in / logged out layout variants
+
+---
+
+### ADR-024: Public Homepage — Phase 2 Marketing + Auth-Aware CTAs
+**Status:** Accepted | **Author:** Trinity | **Date:** 2026-05-19
+
+Phase 2 (PR #45) added public homepage at `/`. `Home.razor` rendered as static SSR (no `@rendermode`, no SignalR overhead), shows 6 pillar cards with auth-aware CTAs. `PublicLayout.razor` wraps public pages—sticky navy header, footer. CSS animations (fadeSlideUp keyframes, Framer Motion -like behavior, prefers-reduced-motion guard). Pillar card links → `/login` for now (Phase 4 adds pillar pages). Dashboard removed from `/` (now only `/dashboard`, [Authorize]). No-redirect gate on homepage (recommended approach—authenticated users see Dashboard/My-Playbook links, anonymous see Sign-In/Get-Started). Auth contract test updated (old test assumed wrong behavior; now asserts 200 OK for `/`, [Authorize] on `/dashboard`). Deferred to Phase 4: pillar pages, post-login redirect TODO, deep-links from cards.
+
+**Key decisions:**
+- `/` is public for everyone (no redirect gate)
+- Static SSR for Home.razor (better TTFB/SEO)
+- CSS animations only (no JS library)
+- Pillar links → `/login` (Phase 4 adds pages)
+
+---
+
+### ADR-025: Dashboard + Pillar Pages + Templates Library — Phase 4 Pages
+**Status:** Accepted | **Author:** Trinity | **Date:** 2026-05-19
+
+Phase 4 (PR #47) rewritten Dashboard, new PillarPage (6 routes), Templates library. `PillarPage.razor`: single component with 6 `@page` directives (`/brand` … `/management`), pillar resolved from NavigationManager.Uri, ordinal "(PILLAR 2 OF 6)" derived from enum. Dashboard: personalized playbook overview + progress grid + recent content (0% empty state with Getting Started cards). Templates.razor: `/templates` library with pillar filter + modal card view. CSS tokens only (zero hardcoded hex); `--pillar-brand`, `--pillar-customer`, etc.; `--color-gold-400`, `--color-navy-800`. All three pages use `@rendermode @(new InteractiveServerRenderMode(prerender: false))` (Phase 3 lesson). `EmptyContentMessage.razor` role-gated. BodyJson schema (Phase 3 domain): if `"placeholder":true` exists, treated as empty state. Cherry-picked service interfaces/implementations from PR #46 (dependency on PR #46). Deferred: BodyJson editing, template creation/publishing flows, CSP fonts, auth redirect.
+
+**Key decisions:**
+- Single PillarPage component with 6 `@page` routes
+- BodyJson placeholder detection for empty state
+- Pillar cards always rendered; progress loaded if userId available (more resilient)
+- Cherry-picked services from PR #46 (temporary; drop before merge if #46 merges first)
+- CSS tokens only, zero hardcoded colors
+
+---
+
+### ADR-026: Pillar Content Admin Editor — Phase 5
+**Status:** Accepted | **Author:** Trinity | **Date:** 2026-05-19
+
+Phase 5 (PR #55) added tenant admin content editor at `/admin/content`. Route-level auth `[Authorize]` + inner `<AuthorizeView>` for role enforcement (SuperAdmin, TenantAdmin). Tenant resolved from `tenant_id` claim (never query string—multi-tenant boundary enforced at auth). Pillar selection via `?pillar=` query param (tab pre-selection UX). BodyJson schema per ADR-025; plain textarea (rich editor deferred). All 6 pillar tabs rendered. Graceful fallback for legacy/placeholder JSON bodies. Page: `PillarContentAdmin.razor` (11 tests, all pass). Deferred: rich-text editor, audit trail UI (UpdatedByUserId stored/shown as truncated GUID), draft/publish workflow (live immediate).
+
+**Key decisions:**
+- Tenant from `tenant_id` claim (auth boundary)
+- `?pillar=` query for UX convenience only
+- Plain textarea for Phase 5 (rich editor deferred)
+- Live save (no draft workflow)
+
+---
+
+### ADR-027: Default Pillar Content Seeding Strategy
+**Status:** Accepted | **Author:** Trinity | **Date:** 2026-05-20
+
+StrategyHub users encountered empty pillar pages on first login (poor UX). Each pillar seeded with meaningful default content on tenant creation + backfill via migration. Each pillar: Title + Subtitle (1-sentence value prop) + BodyJson (1 strategy block with 3 actionable points, 3 execution steps, empty arrays for templates/examples/metrics). Conservative scaffolding—generic, widely applicable, non-invented advice. Implementation: `AdminBootstrapHostedService.GetDefaultPillarContent` (switch expression), `SeedPillarContentForTenantAsync` (calls GetDefaultPillarContent instead of empty body), Migration `20260520025400_SeedDefaultPillarContent` (UPDATE existing rows where body empty/placeholder). Defense-in-depth: `PillarContentService.GetAllForTenantAsync` lazy-seeds if seeder/migration fails. Pillar content: Brand (Define/Audit/Guidelines/Train), Customer (Know/Personas/Journey/Measure), Offering (Structure/Document/Bundle/Renew), Communication (Orchestrate/Map/Calendar/Track), Sales (Systematize/Process/CRM/Train), Management (Drive/Roles/KPIs/Reviews). Positive: new users see helpful scaffolding; reduced first-login emptiness; provides concrete examples. Negative: generic content may not match every tenant's industry; users still customize. Migration idempotent (only updates matching rows).
+
+**Key decisions:**
+- Bootstrap seeder + migration-based backfill
+- Generic scaffolding (no invented domain expertise)
+- Lazy self-healing in PillarContentService
+- Migration targets empty/placeholder rows only (idempotent)
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus

@@ -111,3 +111,24 @@ Tank's prod 401 fix (PR #28) identified a critical gap: `Login.razor` stores JWT
 - **Neo (SignalR→PeriodicTimer):** Replaced hub with polling (3s intervals). New endpoint: \GET /api/audit-runs/{id}/status\ (Bearer JWT, tenant-scoped).
 - **Tank (Search Index Cleanup):** Removed unused indexes; only \six-to-fix-evidence\ remains.
 - **Tank (Docs Sync):** Updated deployment guide for stack changes.
+
+---
+
+### 2026-05-20 — Next-Wave Complete: Security + TenantAdmin + Pillar Seed Content
+
+**Dispatch:** 2026-05-19T22:30:00-05:00  
+**Status:** ✅ COMPLETED (all 3 PRs merged)
+
+Three parallel agents (tank-9, neo-12, trinity-9) completed autonomously:
+
+1. **Tank (PR #56 — Cleanup):** CSP + security headers middleware, font allowlist for Google Fonts, CI/CD audits, Bicep drift verification (zero drift). Calibration/Telemetry fully removed (only Designer snapshots remain—auto-generated, not manually edited).
+
+2. **Neo (PR #57 — TenantAdminPanel MVP):** `ITenantService` API (GetCurrentTenant, UpdateTenantName, GetTenantUsers). Scoped DI, UserManager role abstraction. MVP scope: name-only tenant editing, read-only user list. Auth policies verified intact.
+
+3. **Trinity (PR #58 — Pillar Seed Content):** 6 pillars seeded with meaningful default scaffolding. Migration backfills existing tenants. Dashboard "Getting Started" empty state (3 action cards). Conservative, generic guidance per pillar.
+
+**Verification:** 98 unit tests passing, 0 errors, 2 pre-existing warnings (NU1904). Build clean.
+
+**Decisions recorded:** 15 ADRs (ADR-013 through ADR-027) in `.squad/decisions.md`.
+
+**Lead (you): know that StrategyHub onboarding UX improved** (no-empty-pillars strategy), **security hardened** (CSP+headers), and **tenant admin API ready** for Phase 5 integration.
