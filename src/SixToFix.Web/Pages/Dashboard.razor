@@ -1,6 +1,167 @@
 @page "/dashboard"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @attribute [Authorize]
 @inject NavigationManager Nav
+@inject IProgressService ProgressService
+@inject IClientService ClientService
+@inject AuthenticationStateProvider AuthStateProvider
+
 <PageTitle>Dashboard — StrategyHub</PageTitle>
-<div class="page-header"><div class="page-header-left"><h1 class="page-title">Dashboard</h1></div></div><div class="dashboard-grid"><div class="card dashboard-welcome"><div class="card-body"><h3>Welcome to StrategyHub</h3><p class="text-secondary">StrategyHub helps you build and execute strategy across six key pillars, delivering actionable playbooks and measurable progress.</p></div></div><a href="/pillars" class="card dashboard-nav-card"><div class="card-body"><h3 class="nav-card-title">Pillars</h3></div></a><a href="/templates" class="card dashboard-nav-card"><div class="card-body"><h3 class="nav-card-title">Templates</h3></div></a><AuthorizeView Roles="TenantAdmin,SuperAdmin"><Authorized><a href="/admin/tenant" class="card dashboard-nav-card"><div class="card-body"><h3 class="nav-card-title">Tenant Admin</h3></div></a></Authorized></AuthorizeView><AuthorizeView Roles="SuperAdmin"><Authorized><a href="/admin/super" class="card dashboard-nav-card"><div class="card-body"><h3 class="nav-card-title">Super Admin</h3></div></a></Authorized></AuthorizeView></div>
-@code { [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!; protected override async Task OnInitializedAsync() { var auth = await AuthState; if (!auth.User.Identity?.IsAuthenticated ?? true) Nav.NavigateTo("/login", forceLoad: false); } }
+
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Dashboard</h1>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <p class="text-secondary">Loading…</p>
+}
+else if (_showGettingStarted)
+{
+    <div class="getting-started">
+        <div class="getting-started__header">
+            <h2 class="getting-started__title">Welcome to Six-to-Fix</h2>
+            <p class="getting-started__subtitle">
+                Get started by completing these three steps to unlock the full potential of your StrategyHub.
+            </p>
+        </div>
+
+        <div class="getting-started__cards">
+            <a href="/clients" class="getting-started__card">
+                <div class="getting-started__number">1</div>
+                <h3 class="getting-started__card-title">Add a Client</h3>
+                <p class="getting-started__card-text">
+                    Create your first client to start building and tracking strategy.
+                </p>
+            </a>
+
+            <a href="/brand" class="getting-started__card">
+                <div class="getting-started__number">2</div>
+                <h3 class="getting-started__card-title">Review the 6 Pillars</h3>
+                <p class="getting-started__card-text">
+                    Explore each pillar to understand the strategic framework.
+                </p>
+            </a>
+
+            <a href="/templates" class="getting-started__card">
+                <div class="getting-started__number">3</div>
+                <h3 class="getting-started__card-title">Create Your First Playbook Template</h3>
+                <p class="getting-started__card-text">
+                    Build reusable playbook templates to accelerate execution.
+                </p>
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="dashboard-grid">
+        <div class="card dashboard-welcome">
+            <div class="card-body">
+                <h3>Welcome to StrategyHub</h3>
+                <p class="text-secondary">
+                    StrategyHub helps you build and execute strategy across six key pillars,
+                    delivering actionable playbooks and measurable progress.
+                </p>
+                @if (_averageProgress > 0)
+                {
+                    <div class="dashboard-progress">
+                        <div class="dashboard-progress__label">Your Progress</div>
+                        <div class="dashboard-progress__value">@_averageProgress%</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <a href="/brand" class="card dashboard-nav-card">
+            <div class="card-body">
+                <h3 class="nav-card-title">Pillars</h3>
+            </div>
+        </a>
+
+        <a href="/templates" class="card dashboard-nav-card">
+            <div class="card-body">
+                <h3 class="nav-card-title">Templates</h3>
+            </div>
+        </a>
+
+        <a href="/clients" class="card dashboard-nav-card">
+            <div class="card-body">
+                <h3 class="nav-card-title">Clients</h3>
+            </div>
+        </a>
+
+        <AuthorizeView Roles="TenantAdmin,SuperAdmin">
+            <Authorized>
+                <a href="/admin/tenant" class="card dashboard-nav-card">
+                    <div class="card-body">
+                        <h3 class="nav-card-title">Tenant Admin</h3>
+                    </div>
+                </a>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="SuperAdmin">
+            <Authorized>
+                <a href="/admin/super" class="card dashboard-nav-card">
+                    <div class="card-body">
+                        <h3 class="nav-card-title">Super Admin</h3>
+                    </div>
+                </a>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _showGettingStarted;
+    private int _averageProgress;
+    private Guid _userId;
+    private Guid _tenantId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+
+        if (!(user.Identity?.IsAuthenticated ?? false))
+        {
+            Nav.NavigateTo("/login", forceLoad: false);
+            return;
+        }
+
+        Guid.TryParse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value, out _userId);
+        Guid.TryParse(user.FindFirst("tenant_id")?.Value, out _tenantId);
+
+        if (_userId == Guid.Empty || _tenantId == Guid.Empty)
+        {
+            _loading = false;
+            return;
+        }
+
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+        try
+        {
+            var progressTask = ProgressService.GetAverageForUserAsync(_userId, cts.Token);
+            var clientsTask = ClientService.GetAllForTenantAsync(_tenantId, cts.Token);
+
+            await Task.WhenAll(progressTask, clientsTask);
+
+            _averageProgress = await progressTask;
+            var clients = await clientsTask;
+
+            _showGettingStarted = _averageProgress == 0 && clients.Count == 0;
+        }
+        catch (Exception)
+        {
+            // If services fail, show normal dashboard
+            _showGettingStarted = false;
+        }
+
+        _loading = false;
+    }
+}
