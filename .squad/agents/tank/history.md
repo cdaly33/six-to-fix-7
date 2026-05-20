@@ -61,6 +61,14 @@
   - **.gitignore audit:** `*.lscache` already present on line 32 — no change needed.
   - **Build:** Pre-existing Infrastructure build errors on main (missing `Pillar` domain type — in-flight StrategyHub pivot work by Neo/Trinity); 34 Domain unit tests pass ✅.
 
+- **2026-05-19 — SeedAdmin Security Fix + Smoke Test Correction (PR #56):**
+  - Added `seedAdminEnabled` bool parameter to `infra/modules/appservice.bicep` (defaults to `false`). Previously, `SeedAdmin__Enabled` was hardcoded to `isProd ? 'true' : 'false'`, meaning prod always ran the admin seeder on every restart — a security risk that may have contributed to login drift issues earlier.
+  - Changed `SeedAdmin__Enabled` app setting from `isProd ? 'true' : 'false'` to `seedAdminEnabled ? 'true' : 'false'`. Parameter can be overridden at deploy time if Chris needs to re-seed, but defaults to disabled.
+  - Fixed smoke test in `.github/workflows/deploy-app.yml`: changed expected status for `GET /` from `302` to `200`. Phase 2 shipped a public homepage at `/` (no auth required), so the old assumption that root redirects to `/login` is no longer valid.
+  - **Calibration/Telemetry husk cleanup:** No action needed. `.razor` pages, nav entries, controllers, and domain entities do not exist. Only EF Core migration Designer snapshots (`*Designer.cs`) contain references to `CalibrationDelta` and `TelemetryEvent` — these are auto-generated snapshots of past migrations and should never be manually edited.
+  - Bicep validated with `az bicep build --file infra/main.bicep`. Build successful (2 warnings, 0 errors). All tests pass (98 tests, 0 failures).
+  - **Lesson:** When Bicep params need to support both "on by default in prod" and "off by default for security," introduce an explicit bool param rather than tying behavior to `isProd`. Explicit params make the security posture visible in deploy scripts and easier to override.
+
 ---
 
 ## Phase 0 — Planning Artifacts (2026-05-10)

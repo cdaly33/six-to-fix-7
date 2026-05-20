@@ -1,56 +1,211 @@
 @page "/admin/tenant"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @attribute [Authorize(Roles = "TenantAdmin,SuperAdmin")]
+@layout StrategyHubShell
+@inject ITenantService TenantService
+@inject IClientService ClientService
+@inject NavigationManager Nav
 
 <PageTitle>Tenant Admin — Six to Fix</PageTitle>
 
-<div class="page-header">
-    <div class="page-header-left">
-        <h1 class="page-title">Tenant Admin Panel</h1>
+<div class="sh-templates">
+    <div class="sh-templates__header">
+        <div>
+            <h1 class="sh-templates__title">Tenant Administration</h1>
+            <p class="sh-templates__sub">Manage tenant settings and users.</p>
+        </div>
     </div>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="alert alert-danger" role="alert">@_error</div>
+    }
+
+    @if (_loading)
+    {
+        <p class="sh-templates__loading">Loading tenant information…</p>
+    }
+    else if (_tenant is not null)
+    {
+        <section style="margin-bottom: 2rem;">
+            <h2>Tenant Settings</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Tenant ID:</strong> <span style="font-family: monospace;">@_tenant.Id</span>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Slug:</strong> <span style="font-family: monospace;">@_tenant.Slug</span>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Created:</strong> @_tenant.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss UTC")
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label class="input-label" for="tenant-name">Display Name</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+                            <input id="tenant-name" class="input-field" type="text" @bind="_tenantNameEdit" style="flex: 1; max-width: 400px;" />
+                            <button class="btn btn-primary" @onclick="SaveTenantNameAsync" disabled="@_saving">
+                                @if (_saving) { <text>Saving…</text> } else { <text>Save</text> }
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Users</h2>
+            @if (_users.Count == 0)
+            {
+                <div class="sh-empty-state">
+                    <p class="sh-empty-state__text">No users found.</p>
+                </div>
+            }
+            else if (_users.Count == 1)
+            {
+                <div class="card">
+                    <div class="card-body">
+                        <p style="margin-bottom: 1rem;">You're the only user in this tenant. User invite is coming soon.</p>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Full Name</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>@_users[0].Email</td>
+                                    <td>@_users[0].FullName</td>
+                                    <td>@_users[0].Role</td>
+                                    <td>@(_users[0].IsActive ? "Active" : "Disabled")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Full Name</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in _users)
+                                {
+                                    <tr>
+                                        <td>@user.Email</td>
+                                        <td>@user.FullName</td>
+                                        <td>@user.Role</td>
+                                        <td>@(user.IsActive ? "Active" : "Disabled")</td>
+                                        <td>@user.CreatedAt.ToString("yyyy-MM-dd")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </section>
+    }
 </div>
-
-<div class="stat-grid">
-    <div class="stat-card">
-        <span class="stat-card-label">Active Users</span>
-        <span class="stat-card-value">—</span>
-        <span class="stat-card-sub">In this tenant</span>
-    </div>
-    <div class="stat-card">
-        <span class="stat-card-label">Clients</span>
-        <span class="stat-card-value">—</span>
-        <span class="stat-card-sub">Registered</span>
-    </div>
-    <div class="stat-card">
-        <span class="stat-card-label">Plan Tier</span>
-        <span class="stat-card-value">—</span>
-        <span class="stat-card-sub">Current plan</span>
-    </div>
-</div>
-
-<section>
-    <h2>Settings</h2>
-    <div class="placeholder-section">
-        @* TODO (Phase 5): Implement tenant settings — name, slug, plan tier, HubSpot token,
-           reviewer assignment, skill thresholds, policy rule overrides.
-           Requires dedicated admin service methods, not yet defined. *@
-        <p>Tenant settings configuration is coming in Phase 5.</p>
-    </div>
-</section>
-
-<section>
-    <h2>User Management</h2>
-    <div class="placeholder-section">
-        <p>Invite users, assign roles, and deactivate accounts — coming in Phase 5.</p>
-    </div>
-</section>
 
 @code {
     [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
+
+    private TenantDto? _tenant;
+    private List<TenantUserDto> _users = new();
+    private string _tenantNameEdit = string.Empty;
+    private bool _loading = true;
+    private bool _saving = false;
+    private string? _error;
+    private Guid _tenantId;
 
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthState;
         if (!auth.User.Identity?.IsAuthenticated ?? true)
             return;
+
+        var tenantIdClaim = auth.User.FindFirst("tenant_id");
+        if (tenantIdClaim is null || !Guid.TryParse(tenantIdClaim.Value, out _tenantId))
+        {
+            _error = "Tenant ID not found in user claims.";
+            _loading = false;
+            return;
+        }
+
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            _loading = true;
+            _error = null;
+
+            _tenant = await TenantService.GetCurrentTenantAsync(_tenantId);
+            if (_tenant is null)
+            {
+                _error = "Tenant not found.";
+                return;
+            }
+
+            _tenantNameEdit = _tenant.Name;
+            _users = (await TenantService.GetTenantUsersAsync(_tenantId)).ToList();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load tenant data: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SaveTenantNameAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_tenantNameEdit))
+        {
+            _error = "Tenant name cannot be empty.";
+            return;
+        }
+
+        try
+        {
+            _saving = true;
+            _error = null;
+
+            var updated = await TenantService.UpdateTenantNameAsync(_tenantId, _tenantNameEdit);
+            if (updated is not null)
+            {
+                _tenant = updated;
+            }
+            else
+            {
+                _error = "Failed to update tenant name.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Error updating tenant name: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 }

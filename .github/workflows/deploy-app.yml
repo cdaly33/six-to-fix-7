@@ -146,8 +146,8 @@ jobs:
             exit 1
           }
 
-          # 1. Root: must redirect to /login (302), must NOT be 403 or nginx
-          smoke_check "GET /" "$APP_URL/" "302" '-H "Accept: text/html" -H "Sec-Fetch-Mode: navigate"'
+          # 1. Root: public homepage returns 200, must NOT be 403 or nginx
+          smoke_check "GET /" "$APP_URL/" "200" '-H "Accept: text/html" -H "Sec-Fetch-Mode: navigate"'
 
           # 2. Health endpoint: must return 200 (no auth required)
           smoke_check "GET /health" "$APP_URL/health" "200"

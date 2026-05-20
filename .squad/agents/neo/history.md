@@ -341,6 +341,61 @@ Root cause: `Policy` entity had 0% coverage; `Tenant` entity had ~43%.
 - `Tenant` — defaults, full property round-trip, LogoUrl null, IsActive false
 
 **Result:** All 6 `SixToFix.Domain` entity classes at 100% line coverage. CI green on PR #48.
+
+## 2026-05-19 — TenantAdminPanel MVP + Tenant Service (PR #57)
+
+**Context:** Tonight's Fix-Now wave shipped Clients CRUD (PR #52). Admin pages were stubs. Chris called them "completely worthless."
+
+**Task 1: TenantAdminPanel MVP**
+
+**Service Layer Created:**
+- `ITenantService` interface in `src/SixToFix.Application/Services/` with 3 methods:
+  * `GetCurrentTenantAsync(tenantId)` → `TenantDto?` (id, name, slug, created_at)
+  * `UpdateTenantNameAsync(tenantId, newName)` → `TenantDto?` (validates non-empty, updates display name)
+  * `GetTenantUsersAsync(tenantId)` → `IReadOnlyList<TenantUserDto>` (email, full name, role from Identity, status, created date, nullable last login)
+
+- `TenantService` implementation in `src/SixToFix.Infrastructure/Services/`:
+  * Uses `SixToFixDbContext` for tenant queries (filters by IsActive)
+  * Uses `UserManager<ApplicationUser>` for role lookups (calls `GetRolesAsync` per user)
+  * Registered as Scoped in `BusinessServiceExtensions` (matches `IClientService` pattern from PR #52)
+  * Validates tenant name not empty, trims whitespace, logs updates
+
+- `TenantDto`, `TenantUserDto`, `UpdateTenantNameDto` in `src/SixToFix.Application/Models/TenantDtos.cs`
+
+**UI Implementation:**
+- `src/SixToFix.Web/Pages/TenantAdminPanel.razor` updated from stub to MVP:
+  * Uses `@rendermode InteractiveServerRenderMode(prerender: false)` and `StrategyHubShell` layout
+  * Tenant settings card: shows Tenant ID (read-only monospace), Slug (read-only monospace), Created date, editable Name field with Save button
+  * User list: table with Email, Full Name, Role, Status (Active/Disabled), Created Date columns
+  * Empty state: "You're the only user in this tenant. User invite is coming soon." when 1 user exists
+  * Uses existing CSS (no inline styles, no hardcoded hex colors)
+
+**Tests Added:**
+- `tests/SixToFix.Infrastructure.Tests/Services/TenantServiceTests.cs` with 5 xUnit tests:
+  * `GetCurrentTenantAsync` with active tenant → returns DTO
+  * `GetCurrentTenantAsync` with inactive tenant → returns null
+  * `UpdateTenantNameAsync` with valid name → updates and returns DTO
+  * `UpdateTenantNameAsync` with empty/whitespace name → throws `InvalidOperationException`
+  * `GetTenantUsersAsync` → returns users with roles from Identity (fake UserManager implementation)
+
+**Task 2: Auth Policy Cleanup**
+
+- Verified all 5 auth policies in `Program.cs`: SuperAdmin, TenantAdmin, Client, Reviewer, Viewer
+- All policies actively used in `ApiEndpointExtensions.cs`:
+  * `Viewer` policy → `GetClients`, `GetClientById` (lines 47, 57)
+  * `TenantAdmin` policy → `CreateClient`, `UpdateClient`, `DeleteClient` (lines 78, 98, 108)
+- Comment in Program.cs line 121 confirms: "Legacy policy names kept as aliases during phase-3 → phase-6 transition"
+- **No dead policies found** — all are wired correctly and in active use
+
+**Build/Test Results:**
+- Build: succeeded (2 nullable warnings in test file, non-blocking)
+- Tests: 98 passed (20 in Infrastructure.Tests including 5 new TenantService tests)
+- PR #57 merged to main via squash
+
+**Key Decisions:**
+- TenantService follows IClientService pattern from PR #52: Scoped registration, uses DbContext + Identity manager, structured DTOs, explicit validation
+- Last login tracking deferred (ApplicationUser has no LastLogin property; nullable in DTO returns null for now)
+- User role lookup uses UserManager.GetRolesAsync and takes first role (multi-role not yet supported in UI)
 PR #48 deleted ~141 legacy files, dropping SixToFix.Domain coverage to 71.40% (gate: 80%).
 Root cause: Policy entity had 0% coverage; Tenant entity had ~43%.
 

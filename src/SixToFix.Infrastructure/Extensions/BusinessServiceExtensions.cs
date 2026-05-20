@@ -12,6 +12,7 @@ public static class BusinessServiceExtensions
         services.AddScoped<IPillarContentService, PillarContentService>();
         services.AddScoped<IProgressService, ProgressService>();
         services.AddScoped<IPlaybookTemplateService, PlaybookTemplateService>();
+        services.AddScoped<ITenantService, TenantService>();
         return services;
     }
 }

@@ -136,8 +136,6 @@ public sealed class AdminBootstrapHostedService : BackgroundService
 
     internal async Task SeedPillarContentForTenantAsync(SixToFixDbContext db, Guid tenantId, CancellationToken cancellationToken = default)
     {
-        const string emptyBody = """{"strategy":[],"execution":[],"templates":[],"examples":[],"metrics":[]}""";
-
         foreach (Pillar pillar in Enum.GetValues<Pillar>())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -145,14 +143,16 @@ public sealed class AdminBootstrapHostedService : BackgroundService
             var exists = db.PillarContents.Any(p => p.TenantId == tenantId && p.Pillar == pillar);
             if (exists) continue;
 
+            var (title, subtitle, bodyJson) = GetDefaultPillarContent(pillar);
+
             db.PillarContents.Add(new PillarContent
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
                 Pillar = pillar,
-                Title = $"{pillar} Strategy",
-                Subtitle = string.Empty,
-                BodyJson = emptyBody,
+                Title = title,
+                Subtitle = subtitle,
+                BodyJson = bodyJson,
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow
             });
@@ -160,6 +160,44 @@ public sealed class AdminBootstrapHostedService : BackgroundService
 
         await db.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("Pillar content seeded for tenant {TenantId}", tenantId);
+    }
+
+    private static (string Title, string Subtitle, string BodyJson) GetDefaultPillarContent(Pillar pillar)
+    {
+        return pillar switch
+        {
+            Pillar.Brand => (
+                "Brand Strategy",
+                "Build a powerful brand identity and positioning",
+                """{"strategy":[{"title":"Define Your Identity","points":["Establish clear brand values and mission","Create consistent visual and verbal identity","Differentiate from competitors with unique positioning"]}],"execution":["Audit current brand perception across touchpoints","Document brand guidelines and style standards","Train team on consistent brand application"],"templates":[],"examples":[],"metrics":[]}"""
+            ),
+            Pillar.Customer => (
+                "Customer Strategy",
+                "Understand audience segments, acquisition priorities, and retention motion",
+                """{"strategy":[{"title":"Know Your Audience","points":["Segment customers by behavior and value","Map the customer journey from awareness to advocacy","Prioritize high-value segments for targeted growth"]}],"execution":["Create detailed buyer personas with pain points","Identify key touchpoints in the customer lifecycle","Measure engagement and satisfaction at each stage"],"templates":[],"examples":[],"metrics":[]}"""
+            ),
+            Pillar.Offering => (
+                "Offering Strategy",
+                "Package services for clarity, recurring revenue, and easier buying decisions",
+                """{"strategy":[{"title":"Structure Your Portfolio","points":["Design clear service tiers with predictable pricing","Create productized offerings that scale","Align packages to customer maturity stages"]}],"execution":["Document all current services and their margins","Bundle complementary services into coherent packages","Establish renewal and upsell pathways"],"templates":[],"examples":[],"metrics":[]}"""
+            ),
+            Pillar.Communication => (
+                "Communication Strategy",
+                "Deliver the right message at the right time across all channels",
+                """{"strategy":[{"title":"Orchestrate Your Message","points":["Develop content that addresses each stage of the buyer journey","Coordinate messaging across channels for consistency","Measure engagement to refine content strategy"]}],"execution":["Map content types to buyer journey stages","Establish editorial calendar and approval workflow","Track content performance and optimize based on data"],"templates":[],"examples":[],"metrics":[]}"""
+            ),
+            Pillar.Sales => (
+                "Sales Strategy",
+                "Turn demand into predictable revenue with clear process and follow-through",
+                """{"strategy":[{"title":"Systematize Revenue Generation","points":["Define repeatable sales stages and qualification criteria","Implement CRM to track pipeline and forecast accurately","Align sales and marketing on lead handoff and nurture"]}],"execution":["Document current sales process and identify gaps","Configure CRM with custom fields and automation","Train team on consistent qualification and follow-up"],"templates":[],"examples":[],"metrics":[]}"""
+            ),
+            Pillar.Management => (
+                "Management Strategy",
+                "Operationalize the framework with ownership, KPIs, and execution rhythm",
+                """{"strategy":[{"title":"Drive Accountability","points":["Assign clear owners for each pillar and initiative","Establish KPIs that ladder up to business goals","Create regular review cadence to course-correct"]}],"execution":["Define roles and responsibilities across pillars","Set up dashboard to track progress and outcomes","Schedule monthly reviews with stakeholder accountability"],"templates":[],"examples":[],"metrics":[]}"""
+            ),
+            _ => throw new ArgumentOutOfRangeException(nameof(pillar), pillar, "Unknown pillar")
+        };
     }
 
     private static string FormatErrors(IdentityResult result)

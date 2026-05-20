@@ -6,6 +6,7 @@ param keyVaultName string
 param keyVaultUri string
 param blobEndpoint string
 param searchEndpoint string
+param seedAdminEnabled bool = false
 
 var isProd = environment == 'prod'
 var nameSuffix = '${appName}-${environment}'
@@ -57,7 +58,7 @@ resource appSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     Storage__BlobEndpoint: blobEndpoint
     ConnectionStrings__DefaultConnection: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=ConnectionStrings--DefaultConnection)'
     ConnectionStrings__AdminConnection: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=ConnectionStrings--AdminConnection)'
-    SeedAdmin__Enabled: isProd ? 'true' : 'false'
+    SeedAdmin__Enabled: seedAdminEnabled ? 'true' : 'false'
     SeedAdmin__Email: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=SeedAdmin--Email)'
     SeedAdmin__Password: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=SeedAdmin--Password)'
     Jwt__SigningKey: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=Jwt--SigningKey)'
