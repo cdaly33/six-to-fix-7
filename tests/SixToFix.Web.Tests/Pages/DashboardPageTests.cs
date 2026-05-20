@@ -12,7 +12,10 @@ public sealed class DashboardPageTests
         if (authenticated)
         {
             auth.SetAuthorized("testuser");
-            auth.SetClaims(new Claim("tenant_id", Guid.NewGuid().ToString()));
+            auth.SetClaims(
+                new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+                new Claim("tenant_id", Guid.NewGuid().ToString())
+            );
             if (role is not null) auth.SetRoles(role);
         }
 
