@@ -50,8 +50,18 @@
         @if (_isAdmin)
         {
             <li>
-                <NavItem Label="Admin" Href="/admin/content" IsActive="@IsActive("/admin")">
+                <NavItem Label="Clients" Href="/clients" IsActive="@IsActive("/clients")">
+                    <Icon><UsersIcon /></Icon>
+                </NavItem>
+            </li>
+            <li>
+                <NavItem Label="Admin" Href="/admin/content" IsActive="@IsActive("/admin/content")">
                     <Icon><SettingsIcon /></Icon>
+                </NavItem>
+            </li>
+            <li>
+                <NavItem Label="Template Admin" Href="/admin/templates" IsActive="@IsActive("/admin/templates")">
+                    <Icon><ClipboardIcon /></Icon>
                 </NavItem>
             </li>
         }

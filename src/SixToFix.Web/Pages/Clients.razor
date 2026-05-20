@@ -1,0 +1,230 @@
+@page "/clients"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@attribute [Authorize]
+@layout StrategyHubShell
+@using Microsoft.AspNetCore.WebUtilities
+@inject IClientService ClientService
+@inject NavigationManager Nav
+
+<PageTitle>Clients — StrategyHub</PageTitle>
+
+<div class="sh-templates">
+    <div class="sh-templates__header">
+        <div>
+            <h1 class="sh-templates__title">Clients</h1>
+            <p class="sh-templates__sub">Manage the active client list for this tenant.</p>
+        </div>
+        @if (_canManage)
+        {
+            <button class="btn btn-primary" @onclick="OpenAddModal">Add Client</button>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="alert alert-danger" role="alert">@_error</div>
+    }
+
+    @if (_loading)
+    {
+        <p class="sh-templates__loading">Loading clients…</p>
+    }
+    else if (_clients.Count == 0)
+    {
+        <div class="sh-empty-state sh-templates__empty">
+            <p class="sh-empty-state__text">No clients yet.</p>
+            @if (_canManage)
+            {
+                <p class="sh-empty-state__hint">Use Add Client to create the first one.</p>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Contact Email</th>
+                            <th>Notes</th>
+                            @if (_canManage)
+                            {
+                                <th>Actions</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var client in _clients)
+                        {
+                            <tr>
+                                <td>@client.Name</td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(client.ContactEmail))
+                                    {
+                                        <a href="mailto:@client.ContactEmail">@client.ContactEmail</a>
+                                    }
+                                </td>
+                                <td>@client.Notes</td>
+                                @if (_canManage)
+                                {
+                                    <td>
+                                        <button class="btn btn-sm btn-secondary" @onclick="() => SoftDeleteAsync(client.Id)" disabled="@_saving">Delete</button>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (_showAddModal)
+    {
+        <div class="sh-modal-backdrop" @onclick="CloseAddModal">
+            <div class="sh-modal" @onclick:stopPropagation>
+                <div class="sh-modal__header">
+                    <h2 class="sh-modal__title">Add Client</h2>
+                    <button class="sh-modal__close" @onclick="CloseAddModal" aria-label="Close">✕</button>
+                </div>
+                <EditForm Model="_createModel" OnValidSubmit="CreateClientAsync">
+                    <DataAnnotationsValidator />
+                    <div class="sh-modal__body">
+                        <ValidationSummary />
+                        <div class="form-group">
+                            <label class="input-label" for="client-name">Name</label>
+                            <InputText id="client-name" class="input-field" @bind-Value="_createModel.Name" />
+                            <ValidationMessage For="() => _createModel.Name" />
+                        </div>
+                        <div class="form-group">
+                            <label class="input-label" for="client-email">Contact Email</label>
+                            <InputText id="client-email" class="input-field" @bind-Value="_createModel.ContactEmail" />
+                            <ValidationMessage For="() => _createModel.ContactEmail" />
+                        </div>
+                        <div class="form-group">
+                            <label class="input-label" for="client-notes">Notes</label>
+                            <InputTextArea id="client-notes" class="input-field" @bind-Value="_createModel.Notes" />
+                            <ValidationMessage For="() => _createModel.Notes" />
+                        </div>
+                    </div>
+                    <div class="sh-modal__footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseAddModal" disabled="@_saving">Cancel</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">@(_saving ? "Saving…" : "Save")</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = null!;
+
+    private List<Client> _clients = [];
+    private CreateClientDto _createModel = new();
+    private Guid _tenantId;
+    private bool _canManage;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _showAddModal;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState;
+        var user = auth.User;
+        _canManage = user.IsInRole("SuperAdmin") || user.IsInRole("TenantAdmin");
+        _tenantId = ResolveTenantId(user);
+        await LoadClientsAsync();
+    }
+
+    private async Task LoadClientsAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            if (_tenantId == Guid.Empty)
+            {
+                _error = "Tenant context is unavailable.";
+                return;
+            }
+
+            _clients = (await ClientService.GetAllForTenantAsync(_tenantId)).ToList();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenAddModal()
+    {
+        _createModel = new CreateClientDto();
+        _error = null;
+        _showAddModal = true;
+    }
+
+    private void CloseAddModal() => _showAddModal = false;
+
+    private async Task CreateClientAsync()
+    {
+        if (!_canManage || _tenantId == Guid.Empty) return;
+
+        _saving = true;
+        _error = null;
+        try
+        {
+            await ClientService.CreateAsync(_createModel, _tenantId);
+            _showAddModal = false;
+            await LoadClientsAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task SoftDeleteAsync(Guid id)
+    {
+        if (!_canManage || _tenantId == Guid.Empty) return;
+
+        _saving = true;
+        _error = null;
+        try
+        {
+            await ClientService.DeleteAsync(id, _tenantId);
+            await LoadClientsAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private Guid ResolveTenantId(ClaimsPrincipal user)
+    {
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+        if (user.IsInRole("SuperAdmin") && query.TryGetValue("tenantId", out var value) && Guid.TryParse(value, out var requestedTenantId))
+        {
+            return requestedTenantId;
+        }
+
+        return Guid.TryParse(user.FindFirst("tenant_id")?.Value, out var tenantId) ? tenantId : Guid.Empty;
+    }
+}

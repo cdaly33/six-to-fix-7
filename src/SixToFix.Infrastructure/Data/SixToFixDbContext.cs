@@ -10,6 +10,7 @@ public sealed class SixToFixDbContext : IdentityDbContext<ApplicationUser, Ident
     private readonly ITenantContext _tenantContext;
     public SixToFixDbContext(DbContextOptions<SixToFixDbContext> options, ITenantContext tenantContext) : base(options) => _tenantContext = tenantContext;
     public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<Client> Clients => Set<Client>();
     public DbSet<PillarContent> PillarContents => Set<PillarContent>();
     public DbSet<UserPillarProgress> UserPillarProgresses => Set<UserPillarProgress>();
     public DbSet<PlaybookTemplate> PlaybookTemplates => Set<PlaybookTemplate>();
@@ -17,6 +18,7 @@ public sealed class SixToFixDbContext : IdentityDbContext<ApplicationUser, Ident
     {
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(typeof(SixToFixDbContext).Assembly);
+        builder.Entity<Client>().HasQueryFilter(e => (!_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId) && e.IsActive);
         builder.Entity<PillarContent>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
         builder.Entity<UserPillarProgress>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
         builder.Entity<PlaybookTemplate>().HasQueryFilter(e => !_tenantContext.IsResolved || e.TenantId == _tenantContext.TenantId);
