@@ -111,6 +111,10 @@
                     {
                         <p class="sh-modal__notes">@_selectedTemplate.Notes</p>
                     }
+                    @if (!string.IsNullOrWhiteSpace(_selectedTemplate.ContentMarkdown))
+                    {
+                        <pre class="sh-modal__content">@_selectedTemplate.ContentMarkdown</pre>
+                    }
                     <p class="sh-modal__updated">Last updated: @_selectedTemplate.LastUpdatedAt.ToString("MMMM d, yyyy")</p>
                 </div>
                 <div class="sh-modal__footer">

@@ -303,6 +303,11 @@ namespace SixToFix.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("ContentMarkdown")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content_markdown");
+
                     b.Property<string>("Format")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -315,8 +320,8 @@ namespace SixToFix.Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
                     b.Property<string>("Notes")

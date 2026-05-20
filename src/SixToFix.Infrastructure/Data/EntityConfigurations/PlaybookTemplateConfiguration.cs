@@ -17,7 +17,7 @@ public sealed class PlaybookTemplateConfiguration : IEntityTypeConfiguration<Pla
 
         builder.Property(e => e.Name)
             .IsRequired()
-            .HasMaxLength(256);
+            .HasMaxLength(200);
 
         builder.Property(e => e.Format)
             .IsRequired()
@@ -25,6 +25,10 @@ public sealed class PlaybookTemplateConfiguration : IEntityTypeConfiguration<Pla
 
         builder.Property(e => e.Notes)
             .HasMaxLength(2048);
+
+        builder.Property(e => e.ContentMarkdown)
+            .IsRequired()
+            .HasColumnType("text");
 
         builder.HasIndex(e => new { e.TenantId, e.Status });
     }

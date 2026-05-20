@@ -7,6 +7,11 @@ namespace SixToFix.Application.Services;
 public interface IPlaybookTemplateService
 {
     /// <summary>
+    /// Returns all templates visible to an admin. Passing null is reserved for authorized SuperAdmin callers.
+    /// </summary>
+    Task<IReadOnlyList<PlaybookTemplate>> GetAllAsync(Guid? tenantId, CancellationToken ct = default);
+
+    /// <summary>
     /// Returns all Published templates for a tenant. When <paramref name="pillar"/> is provided,
     /// results are filtered to that pillar plus any null-pillar (cross-cutting) templates.
     /// When <paramref name="pillar"/> is null, returns all Published templates regardless of pillar.
@@ -20,11 +25,14 @@ public interface IPlaybookTemplateService
     Task<PlaybookTemplate> CreateAsync(Guid tenantId, PlaybookTemplate template, CancellationToken ct = default);
 
     /// <summary>Updates a template's mutable fields. TenantId and Status are not changed here.</summary>
-    Task<PlaybookTemplate> UpdateAsync(Guid tenantId, PlaybookTemplate template, CancellationToken ct = default);
+    Task<PlaybookTemplate> UpdateAsync(Guid tenantId, PlaybookTemplate template, CancellationToken ct = default, bool includeAllTenants = false);
 
     /// <summary>Transitions a template to Published status.</summary>
-    Task<PlaybookTemplate> PublishAsync(Guid tenantId, Guid id, CancellationToken ct = default);
+    Task<PlaybookTemplate> PublishAsync(Guid tenantId, Guid id, CancellationToken ct = default, bool includeAllTenants = false);
+
+    /// <summary>Transitions a template to Draft status.</summary>
+    Task<PlaybookTemplate> UnpublishAsync(Guid tenantId, Guid id, CancellationToken ct = default, bool includeAllTenants = false);
 
     /// <summary>Transitions a template to Archived status.</summary>
-    Task<PlaybookTemplate> ArchiveAsync(Guid tenantId, Guid id, CancellationToken ct = default);
+    Task<PlaybookTemplate> ArchiveAsync(Guid tenantId, Guid id, CancellationToken ct = default, bool includeAllTenants = false);
 }
