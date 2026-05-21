@@ -10,6 +10,7 @@ public sealed class DeploymentInfoEndpointTests
     {
         using var factory = new CustomWebApplicationFactory(config =>
         {
+            config["Deploy:BuildTimestamp"] = "2026-05-20T20:00:00+00:00";
             config["Deploy:Timestamp"] = "2026-05-20T21:00:00+00:00";
             config["Deploy:CommitSha"] = "abc1234def";
         });
@@ -19,7 +20,8 @@ public sealed class DeploymentInfoEndpointTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var payload = await response.Content.ReadFromJsonAsync<DeploymentInfoResponse>();
         payload.Should().NotBeNull();
-        payload!.DeployedAt.Should().Be(DateTimeOffset.Parse("2026-05-20T21:00:00+00:00"));
+        payload!.BuildTimestamp.Should().Be(DateTimeOffset.Parse("2026-05-20T20:00:00+00:00"));
+        payload.DeployedAt.Should().Be(DateTimeOffset.Parse("2026-05-20T21:00:00+00:00"));
         payload.CommitSha.Should().Be("abc1234");
     }
 
@@ -33,7 +35,8 @@ public sealed class DeploymentInfoEndpointTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var payload = await response.Content.ReadFromJsonAsync<DeploymentInfoResponse>();
         payload.Should().NotBeNull();
-        payload!.DeployedAt.Should().BeNull();
+        payload!.BuildTimestamp.Should().BeNull();
+        payload.DeployedAt.Should().BeNull();
         payload.CommitSha.Should().BeNull();
     }
 
@@ -68,6 +71,7 @@ public sealed class DeploymentInfoEndpointTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["Deploy:BuildTimestamp"] = "not-a-date",
                 ["Deploy:Timestamp"] = "not-a-date",
                 ["Deploy:CommitSha"] = "abc1234"
             })
@@ -76,7 +80,8 @@ public sealed class DeploymentInfoEndpointTests
         var svc = new DeploymentInfoService(config);
         var info = svc.GetDeploymentInfo();
 
-        info.DeployedAt.Should().BeNull("invalid timestamp must fall back to null");
+        info.BuildTimestamp.Should().BeNull("invalid build timestamp must fall back to null");
+        info.DeployedAt.Should().BeNull("invalid deploy timestamp must fall back to null");
         info.CommitSha.Should().Be("abc1234");
     }
 }

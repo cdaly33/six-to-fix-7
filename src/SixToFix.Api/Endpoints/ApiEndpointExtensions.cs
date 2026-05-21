@@ -23,7 +23,7 @@ public static class ApiEndpointExtensions
         app.MapGet("/api/deployment-info", (IDeploymentInfoService deploymentInfoService) =>
         {
             var info = deploymentInfoService.GetDeploymentInfo();
-            return Results.Ok(new DeploymentInfoResponse(info.DeployedAt, info.CommitSha));
+            return Results.Ok(new DeploymentInfoResponse(info.BuildTimestamp, info.DeployedAt, info.CommitSha));
         }).AllowAnonymous().WithName("DeploymentInfo");
         MapAuthEndpoints(app);
         MapClientEndpoints(app);
