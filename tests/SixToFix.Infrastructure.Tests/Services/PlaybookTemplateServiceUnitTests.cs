@@ -35,6 +35,35 @@ public sealed class PlaybookTemplateServiceUnitTests
         (await sut.GetByIdAsync(otherTenantId, created.Id)).Should().BeNull();
     }
 
+    [Fact]
+    public async Task GetPublishedAsync_NoPublishedTemplates_SeedsTenantStarterTemplates()
+    {
+        var tenantId = Guid.NewGuid();
+        await using var db = CreateDbContext(tenantId);
+        var sut = new PlaybookTemplateService(db, NullLogger<PlaybookTemplateService>.Instance);
+
+        var result = await sut.GetPublishedAsync(tenantId, null);
+
+        result.Should().NotBeEmpty();
+        result.Should().OnlyContain(t => t.TenantId == tenantId);
+        result.Should().OnlyContain(t => t.Status == PlaybookTemplateStatus.Published);
+        result.Should().Contain(t => t.Pillar == Pillar.Brand);
+        result.Should().Contain(t => t.Pillar == Pillar.Management);
+    }
+
+    [Fact]
+    public async Task GetPublishedAsync_ExistingPublishedTemplates_DoesNotDuplicateSeedRows()
+    {
+        var tenantId = Guid.NewGuid();
+        await using var db = CreateDbContext(tenantId);
+        var sut = new PlaybookTemplateService(db, NullLogger<PlaybookTemplateService>.Instance);
+
+        var first = await sut.GetPublishedAsync(tenantId, null);
+        var second = await sut.GetPublishedAsync(tenantId, null);
+
+        second.Should().HaveCount(first.Count);
+    }
+
     private static SixToFixDbContext CreateDbContext(Guid tenantId)
     {
         var options = new DbContextOptionsBuilder<SixToFixDbContext>()

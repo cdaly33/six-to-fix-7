@@ -6,11 +6,11 @@ namespace SixToFix.Application.Services;
 /// </summary>
 public interface IPillarContentService
 {
-    /// <summary>Returns the content for a single pillar, or null if not yet seeded.</summary>
+    /// <summary>Returns the content for a single pillar, seeding starter content if missing.</summary>
     Task<PillarContent?> GetForTenantAsync(Guid tenantId, Pillar pillar, CancellationToken ct = default);
 
     /// <summary>
-    /// Returns content for all 6 pillars, lazily seeding placeholder rows for any that are missing.
+    /// Returns content for all 6 pillars, lazily seeding starter rows for any that are missing.
     /// The returned list always has exactly 6 items after seeding.
     /// </summary>
     Task<IReadOnlyList<PillarContent>> GetAllForTenantAsync(Guid tenantId, CancellationToken ct = default);
