@@ -167,3 +167,11 @@
     ```
   - **Bicep follow-up:** `infra/modules/appservice.bicep` app settings block should include `SeedAdmin__Email` and `SeedAdmin__Password` KV references. They are currently absent. Add them to match live config before next `deploy-infra` run (otherwise Bicep will DELETE the manually-added settings on next deploy).
   - Decision note: `.squad/decisions/inbox/tank-keyvault-secret-naming.md`.
+
+- **2026-05-20 — Prod Login Recovery (password typo diagnosis):**
+  - Chris reported being locked out of prod with chris@christopherdaly.com / GYyE3jnmvGJuMyjtNQAk!, claiming "this exact password worked last night."
+  - **Diagnosis:** App Service config shows SeedAdmin__Enabled=false (set by PR #56). Database query shows only ONE user (the SuperAdmin), created on 2026-05-19 at 3:37 AM UTC. Key Vault shows SeedAdmin--Password=GYyE3jnmvGJuMyjtNQAk1! (note the 1 before the !). Chris's password was missing the 1.
+  - **Timeline:** May 18 10:36 PM — KV secret created with correct password. May 19 3:37 AM — deploy ran with SeedAdmin__Enabled=true (still hardcoded isProd ? 'true' : 'false' before PR #56 changed it). Bootstrap service found no SuperAdmin, created one. May 20 3:03 AM — PR #56 merged, SeedAdmin__Enabled now defaults to alse.
+  - **Root cause:** Chris had a typo in his notes. The password has ALWAYS been GYyE3jnmvGJuMyjtNQAk1! since the admin was created on May 19. No re-hashing occurred; no password drift; no account lockout (lockout_end=NULL, ccess_failed_count=0).
+  - **Verification:** curl -X POST /api/auth/login with GYyE3jnmvGJuMyjtNQAk1! → 200 OK with JWT. Clean 401 from app, not CSP/middleware rejection. Security headers from PR #56 are working correctly.
+  - **Prevention:** None needed. This was user error. AdminBootstrapHostedService.EnsureSuperAdminAsync has always checked for existing SuperAdmins (line 79-84) before creating a new one. PR #56's seedAdminEnabled=false default correctly prevents re-seeding on prod restarts going forward.
