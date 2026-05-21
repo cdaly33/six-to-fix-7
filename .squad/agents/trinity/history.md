@@ -294,6 +294,9 @@ https://github.com/cdaly33/six-to-fix-7/pull/47
 
 Per CSS spec, when a `var()` references an undefined custom property the **entire property
 declaration becomes invalid at computed-value time** and falls back to its initial value.
+
+## Note — 2026-05-20: Prod Login Scare Not Your PRs
+Tank determined the prod login issue (2026-05-20 evening) was a typo in Chris's password notes, not a bug in PR #58 (default pillar seeding). Correct password in Key Vault: `GYyE3jnmvGJuMyjtNQAk1!` (with `1`). Chris was trying `GYyE3jnmvGJuMyjtNQAk!` (missing `1`). Your pillar seeding work (#58) is safe.
 The `.hero { background: radial-gradient(var(--hero-radial-overlay), ...) }` declaration in
 `public.css` collapsed to `transparent`. The hero heading had `color: var(--text-inverse)` = white,
 which was invisible on the light cream body background (`--color-slate-50`).

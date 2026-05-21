@@ -317,6 +317,9 @@ Build succeeded. 0 Errors. Non-integration tests: 160/160 passed.
 - Tests deleted: 10+
 - Total files deleted: ~120+
 
+## Note — 2026-05-20: Prod Login Scare Not Your PRs
+Tank determined the prod login issue (2026-05-20 evening) was a typo in Chris's password notes, not a bug in PR #57. Correct password in Key Vault: `GYyE3jnmvGJuMyjtNQAk1!` (with `1`). Chris was trying `GYyE3jnmvGJuMyjtNQAk!` (missing `1`). Your TenantService work (#57) is safe.
+
 ### Legacy Tables Dropped
 audits, audit_runs, blob_references, calibration_deltas, category_configs, category_results, category_result_versions, clients, council_sessions, hub_spot_sync_queue, policies, policy_flags, reviewer_actions, reviewer_lockouts, skill_runs, telemetry_events
 

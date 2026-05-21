@@ -30,3 +30,23 @@ After deploying `.NET 10` with `linuxFxVersion: 'DOTNETCORE|10.0'`, the site beg
 **Resolved by:** PR #28 (merged 2026-05-17 03:24 UTC), verified live with `curl` against prod.
 
 
+### Tank — Prod Login Recovery — Password Typo Diagnosis
+**Author:** Tank (DevOps & QA)  
+**Date:** 2026-05-20  
+**Status:** Resolved — User Error
+
+Chris reported being locked out of prod (https://app-sixtofix-prod.azurewebsites.net/) with credentials `chris@christopherdaly.com` / `GYyE3jnmvGJuMyjtNQAk!`, claiming "last night this exact password worked." PRs #56 (Tank: SeedAdmin defaults to false), #57 (Neo: TenantService), and #58 (Trinity: default pillar content seeding) had shipped between "last night" and this morning.
+
+**Investigation findings:**
+- KV secret created 2026-05-18 10:36 PM: `GYyE3jnmvGJuMyjtNQAk1!` (with `1` before `!`)
+- Chris's notes had typo: missing the `1`
+- Database user `55d11c4a-d353-4683-a8b4-2ae1e23ca983` created 2026-05-19 03:37 AM, never updated, not locked (`lockout_end=NULL`, `access_failed_count=0`)
+- AdminBootstrapHostedService correctly skips re-seeding when SuperAdmin exists
+- PR #56 changed `SeedAdmin__Enabled` to default `false` AFTER admin creation — no re-hashing occurred
+- Login test with correct password: `curl -X POST https://app-sixtofix-prod.azurewebsites.net/api/auth/login` returned HTTP 200 with JWT
+
+**Root cause:** Password typo in Chris's notes. Correct credentials: `chris@christopherdaly.com` / `GYyE3jnmvGJuMyjtNQAk1!`
+
+**Lesson:** Always verify KV secrets match user notes; Key Vault is the source of truth.
+
+
