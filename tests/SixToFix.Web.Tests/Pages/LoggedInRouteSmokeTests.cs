@@ -16,7 +16,7 @@ public sealed class LoggedInRouteSmokeTests
 
         var cut = ctx.RenderComponent<Clients>();
         cut.Markup.Should().Contain("Clients");
-        cut.Markup.Should().Contain("No clients yet.");
+        cut.Markup.Should().Contain("No clients are active yet");
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public sealed class LoggedInRouteSmokeTests
 
         var cut = ctx.RenderComponent<Templates>();
         cut.Markup.Should().Contain("Template Library");
-        cut.Markup.Should().Contain("No templates yet.");
+        cut.Markup.Should().Contain("Start from a proven template track");
     }
 
     [Fact]

@@ -100,11 +100,11 @@ public sealed class PillarPageTests
     }
 
     [Fact]
-    public void PillarPage_ShowsEmptyStateWhenNoContent()
+    public void PillarPage_ShowsStarterGuidanceWhenNoContent()
     {
         using var ctx = BuildContext("/brand");
         var cut = ctx.RenderComponent<PillarPage>();
-        // With no DB content, EmptyContentMessage should render
-        cut.Markup.Should().Contain("No content yet");
+        cut.Markup.Should().Contain("Starter guidance is shown until custom tenant content is added.");
+        cut.Markup.Should().Contain("Positioning Foundation");
     }
 }
