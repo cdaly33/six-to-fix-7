@@ -252,52 +252,61 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Resolve pillar from current URL
-        var segment = Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].Trim('/').ToLowerInvariant();
-        var meta = AllPillars.FirstOrDefault(p => p.Route == segment);
-        if (meta == default)
+        try
         {
-            Nav.NavigateTo("/dashboard");
-            return;
-        }
-
-        _pillarEnum   = meta.Pillar;
-        _accentKey    = meta.AccentKey;
-        _pillarTitle  = meta.Pillar.ToString() + " Strategy";
-        _subtitle     = meta.DefaultSubtitle;
-        _pillarOrdinal = (int)meta.Pillar;
-        _icon         = meta.Icon;
-
-        // Auth
-        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = auth.User;
-        if (!(user.Identity?.IsAuthenticated ?? false)) return;
-
-        Guid.TryParse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value, out _userId);
-        Guid.TryParse(user.FindFirst("tenant_id")?.Value, out _tenantId);
-
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-
-        // Load content
-        if (_tenantId != Guid.Empty)
-        {
-            var content = await PillarContentService.GetForTenantAsync(_tenantId, _pillarEnum, cts.Token);
-            if (content is not null)
+            // Resolve pillar from current URL
+            var segment = Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].Trim('/').ToLowerInvariant();
+            var meta = AllPillars.FirstOrDefault(p => p.Route == segment);
+            if (meta == default)
             {
-                if (!string.IsNullOrEmpty(content.Title)) _pillarTitle = content.Title;
-                if (!string.IsNullOrEmpty(content.Subtitle)) _subtitle = content.Subtitle;
-                ParseBodyJson(content.BodyJson);
+                Nav.NavigateTo("/dashboard");
+                return;
+            }
+
+            _pillarEnum   = meta.Pillar;
+            _accentKey    = meta.AccentKey;
+            _pillarTitle  = meta.Pillar.ToString() + " Strategy";
+            _subtitle     = meta.DefaultSubtitle;
+            _pillarOrdinal = (int)meta.Pillar;
+            _icon         = meta.Icon;
+
+            // Auth
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+            if (!(user.Identity?.IsAuthenticated ?? false)) return;
+
+            Guid.TryParse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value, out _userId);
+            Guid.TryParse(user.FindFirst("tenant_id")?.Value, out _tenantId);
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+            // Load content
+            if (_tenantId != Guid.Empty)
+            {
+                var content = await PillarContentService.GetForTenantAsync(_tenantId, _pillarEnum, cts.Token);
+                if (content is not null)
+                {
+                    if (!string.IsNullOrEmpty(content.Title)) _pillarTitle = content.Title;
+                    if (!string.IsNullOrEmpty(content.Subtitle)) _subtitle = content.Subtitle;
+                    ParseBodyJson(content.BodyJson);
+                }
+            }
+
+            // Load current progress
+            if (_userId != Guid.Empty)
+            {
+                var progress = await ProgressService.GetForUserPillarAsync(_userId, _pillarEnum, cts.Token);
+                _currentProgress = progress?.PercentComplete ?? 0;
             }
         }
-
-        // Load current progress
-        if (_userId != Guid.Empty)
+        catch
         {
-            var progress = await ProgressService.GetForUserPillarAsync(_userId, _pillarEnum, cts.Token);
-            _currentProgress = progress?.PercentComplete ?? 0;
+            // Fall back to starter content if tenant data services fail.
         }
-
-        _loading = false;
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private IReadOnlyList<StrategyBlock> GetStrategyContent() =>

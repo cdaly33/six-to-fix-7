@@ -178,8 +178,12 @@
             _isAdmin = (await AuthState).User.IsInRole("TenantAdmin")
                        || (await AuthState).User.IsInRole("SuperAdmin");
 
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             _templates = (await TemplateService.GetPublishedAsync(_tenantId, _pillarFilter, cts.Token)).ToList();
+        }
+        catch
+        {
+            _templates = [];
         }
         finally
         {
