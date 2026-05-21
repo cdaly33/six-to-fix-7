@@ -9,11 +9,7 @@
             <div class="sh-shell__topbar-title">StrategyHub</div>
         </header>
         <main class="sh-shell__content" id="main-content" role="main">
-            @ChildContent
+            @Body
         </main>
     </div>
 </div>
-
-@code {
-    [Parameter] public RenderFragment? ChildContent { get; set; }
-}
