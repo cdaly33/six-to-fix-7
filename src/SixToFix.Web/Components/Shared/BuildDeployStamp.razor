@@ -1,0 +1,60 @@
+@* Compact last-build / last-deploy stamp. Visible to SuperAdmin and TenantAdmin only. *@
+@inject IDeploymentInfoService DeploymentInfoService
+
+<AuthorizeView Roles="SuperAdmin,TenantAdmin">
+    <Authorized>
+        @if (_info is not null && (_info.BuildTimestamp.HasValue || _info.DeployedAt.HasValue))
+        {
+            <div class="build-deploy-stamp" aria-label="Deployment information">
+                @if (_info.BuildTimestamp.HasValue)
+                {
+                    <div class="build-deploy-stamp__row">
+                        <span class="build-deploy-stamp__label">Build</span>
+                        <time class="build-deploy-stamp__value"
+                              datetime="@_info.BuildTimestamp.Value.ToString("O")"
+                              title="@FormatUtcTooltip(_info.BuildTimestamp.Value)">
+                            @RelativeTimeFormatter.ToRelative(_info.BuildTimestamp.Value)
+                        </time>
+                    </div>
+                }
+                @if (_info.DeployedAt.HasValue)
+                {
+                    <div class="build-deploy-stamp__row">
+                        <span class="build-deploy-stamp__label">Deploy</span>
+                        <time class="build-deploy-stamp__value"
+                              datetime="@_info.DeployedAt.Value.ToString("O")"
+                              title="@FormatUtcTooltip(_info.DeployedAt.Value)">
+                            @RelativeTimeFormatter.ToRelative(_info.DeployedAt.Value)
+                        </time>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(_info.CommitSha))
+                {
+                    <div class="build-deploy-stamp__row">
+                        <span class="build-deploy-stamp__label">SHA</span>
+                        <span class="build-deploy-stamp__value build-deploy-stamp__sha">@_info.CommitSha</span>
+                    </div>
+                }
+            </div>
+        }
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private DeploymentInfo? _info;
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            _info = DeploymentInfoService.GetDeploymentInfo();
+        }
+        catch
+        {
+            // Non-critical metadata — degrade silently.
+        }
+    }
+
+    private static string FormatUtcTooltip(DateTimeOffset utc) =>
+        utc.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss") + " UTC";
+}
