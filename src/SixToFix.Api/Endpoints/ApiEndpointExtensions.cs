@@ -20,6 +20,11 @@ public static class ApiEndpointExtensions
     public static IEndpointRouteBuilder MapApiEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow })).AllowAnonymous().WithName("HealthCheck");
+        app.MapGet("/api/deployment-info", (IDeploymentInfoService deploymentInfoService) =>
+        {
+            var info = deploymentInfoService.GetDeploymentInfo();
+            return Results.Ok(new DeploymentInfoResponse(info.DeployedAt, info.CommitSha));
+        }).AllowAnonymous().WithName("DeploymentInfo");
         MapAuthEndpoints(app);
         MapClientEndpoints(app);
         return app;
