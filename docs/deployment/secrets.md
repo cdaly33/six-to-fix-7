@@ -26,7 +26,18 @@
 5. Add the GitHub secrets in **Repository settings → Secrets and variables → Actions**.
 6. Run `deploy-infra.yml` manually once for `dev` to validate the trust relationship before relying on automatic pushes.
 
-## Notes
+## Deployment metadata app settings
+
+The `deploy-app.yml` workflow sets the following **non-secret** App Service application settings at deploy time. They are mapped to `IConfiguration` in the running app via the `Deploy__*` key prefix (double-underscore = nested section in ASP.NET Core).
+
+| App Setting key | `IConfiguration` path | Description |
+| --- | --- | --- |
+| `Deploy__BuildTimestamp` | `Deploy:BuildTimestamp` | UTC ISO-8601 timestamp captured at the start of the build job (e.g. `2025-05-20T21:40:00Z`). |
+| `Deploy__Timestamp` | `Deploy:Timestamp` | UTC ISO-8601 timestamp captured at the moment the deploy job sets the settings. |
+| `Deploy__CommitSha` | `Deploy:CommitSha` | Full 40-char commit SHA (`github.sha`) that triggered the deployment. The service trims it to 7 chars for display. |
+
+These values are injected by the CI/CD pipeline and **must not be stored in Key Vault or GitHub secrets** — they are computed at run time and contain no sensitive data. Local development leaves all three blank (empty string in `appsettings.json`), and `IDeploymentInfoService` degrades gracefully when any value is missing.
+
 
 - `deploy-infra.yml` and `deploy-app.yml` both require `permissions: id-token: write` so the OIDC token can be exchanged by `azure/login@v2`.
 - Keep environment-specific names in GitHub secrets rather than hard-coding them in workflows.

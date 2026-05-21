@@ -18,6 +18,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      build_timestamp: ${{ steps.meta.outputs.build_timestamp }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,6 +29,10 @@ jobs:
 
       - name: Restore
         run: dotnet restore SixToFix.slnx
+
+      - name: Capture build metadata
+        id: meta
+        run: echo "build_timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Build and publish
         run: |
@@ -88,6 +94,17 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set deployment metadata app settings
+        run: |
+          az webapp config appsettings set \
+            --name "${{ secrets.AZURE_WEBAPP_NAME_PROD }}" \
+            --resource-group rg-sixtofix-prod \
+            --output none \
+            --settings \
+              "Deploy__BuildTimestamp=${{ needs.build.outputs.build_timestamp }}" \
+              "Deploy__Timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              "Deploy__CommitSha=${{ github.sha }}"
 
       - name: Deploy to App Service (prod)
         uses: azure/webapps-deploy@v3
