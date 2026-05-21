@@ -169,7 +169,7 @@ jobs:
           # 2. Health endpoint: must return 200 (no auth required)
           smoke_check "GET /health" "$APP_URL/health" "200"
 
-          # 3. API endpoint: must return 401 when anonymous (proves JwtBearer still gates /api)
-          smoke_check "GET /api/audit-runs (anon)" "$APP_URL/api/audit-runs?clientId=00000000-0000-0000-0000-000000000000" "401"
+          # 3. API endpoint: must return 401 when anonymous (proves auth gating still works)
+          smoke_check "POST /api/auth/refresh (anon)" "$APP_URL/api/auth/refresh" "401" "-X POST"
 
           echo "🎉 All smoke checks passed."
