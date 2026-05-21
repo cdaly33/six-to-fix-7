@@ -15,6 +15,7 @@ public interface IPlaybookTemplateService
     /// Returns all Published templates for a tenant. When <paramref name="pillar"/> is provided,
     /// results are filtered to that pillar plus any null-pillar (cross-cutting) templates.
     /// When <paramref name="pillar"/> is null, returns all Published templates regardless of pillar.
+    /// If no published templates exist yet, starter templates are seeded for that tenant.
     /// </summary>
     Task<IReadOnlyList<PlaybookTemplate>> GetPublishedAsync(Guid tenantId, Pillar? pillar, CancellationToken ct = default);
 

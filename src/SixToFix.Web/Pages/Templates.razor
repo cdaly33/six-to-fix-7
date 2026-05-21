@@ -3,7 +3,6 @@
 @attribute [Authorize]
 @layout StrategyHubShell
 @inject IPlaybookTemplateService TemplateService
-@inject IPillarContentService PillarContentService
 @inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Template Library — StrategyHub</PageTitle>
@@ -40,11 +39,28 @@
     else if (_templates.Count == 0)
     {
         <div class="sh-empty-state sh-templates__empty">
-            <p class="sh-empty-state__text">No templates yet.</p>
+            <h2 class="sh-empty-state__heading">Start from a proven template track</h2>
+            <p class="sh-empty-state__text">No templates are published for this tenant yet.</p>
+            <ul class="sh-empty-state__list">
+                @foreach (var starter in StarterTracks)
+                {
+                    <li>@starter</li>
+                }
+            </ul>
+            <div class="sh-empty-state__actions">
+                <a href="/brand" class="btn btn-sm btn-secondary">Review Pillar Guidance</a>
+                @if (_isAdmin)
+                {
+                    <a href="/admin/templates" class="btn btn-sm btn-primary">Open Template Admin</a>
+                }
+            </div>
             <AuthorizeView Roles="TenantAdmin,SuperAdmin">
                 <Authorized>
                     <p class="sh-empty-state__hint">Admins can publish templates from the admin panel.</p>
                 </Authorized>
+                <NotAuthorized>
+                    <p class="sh-empty-state__hint">Ask your tenant admin to publish templates for your team.</p>
+                </NotAuthorized>
             </AuthorizeView>
         </div>
     }
@@ -134,6 +150,13 @@
     private PlaybookTemplate? _selectedTemplate;
     private Pillar? _pillarFilter;
     private Guid _tenantId;
+    private bool _isAdmin;
+    private static readonly string[] StarterTracks =
+    [
+        "Pillar kickoff: assess current state, target outcomes, and owner.",
+        "30-day execution plan: milestones, dependencies, and weekly check-ins.",
+        "Quarterly scorecard: KPI targets, reporting cadence, and risks."
+    ];
 
     protected override async Task OnInitializedAsync()
     {
@@ -152,8 +175,8 @@
         {
             if (_tenantId == Guid.Empty) return;
 
-            var isAdmin = (await AuthState).User.IsInRole("TenantAdmin")
-                          || (await AuthState).User.IsInRole("SuperAdmin");
+            _isAdmin = (await AuthState).User.IsInRole("TenantAdmin")
+                       || (await AuthState).User.IsInRole("SuperAdmin");
 
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             _templates = (await TemplateService.GetPublishedAsync(_tenantId, _pillarFilter, cts.Token)).ToList();

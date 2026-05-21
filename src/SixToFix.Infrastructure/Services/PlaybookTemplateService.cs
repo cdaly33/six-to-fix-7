@@ -14,6 +14,61 @@ namespace SixToFix.Infrastructure.Services;
 /// </summary>
 public sealed class PlaybookTemplateService : IPlaybookTemplateService
 {
+    private static readonly IReadOnlyList<TemplateSeed> DefaultTemplateSeeds =
+    [
+        new("Brand Messaging Matrix", Pillar.Brand, "doc", 92, "Define audience-specific value props and proof points.", """
+# Brand Messaging Matrix
+
+## Audience
+- Segment:
+- Core pain:
+
+## Message pillars
+1. Outcome promise
+2. Differentiator
+3. Proof
+"""),
+        new("Customer Journey Mapper", Pillar.Customer, "sheet", 88, "Map lifecycle stages, friction, and ownership.", """
+# Customer Journey Mapper
+
+| Stage | Customer Goal | Friction | Owner |
+|---|---|---|---|
+| Awareness |  |  |  |
+| Consideration |  |  |  |
+| Adoption |  |  |  |
+"""),
+        new("Service Packaging Worksheet", Pillar.Offering, "doc", 86, "Turn custom services into clear tiers.", """
+# Service Packaging Worksheet
+
+## Tier name
+- Target client:
+- Included outcomes:
+- Delivery scope:
+- Price:
+"""),
+        new("Campaign Brief Template", Pillar.Communication, "doc", 84, "Coordinate objectives, channels, and assets.", """
+# Campaign Brief
+
+- Goal:
+- Audience:
+- Core message:
+- Channels:
+- CTA:
+"""),
+        new("Pipeline Review Pack", Pillar.Sales, "sheet", 90, "Weekly pipeline inspection with stage-level blockers.", """
+# Pipeline Review Pack
+
+| Opportunity | Stage | Value | Next step | Blocker |
+|---|---|---|---|---|
+"""),
+        new("KPI Accountability Scorecard", Pillar.Management, "sheet", 87, "Track pillar owners, targets, and trend direction.", """
+# KPI Accountability Scorecard
+
+| KPI | Owner | Target | Current | Trend |
+|---|---|---|---|---|
+""")
+    ];
+
     private readonly SixToFixDbContext _db;
     private readonly ILogger<PlaybookTemplateService> _logger;
 
@@ -39,18 +94,11 @@ public sealed class PlaybookTemplateService : IPlaybookTemplateService
     public async Task<IReadOnlyList<PlaybookTemplate>> GetPublishedAsync(
         Guid tenantId, Pillar? pillar, CancellationToken ct = default)
     {
-        var query = _db.PlaybookTemplates
-            .Where(e => e.TenantId == tenantId && e.Status == PlaybookTemplateStatus.Published);
+        var results = await QueryPublishedAsync(tenantId, pillar, ct);
+        if (results.Count > 0) return results;
 
-        if (pillar is not null)
-        {
-            query = query.Where(e => e.Pillar == pillar || e.Pillar == null);
-        }
-
-        return await query
-            .OrderByDescending(e => e.Popularity)
-            .ThenBy(e => e.Name)
-            .ToListAsync(ct);
+        await EnsureDefaultPublishedTemplatesAsync(tenantId, ct);
+        return await QueryPublishedAsync(tenantId, pillar, ct);
     }
 
     public async Task<PlaybookTemplate?> GetByIdAsync(
@@ -149,4 +197,58 @@ public sealed class PlaybookTemplateService : IPlaybookTemplateService
             ?? throw new InvalidOperationException(
                 $"PlaybookTemplate {id} not found for tenant {tenantId}.");
     }
+
+    private async Task<List<PlaybookTemplate>> QueryPublishedAsync(Guid tenantId, Pillar? pillar, CancellationToken ct)
+    {
+        var query = _db.PlaybookTemplates
+            .Where(e => e.TenantId == tenantId && e.Status == PlaybookTemplateStatus.Published);
+
+        if (pillar is not null)
+        {
+            query = query.Where(e => e.Pillar == pillar || e.Pillar == null);
+        }
+
+        return await query
+            .OrderByDescending(e => e.Popularity)
+            .ThenBy(e => e.Name)
+            .ToListAsync(ct);
+    }
+
+    private async Task EnsureDefaultPublishedTemplatesAsync(Guid tenantId, CancellationToken ct)
+    {
+        var hasPublished = await _db.PlaybookTemplates
+            .AnyAsync(e => e.TenantId == tenantId && e.Status == PlaybookTemplateStatus.Published, ct);
+        if (hasPublished) return;
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var seed in DefaultTemplateSeeds)
+        {
+            _db.PlaybookTemplates.Add(new PlaybookTemplate
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                Pillar = seed.Pillar,
+                Name = seed.Name,
+                Format = seed.Format,
+                Status = PlaybookTemplateStatus.Published,
+                Popularity = seed.Popularity,
+                LastUpdatedAt = now,
+                Notes = seed.Notes,
+                ContentMarkdown = seed.ContentMarkdown
+            });
+        }
+
+        await _db.SaveChangesAsync(ct);
+        _logger.LogInformation(
+            "Seeded {Count} default published templates for tenant {TenantId}",
+            DefaultTemplateSeeds.Count, tenantId);
+    }
+
+    private sealed record TemplateSeed(
+        string Name,
+        Pillar? Pillar,
+        string Format,
+        int Popularity,
+        string? Notes,
+        string ContentMarkdown);
 }

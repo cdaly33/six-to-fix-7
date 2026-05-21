@@ -54,11 +54,14 @@ public sealed class PillarContentServiceTests : IntegrationTestBase
     // ──────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetForTenantAsync_NoRows_ReturnsNull()
+    public async Task GetForTenantAsync_NoRows_SeedsAndReturnsRow()
     {
         var result = await _sut.GetForTenantAsync(_tenantId, Pillar.Brand);
 
-        result.Should().BeNull();
+        result.Should().NotBeNull();
+        result!.Pillar.Should().Be(Pillar.Brand);
+        result.BodyJson.Should().Contain("strategy");
+        result.BodyJson.Should().NotContain("placeholder");
     }
 
     [Fact]
@@ -95,11 +98,11 @@ public sealed class PillarContentServiceTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task GetAllForTenantAsync_PlaceholderBodyJson_IsSet()
+    public async Task GetAllForTenantAsync_DefaultBodyJson_IsSet()
     {
         var result = await _sut.GetAllForTenantAsync(_tenantId);
 
-        result.Should().OnlyContain(r => r.BodyJson == """{"placeholder":true}""");
+        result.Should().OnlyContain(r => r.BodyJson.Contains("strategy"));
     }
 
     [Fact]
@@ -128,7 +131,7 @@ public sealed class PillarContentServiceTests : IntegrationTestBase
         var brandBody = System.Text.Json.JsonDocument.Parse(result.Single(r => r.Pillar == Pillar.Brand).BodyJson).RootElement;
         brandBody.GetProperty("seeded").GetBoolean().Should().BeTrue();
         var offeringBody = System.Text.Json.JsonDocument.Parse(result.Single(r => r.Pillar == Pillar.Offering).BodyJson).RootElement;
-        offeringBody.GetProperty("placeholder").GetBoolean().Should().BeTrue();
+        offeringBody.GetProperty("strategy").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
     }
 
     // ──────────────────────────────────────────────────────────────

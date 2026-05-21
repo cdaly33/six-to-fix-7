@@ -51,6 +51,20 @@
         }
     </div>
 
+    @if (IsUsingStarterContent(_activeTab))
+    {
+        <div class="sh-pillar-page__starter-note">
+            <p class="sh-pillar-page__starter-text">
+                Starter guidance is shown until custom tenant content is added.
+            </p>
+            <AuthorizeView Roles="SuperAdmin,TenantAdmin">
+                <Authorized>
+                    <a href="/admin/content?pillar=@_accentKey" class="btn btn-sm btn-secondary">Customize Content</a>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    }
+
     @* ── Tab content ── *@
     <div class="sh-pillar-page__content">
         @if (_loading)
@@ -61,111 +75,76 @@
         {
             @if (_activeTab == "strategy")
             {
-                @if (_strategy.Count > 0)
-                {
-                    <div class="sh-strategy-grid">
-                        @foreach (var block in _strategy)
-                        {
-                            <div class="sh-strategy-block">
-                                <h3 class="sh-strategy-block__title">@block.Title</h3>
-                                <ul class="sh-strategy-block__points">
-                                    @foreach (var point in block.Points)
-                                    {
-                                        <li class="sh-strategy-block__point">
-                                            <span class="sh-strategy-block__check" aria-hidden="true">✓</span>
-                                            @point
-                                        </li>
-                                    }
-                                </ul>
-                            </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <EmptyContentMessage Pillar="_pillarEnum" Tab="strategy" />
-                }
+                <div class="sh-strategy-grid">
+                    @foreach (var block in GetStrategyContent())
+                    {
+                        <div class="sh-strategy-block">
+                            <h3 class="sh-strategy-block__title">@block.Title</h3>
+                            <ul class="sh-strategy-block__points">
+                                @foreach (var point in block.Points)
+                                {
+                                    <li class="sh-strategy-block__point">
+                                        <span class="sh-strategy-block__check" aria-hidden="true">✓</span>
+                                        @point
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
             }
 
             @if (_activeTab == "execution")
             {
-                @if (_execution.Count > 0)
-                {
-                    <div class="sh-execution-grid">
-                        @for (int i = 0; i < _execution.Count; i++)
-                        {
-                            var step = _execution[i];
-                            var num = i + 1;
-                            <div class="sh-execution-step">
-                                <div class="sh-execution-step__num">@num</div>
-                                <div class="sh-execution-step__text">@step</div>
-                            </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <EmptyContentMessage Pillar="_pillarEnum" Tab="execution" />
-                }
+                <div class="sh-execution-grid">
+                    @for (int i = 0; i < GetExecutionContent().Count; i++)
+                    {
+                        var step = GetExecutionContent()[i];
+                        var num = i + 1;
+                        <div class="sh-execution-step">
+                            <div class="sh-execution-step__num">@num</div>
+                            <div class="sh-execution-step__text">@step</div>
+                        </div>
+                    }
+                </div>
             }
 
             @if (_activeTab == "templates")
             {
-                @if (_templateItems.Count > 0)
-                {
-                    <div class="sh-template-grid">
-                        @foreach (var item in _templateItems)
-                        {
-                            <div class="sh-template-item">
-                                <div class="sh-template-item__icon">
-                                    <ClipboardIcon Size="20" />
-                                </div>
-                                <div class="sh-template-item__name">@item</div>
+                <div class="sh-template-grid">
+                    @foreach (var item in GetTemplateContent())
+                    {
+                        <div class="sh-template-item">
+                            <div class="sh-template-item__icon">
+                                <ClipboardIcon Size="20" />
                             </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <EmptyContentMessage Pillar="_pillarEnum" Tab="templates" />
-                }
+                            <div class="sh-template-item__name">@item</div>
+                        </div>
+                    }
+                </div>
             }
 
             @if (_activeTab == "examples")
             {
-                @if (_examples.Count > 0)
-                {
-                    <ul class="sh-examples-list">
-                        @foreach (var ex in _examples)
-                        {
-                            <li class="sh-examples-list__item">@ex</li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <EmptyContentMessage Pillar="_pillarEnum" Tab="examples" />
-                }
+                <ul class="sh-examples-list">
+                    @foreach (var ex in GetExampleContent())
+                    {
+                        <li class="sh-examples-list__item">@ex</li>
+                    }
+                </ul>
             }
 
             @if (_activeTab == "metrics")
             {
-                @if (_metrics.Count > 0)
-                {
-                    <div class="sh-metrics-grid">
-                        @foreach (var (label, value) in _metrics)
-                        {
-                            <div class="sh-metric-card">
-                                <div class="sh-metric-card__label">@label</div>
-                                <div class="sh-metric-card__value">@value</div>
-                            </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <EmptyContentMessage Pillar="_pillarEnum" Tab="metrics" />
-                }
+                <div class="sh-metrics-grid">
+                    @foreach (var (label, value) in GetMetricContent())
+                    {
+                        <div class="sh-metric-card">
+                            <div class="sh-metric-card__label">@label</div>
+                            <div class="sh-metric-card__value">@value</div>
+                        </div>
+                    }
+                </div>
             }
         }
     </div>
@@ -214,6 +193,52 @@
 
     private Guid _userId;
     private Guid _tenantId;
+
+    private static readonly Dictionary<Pillar, StarterContent> StarterContentByPillar = new()
+    {
+        [Pillar.Brand] = new(
+            [new("Positioning Foundation", ["Define your ICP and differentiation in one sentence.", "Align brand promise to measurable business outcomes."]), new("Narrative Clarity", ["Audit website and pitch language for consistency.", "Map top objections and prepare proof points."])],
+            ["Document tone and visual standards used in sales assets.", "Update hero message across website and onboarding emails.", "Publish quarterly brand health review with owners."],
+            ["Brand Messaging Matrix", "Value Proposition One-Pager", "Proof Library Checklist"],
+            ["Before/after homepage headline rewrite improved demo requests.", "Brand voice guide reduced proposal revision cycles."],
+            [("Branded search growth", "↑ 12% QoQ"), ("Win-rate on ideal-fit opportunities", "≥ 35%"), ("Message consistency score", "Target 90%+")]
+        ),
+        [Pillar.Customer] = new(
+            [new("Segment Strategy", ["Define top customer segments by revenue potential.", "Prioritize the segment with shortest time-to-value."]), new("Journey Design", ["Map onboarding and renewal touchpoints.", "Assign owners for every stage of the lifecycle."])],
+            ["Score current pipeline by segment and urgency.", "Interview 5 recent customers to capture buying triggers.", "Implement one retention play for at-risk accounts."],
+            ["Customer Interview Guide", "Journey Mapping Worksheet", "Renewal Risk Tracker"],
+            ["Segment-specific onboarding cut implementation time.", "Retention outreach playbook recovered expansion opportunities."],
+            [("NPS by segment", "Track monthly"), ("Time to first value", "< 30 days"), ("Retention rate", "Target 92%+")]
+        ),
+        [Pillar.Offering] = new(
+            [new("Offer Architecture", ["Bundle services into 2-3 clear packages.", "Define outcomes, scope, and boundaries per package."]), new("Pricing Confidence", ["Standardize pricing guardrails for margin protection.", "Clarify when discounts require approval."])],
+            ["List all deliverables and remove low-value custom work.", "Publish package comparison sheet for sales calls.", "Pilot one premium tier with expansion path."],
+            ["Service Packaging Canvas", "Scope Definition Checklist", "Pricing Approval Matrix"],
+            ["Offer simplification reduced proposal cycle time.", "Tiered packaging increased average deal size."],
+            [("Average deal size", "↑ 15%"), ("Gross margin per package", "Target 55%+"), ("Proposal-to-close time", "< 21 days")]
+        ),
+        [Pillar.Communication] = new(
+            [new("Channel Focus", ["Select 2 primary channels for demand generation.", "Set message intent by channel and funnel stage."]), new("Content Rhythm", ["Create repeatable weekly publishing cadence.", "Tie each content asset to a CTA and KPI."])],
+            ["Audit last 60 days of campaigns and remove low performers.", "Launch one nurture sequence by lifecycle stage.", "Define response SLA for inbound leads."],
+            ["Campaign Brief Template", "Content Calendar", "CTA Performance Tracker"],
+            ["Lifecycle email sequence improved MQL-to-SQL conversion.", "Channel simplification improved message recall."],
+            [("Engagement rate", "Target 5%+"), ("MQL to SQL conversion", "Target 30%+"), ("Inbound response time", "< 2 hours")]
+        ),
+        [Pillar.Sales] = new(
+            [new("Pipeline Discipline", ["Create stage definitions with clear exit criteria.", "Track conversion at every stage weekly."]), new("Deal Velocity", ["Standardize discovery and proposal cadence.", "Flag stalled deals with recovery actions."])],
+            ["Implement call scorecard for first meetings.", "Create a weekly deal review ritual with action owners.", "Build objection-handling snippets in CRM."],
+            ["Discovery Call Framework", "Pipeline Review Agenda", "Objection Handling Playbook"],
+            ["Structured deal reviews lifted close rates.", "New qualification criteria reduced late-stage churn."],
+            [("Qualified pipeline coverage", "3x target"), ("Stage conversion rate", "Improve 10%"), ("Average sales cycle", "Reduce by 20%")]
+        ),
+        [Pillar.Management] = new(
+            [new("Operating Cadence", ["Establish weekly KPI review with accountable owners.", "Use one source of truth for strategic priorities."]), new("Execution Visibility", ["Convert goals into 90-day milestones.", "Track blockers and decisions transparently."])],
+            ["Define top 5 KPIs and owners for the quarter.", "Run a monthly strategy health checkpoint.", "Document escalations and decisions within 24 hours."],
+            ["Quarterly Planning Template", "KPI Owner Scorecard", "Decision Log"],
+            ["Weekly scorecard reviews improved accountability.", "Clear milestone tracking reduced cross-team blockers."],
+            [("On-time milestone completion", "Target 90%+"), ("Weekly KPI update rate", "100%"), ("Cross-team blocker resolution", "< 5 business days")]
+        )
+    };
 
     private static readonly (Pillar Pillar, string Route, string AccentKey, string OrdinalLabel, string DefaultSubtitle, RenderFragment Icon)[] AllPillars =
     [
@@ -275,6 +300,31 @@
         _loading = false;
     }
 
+    private IReadOnlyList<StrategyBlock> GetStrategyContent() =>
+        _strategy.Count > 0 ? _strategy : StarterContentByPillar[_pillarEnum].Strategy;
+
+    private IReadOnlyList<string> GetExecutionContent() =>
+        _execution.Count > 0 ? _execution : StarterContentByPillar[_pillarEnum].Execution;
+
+    private IReadOnlyList<string> GetTemplateContent() =>
+        _templateItems.Count > 0 ? _templateItems : StarterContentByPillar[_pillarEnum].Templates;
+
+    private IReadOnlyList<string> GetExampleContent() =>
+        _examples.Count > 0 ? _examples : StarterContentByPillar[_pillarEnum].Examples;
+
+    private IReadOnlyList<(string Label, string Value)> GetMetricContent() =>
+        _metrics.Count > 0 ? _metrics : StarterContentByPillar[_pillarEnum].Metrics;
+
+    private bool IsUsingStarterContent(string tab) => tab switch
+    {
+        "strategy" => _strategy.Count == 0,
+        "execution" => _execution.Count == 0,
+        "templates" => _templateItems.Count == 0,
+        "examples" => _examples.Count == 0,
+        "metrics" => _metrics.Count == 0,
+        _ => false
+    };
+
     private void ParseBodyJson(string bodyJson)
     {
         if (string.IsNullOrWhiteSpace(bodyJson) || bodyJson == "{}") return;
@@ -293,19 +343,47 @@
                     var title = block.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
                     var points = new List<string>();
                     if (block.TryGetProperty("points", out var pts) && pts.ValueKind == System.Text.Json.JsonValueKind.Array)
-                        foreach (var p in pts.EnumerateArray()) points.Add(p.GetString() ?? "");
-                    _strategy.Add(new StrategyBlock(title, points));
+                    {
+                        foreach (var p in pts.EnumerateArray())
+                        {
+                            var point = p.GetString();
+                            if (!string.IsNullOrWhiteSpace(point)) points.Add(point);
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(title) || points.Count > 0)
+                    {
+                        _strategy.Add(new StrategyBlock(title, points));
+                    }
                 }
             }
 
             if (root.TryGetProperty("execution", out var execEl) && execEl.ValueKind == System.Text.Json.JsonValueKind.Array)
-                foreach (var item in execEl.EnumerateArray()) _execution.Add(item.GetString() ?? "");
+            {
+                foreach (var item in execEl.EnumerateArray())
+                {
+                    var value = item.GetString();
+                    if (!string.IsNullOrWhiteSpace(value)) _execution.Add(value);
+                }
+            }
 
             if (root.TryGetProperty("templates", out var tplEl) && tplEl.ValueKind == System.Text.Json.JsonValueKind.Array)
-                foreach (var item in tplEl.EnumerateArray()) _templateItems.Add(item.GetString() ?? "");
+            {
+                foreach (var item in tplEl.EnumerateArray())
+                {
+                    var value = item.GetString();
+                    if (!string.IsNullOrWhiteSpace(value)) _templateItems.Add(value);
+                }
+            }
 
             if (root.TryGetProperty("examples", out var exEl) && exEl.ValueKind == System.Text.Json.JsonValueKind.Array)
-                foreach (var item in exEl.EnumerateArray()) _examples.Add(item.GetString() ?? "");
+            {
+                foreach (var item in exEl.EnumerateArray())
+                {
+                    var value = item.GetString();
+                    if (!string.IsNullOrWhiteSpace(value)) _examples.Add(value);
+                }
+            }
 
             if (root.TryGetProperty("metrics", out var metEl) && metEl.ValueKind == System.Text.Json.JsonValueKind.Array)
             {
@@ -314,7 +392,15 @@
                     if (pair.ValueKind == System.Text.Json.JsonValueKind.Array)
                     {
                         var arr = pair.EnumerateArray().ToArray();
-                        if (arr.Length >= 2) _metrics.Add((arr[0].GetString() ?? "", arr[1].GetString() ?? ""));
+                        if (arr.Length >= 2)
+                        {
+                            var label = arr[0].GetString() ?? string.Empty;
+                            var value = arr[1].GetString() ?? string.Empty;
+                            if (!string.IsNullOrWhiteSpace(label) && !string.IsNullOrWhiteSpace(value))
+                            {
+                                _metrics.Add((label, value));
+                            }
+                        }
                     }
                 }
             }
@@ -357,4 +443,10 @@
     };
 
     private sealed record StrategyBlock(string Title, List<string> Points);
+    private sealed record StarterContent(
+        IReadOnlyList<StrategyBlock> Strategy,
+        IReadOnlyList<string> Execution,
+        IReadOnlyList<string> Templates,
+        IReadOnlyList<string> Examples,
+        IReadOnlyList<(string Label, string Value)> Metrics);
 }

@@ -32,10 +32,27 @@
     else if (_clients.Count == 0)
     {
         <div class="sh-empty-state sh-templates__empty">
-            <p class="sh-empty-state__text">No clients yet.</p>
+            <h2 class="sh-empty-state__heading">No clients are active yet</h2>
+            <p class="sh-empty-state__text">Add your first client to start assigning pillar progress and templates.</p>
+            <ul class="sh-empty-state__list">
+                <li>Create a client profile with contact details.</li>
+                <li>Assign a pillar owner and kickoff meeting date.</li>
+                <li>Track progress from Brand through Management.</li>
+            </ul>
+            <div class="sh-empty-state__actions">
+                @if (_canManage)
+                {
+                    <button class="btn btn-sm btn-primary" @onclick="OpenAddModal">Add First Client</button>
+                }
+                <a href="/dashboard" class="btn btn-sm btn-secondary">Back to Dashboard</a>
+            </div>
             @if (_canManage)
             {
                 <p class="sh-empty-state__hint">Use Add Client to create the first one.</p>
+            }
+            else
+            {
+                <p class="sh-empty-state__hint">Ask a tenant admin to add clients for this workspace.</p>
             }
         </div>
     }

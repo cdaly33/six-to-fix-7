@@ -84,12 +84,27 @@ public sealed class PillarPageTests
         cut.Markup.Should().Contain("PILLAR 6 OF 6");
     }
 
+    [Theory]
+    [InlineData("/brand", "Brand Strategy")]
+    [InlineData("/customer", "Customer Strategy")]
+    [InlineData("/offering", "Offering Strategy")]
+    [InlineData("/communication", "Communication Strategy")]
+    [InlineData("/sales", "Sales Strategy")]
+    [InlineData("/management", "Management Strategy")]
+    public void PillarPage_AllSidebarRoutes_RenderExpectedHeading(string route, string expectedHeading)
+    {
+        using var ctx = BuildContext(route);
+        var cut = ctx.RenderComponent<PillarPage>();
+        cut.Markup.Should().Contain(expectedHeading);
+        cut.Markup.Should().NotContain("Page not found");
+    }
+
     [Fact]
-    public void PillarPage_ShowsEmptyStateWhenNoContent()
+    public void PillarPage_ShowsStarterGuidanceWhenNoContent()
     {
         using var ctx = BuildContext("/brand");
         var cut = ctx.RenderComponent<PillarPage>();
-        // With no DB content, EmptyContentMessage should render
-        cut.Markup.Should().Contain("No content yet");
+        cut.Markup.Should().Contain("Starter guidance is shown until custom tenant content is added.");
+        cut.Markup.Should().Contain("Positioning Foundation");
     }
 }
