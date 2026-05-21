@@ -378,6 +378,202 @@ StrategyHub users encountered empty pillar pages on first login (poor UX). Each 
 
 ---
 
+### Morpheus — Build & Deployment Date Tracking (Assembly + Env Var)
+**Author:** Morpheus (Lead & Architect)  
+**Date:** 2026-05-20  
+**Status:** Recommended (awaiting implementation decision)  
+**Scope:** Backend exposure of build and deployment timestamps  
+
+User requested visibility into last build/deployment dates in the web interface. For a 2–5 user internal SaaS app with a single prod deployment pipeline, this decision recommends exposing timestamps via a lightweight endpoint and optional footer UI using assembly metadata + GitHub Actions environment variable (pushed to App Settings).
+
+**Architecture Decision: Option 1 — Assembly Build Time + Azure Deployment Time**
+
+**Source of Truth:**
+- Build timestamp: Embedded in assembly at compile time via `[AssemblyInformationalVersion]` or custom build attribute
+- Deployment timestamp: Retrieved from environment variable set by deploy-app.yml (GitHub Actions context)
+
+**Implementation:**
+- Backend: New scoped service `IDeploymentInfoService` reads build timestamp from assembly reflection and deployment time from environment variable
+- Endpoint: `GET /api/deployment-info` (optional Bearer auth; if user authenticated, returns full info; if anonymous, returns minimal build-time only)
+- UI: Optional footer component in `MainLayout.razor` showing "Last deployed: [time]" and "Built: [time]"
+
+**Why This Approach (vs. Other Options):**
+1. **Minimal dependencies:** No Azure SDK, no database, no scheduled jobs
+2. **Single source per concern:** Build time immutable in binary, deploy time atomic environment variable set once per pipeline
+3. **Transparent to operators:** Deployment date visible in both Azure Portal and app UI with no drift
+4. **Low operational risk:** Safe fallback if env var missing (returns "unavailable", app still boots)
+5. **Good for 2–5 user app:** Suffices for small team without multi-environment complexity
+
+**Options Rejected:**
+- **Option 2 (Azure Deployment History API):** MEDIUM effort (4–5 hours); promoted as fallback if app grows to multiple environments
+- **Option 3 (Database Audit Table):** LARGE effort (6–8 hours); over-engineered, adds schema maintenance overhead
+
+**Effort:** SMALL (2–3 hours)
+- Add one environment variable to deploy-app.yml
+- Create `IDeploymentInfoService` + registration in `Program.cs`
+- Wire endpoint in `ApiEndpointExtensions`
+- Optional: Razor footer component
+
+**Security:** ✅ Non-sensitive metadata; low leakage risk; does not expose git commit hash, branch, or artifact paths
+
+**Implementation Deliverables:**
+1. Environment Variable: `DEPLOYMENT_TIMESTAMP: ${{ github.run_started_at }}` in deploy-app.yml
+2. Service interface: `IDeploymentInfoService` with `(DateTime BuildTime, DateTime? DeploymentTime) GetTimestamps()`
+3. Endpoint: `GET /api/deployment-info` returning `{ buildTime: "2026-05-20T21:30:00Z", deploymentTime: "2026-05-20T21:35:00Z" }`
+4. Optional UI: Footer in `MainLayout.razor` displaying human-readable deploy time
+
+**Next Steps:**
+- Implementer (Neo or Trinity): Wire Option 1 per deliverables
+- QA (Tank): Add smoke test verifying `/api/deployment-info` returns valid timestamps
+- Review (Morpheus): Verify assembly reflection approach, env var plumbing is secure
+
+**Related Decisions:** morpheus-dual-auth-scheme.md (Bearer for `/api/*` calls); Program.cs middleware pipeline (no changes required)
+
+---
+
+### Tank — Build/Deploy Metadata Visibility Pattern (App Settings)
+**Author:** Tank (DevOps & QA)  
+**Date:** 2026-05-20  
+**Status:** Recommended (awaiting implementation approval)  
+**Scope:** Ops visibility, metadata capture in deployment workflow  
+
+Operators and users need visibility: what commit hash is running? When was the app built? When was the app deployed? Currently, `/health` endpoint returns only `{ status, timestamp }` (current time); it does not capture deployment history.
+
+**Decision: Pattern 2 — Deployment Metadata Pushed to App Settings** ✅
+
+**Pattern Comparison:**
+
+| Pattern | Approach | Reliability | Complexity | Selection |
+|---------|----------|-------------|-----------|-----------|
+| 1 | Assembly Build Info Baked at Build Time | ⭐⭐⭐⭐⭐ | Medium | Build ≠ deploy time; can't track history separately |
+| 2 | Deployment Metadata Pushed to App Settings | ⭐⭐⭐⭐⭐ | Low | ✅ **SELECTED** |
+| 3 | Runtime Query from GitHub/Azure APIs | ⭐⭐ | High | Slow, fragile, unnecessary complexity |
+
+**Why Pattern 2 (Recommended):**
+1. **Aligns with team architecture:** App Service config pattern already proven in Bicep (appservice.bicep:50–69)
+2. **Immediate operational visibility:** Ops see in Azure Portal; no API query needed
+3. **Minimal attack surface:** Metadata (commit hash, timestamps) is not sensitive
+4. **Perfect for small team (2–5 users):** Removes manual debugging ("what version is live?")
+5. **Zero ongoing overhead:** One-time write at deploy; read-only thereafter; no cache invalidation
+
+**Implementation (Sketch):**
+
+GitHub Actions (deploy-app.yml) — After deployment step:
+```bash
+az webapp config appsettings set \
+  --name $WEBAPP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --settings \
+    BUILD_COMMIT="${{ github.sha }}" \
+    DEPLOYED_AT="$(date -Iseconds)"
+```
+
+App code (`/health` or `/version` endpoint):
+- Read `BUILD_COMMIT`, `DEPLOYED_AT` from `IConfiguration`
+- Return in JSON response
+
+Bicep (optional; for documentation):
+- Add AppSettings outputs showing possible metadata keys
+
+**Next Steps:**
+1. Await Coordinator decision on implementation priority
+2. If approved: Neo to implement `/version` endpoint; Tank to add workflow step
+3. Test in dev environment before prod rollout
+
+**Audit Trail:** 3 patterns evaluated; 2–5 concurrent users; current health endpoint exists (returns only status + current timestamp); manual Azure App Service deployment + GitHub Actions workflow; stakeholders: Ops (visibility), QA (test metadata), Neo (implementation)
+
+---
+
+### Trinity — Build & Deployment Metadata UI Placement (Sidebar Footer)
+**Author:** Trinity (Frontend & Design)  
+**Date:** 2026-05-20  
+**Status:** Recommended (awaiting implementation decision)  
+**Scope:** StrategyHub UI — metadata display and role-based visibility  
+
+How to surface "Last build" and "Last deployment" infrastructure metadata in StrategyHub without adding visual noise, while respecting role-based visibility and design system constraints?
+
+**Decision: Sidebar Footer with Admin-Only Visibility** ✅
+
+**Placement: Sidebar Footer**
+- Primary: Embed in `SectionSidebar.razor` footer, below user info card and "Sign Out"
+- Rationale: Low-noise zone already established as metadata zone; visible to all authenticated users but non-intrusive; aligns with ops/admin workflows (admins glance while navigating); mobile-responsive
+
+**Component Shape: Compact Status Row**
+```html
+<div class="metadata-row">
+  <span class="metadata-label">Last Build</span>
+  <span class="metadata-value" title="2h 34m ago">2h ago</span>
+</div>
+<div class="metadata-row">
+  <span class="metadata-label">Last Deploy</span>
+  <span class="metadata-value" title="15m 22s ago">15m ago</span>
+</div>
+```
+
+Style: Tiny, muted, monospace-friendly
+- Font: `var(--text-xs)` (0.75rem)
+- Color: `var(--text-muted)` (slate-400)
+- Spacing: `var(--space-1)` vertical, `var(--space-2)` horizontal
+- No animation, no hover state, no color emphasis
+
+**Role Visibility: Admin-Only**
+- Show to: `SuperAdmin` or `TenantAdmin`
+- Hide from: `Reviewer`, `Viewer`
+- Rationale: Operational metadata is not a StrategyHub business concern; admins managing infrastructure need quick visibility; other roles don't
+
+**Time Format Convention**
+
+Display Format (Client-Side): Relative time with tooltip fallback
+
+| Scenario | Display | Tooltip (on hover) |
+|----------|---------|-------------------|
+| Just now | "now" | "less than 1m ago" |
+| < 1 hour | "23m ago" | "2026-05-20 19:35:22 UTC" |
+| < 24 hours | "3h ago" | "2026-05-20 18:35:22 UTC" |
+| 1+ days | "2d ago" | "2026-05-18 20:35:22 UTC" |
+
+Storage/API: Always UTC ISO-8601 (`2026-05-20T20:35:22Z`)
+
+Refresh: Fetch on page load, cache locally. **Do NOT poll** — auto-refreshes require user action (F5) or explicit "Refresh" button if persistence is needed.
+
+**Anti-Patterns to Avoid**
+
+❌ **Do NOT:**
+- Fetch via polling or WebSocket (burden on backend, noisy SignalR messages)
+- Use animations or color-coded status (metadata is secondary, not a warning)
+- Hardcode hex colors or inline styles (use token system)
+- Show on high-traffic pages (Dashboard, ReviewerQueue, AuditDetail)
+- Use bold or large fonts (diminishes visual hierarchy)
+- Make timestamps clickable or interactive (read-only metadata only)
+- Auto-refresh on timer (stale data without refresh context is worse than honest staleness)
+
+Why: StrategyHub value is in playbooks, not deployment status. Ops metadata belongs in a dedicated ops dashboard. Polling/animation can confuse screen readers. Many clients polling for rarely-changing data increases API bloat.
+
+**Implementation Notes**
+
+Files to touch:
+- `SectionSidebar.razor` — add metadata section in footer
+- `SectionSidebar.razor.css` — add `.metadata-row`, `.metadata-label`, `.metadata-value` classes using `var(--text-xs)`, `var(--text-muted)`
+- (Morpheus/Neo) API service: expose `GetBuildMetadataAsync()` returning `{ buildTimestamp: DateTime, deploymentTimestamp: DateTime }`
+
+No changes needed:
+- `tokens.css` (reuse existing semantic tokens)
+- Other pages/components (metadata isolated to sidebar)
+
+**Secondary Placements (Lower Priority)**
+
+If sidebar footer proves insufficient:
+- Small expandable badge in topbar (right-aligned, after user menu)
+- Dedicated read-only "System Status" micro-panel in TenantAdminPanel
+- Never on Dashboard, PillarPage, or public-facing screens
+
+**Next Steps (If Approved)**
+1. **Morpheus/Neo:** Define API contract for `GetBuildMetadataAsync()` and wire to CI/CD artifact metadata
+2. **Trinity (next session):** Implement `BuildMetadataPanel.razor` component + update `SectionSidebar.razor` with `<AuthorizeView>` gate
+3. **Test:** Ensure role-based visibility works, time format renders correctly, no polling errors
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus
