@@ -1,5 +1,5 @@
 @page "/templates"
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@rendermode InteractiveServer
 @attribute [Authorize]
 @layout StrategyHubShell
 @inject IPlaybookTemplateService TemplateService

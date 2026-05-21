@@ -1,5 +1,5 @@
 @page "/dashboard"
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@rendermode InteractiveServer
 @attribute [Authorize]
 @inject NavigationManager Nav
 @inject IProgressService ProgressService

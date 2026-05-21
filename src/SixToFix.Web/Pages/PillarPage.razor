@@ -4,7 +4,7 @@
 @page "/communication"
 @page "/sales"
 @page "/management"
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@rendermode InteractiveServer
 @attribute [Authorize]
 @layout StrategyHubShell
 @inject IPillarContentService PillarContentService
